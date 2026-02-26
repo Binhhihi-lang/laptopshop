@@ -15,15 +15,8 @@
         </head>
 
         <body>
-            hello from jsp
-            <h1>
-                <!-- jstl -->
-                <!-- <c:out value="${test}" /> -->
 
-                <!-- in biến jsp -->
-                ${test}
-            </h1>
-            <button>Submit</button>
+            <h1>User created successfully!</h1>
         </body>
 
         </html>
