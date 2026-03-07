@@ -10,26 +10,9 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
                 <meta name="description" content="" />
                 <meta name="author" content="" />
-                <title>Detail Info User</title>
+                <title>Update Info User</title>
                 <link href="/css/styles.css" rel="stylesheet" />
-                <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-                <script>
-                    $(document).ready(() =>{
-                        // lay thuoc tinh avatarFile
-                        const avatarFile = $("#avatarFile");
-                        // thay doi file
-                        avatarFile.change(function (e) {
-                            // lay dg link URL hien thi anh
-                            const imgURL = URL.createObjectURL(e.target.files[0]);
-                            $("#avatarPreview").attr("src", imgURL);
-                            $("#avatarPreview").css({"display": "block"});
-                        });
-                    });
-                </script>
                 <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
-                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-                    crossorigin="anonymous"></script>
-                <script src="js/scripts.js"></script>
             </head>
 
             <body class="sb-nav-fixed">
@@ -48,64 +31,52 @@
                                 <div class="mt-5">
                                     <div class="row">
                                         <div class="col-md-6 col-12 mx-auto">
-                                            <h3>Create User</h3>
+                                            <h3>Update User</h3>
                                             <hr>
-                                            <form:form method="post" action="/admin/user/create"
-                                                modelAttribute="newUser" class="row">
-                                                <div class="mb-3 col-12 col-md-6">
+                                            <form:form method="post" action="/admin/user/update"
+                                                modelAttribute="userUpdate">
+                                                <div class="mb-3" style="display: none;">
+                                                    <label for="exampleInputId1">Id: </label>
+                                                    <form:input type="Id" name="Id" class="form-control" id="IdInput"
+                                                        placeholder="Enter ID" path="Id" />
+                                                </div>
+                                                <div class="mb-3">
                                                     <label for="exampleInputEmail1">Email: </label>
                                                     <form:input type="email" name="email" class="form-control"
-                                                        id="emailInput" placeholder="Enter email" path="email" />
+                                                        id="emailInput" placeholder="Enter email" path="email"
+                                                        disabled="true" />
                                                 </div>
 
-                                                <div class="mb-3 col-12 col-md-6">
+                                                <div class="mb-3">
                                                     <label for="exampleInputPassword1">Password:</label>
                                                     <form:input type="password" name="password" class="form-control"
                                                         id="passwordInput" placeholder="Password" path="password" />
                                                 </div>
 
-                                                <div class="mb-3 col-12 col-md-6">
+                                                <div class="mb-3">
                                                     <label for="exampleInputEmail1">Phone number: </label>
                                                     <form:input type="text" name="phone" class="form-control"
                                                         id="phoneInput" placeholder="Enter phone /number"
                                                         path="phone" />
                                                 </div>
 
-                                                <div class="mb-3 col-12 col-md-6">
+
+                                                <div class="mb-3">
                                                     <label for="exampleInputEmail1">Full Name: </label>
                                                     <form:input type="text" name="fullName" class="form-control"
                                                         id="fullNameInput" placeholder="Enter full name"
                                                         path="fullName" />
                                                 </div>
 
-                                                <div class="mb-3 col-12">
+
+                                                <div class="mb-3">
                                                     <label for="exampleInputEmail1">Address: </label>
                                                     <form:input type="text" name="address" class="form-control"
                                                         id="addressInput" placeholder="Enter address" path="address" />
                                                 </div>
 
-                                                <div class="mb-3 col-12 col-md-6">
-                                                    <label class="form-label">Role:</label>
-                                                    <select class="form-select" id="inputGroupSelect01">
-                                                        <option selected>ADMIN</option>
-                                                        <option value="1">USER</option>
-                                                    </select>
-                                                </div>
 
-                                                <!-- Upload file   -->
-                                                <div class="mb-3 col-12 col-md-6">
-                                                    <label class="form-label" for="avatarFile">Avatar:</label>
-                                                    <input type="file" class="form-control" id="avatarFile" accept=".png, .jpg, .jpeg">
-                                                </div>
-
-                                                <!-- Image với Preview-->
-                                                 <div class="col-12 mb-3">
-                                                    <img style="max-height: 250px; display: none;" alt="avatar preview" id="avatarPreview">
-                                                 </div>
-
-                                                <div class="col-12 mb-5">
-                                                    <button type="submit" class="btn btn-primary">Create</button>
-                                                </div>
+                                                <button type="submit" class="btn btn-warning">Update</button>
                                             </form:form>
                                         </div>
                                     </div>
@@ -117,4 +88,7 @@
                         <jsp:include page="../layout/footer.jsp" />
                     </div>
                 </div>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+                    crossorigin="anonymous"></script>
+                <script src="js/scripts.js"></script>
             </body>
