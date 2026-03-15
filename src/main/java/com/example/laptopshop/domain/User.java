@@ -2,6 +2,8 @@ package com.example.laptopshop.domain;
 
 import java.util.List;
 
+import org.hibernate.annotations.Cascade;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,8 +38,26 @@ public class User {
     @OneToMany(mappedBy = "user")
     List<Order> orders;
 
+    // get và set cho role và orders
+
     public long getId() {
         return id;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public List<Order> getOrders() {
+        return orders;
+    }
+
+    public void setOrders(List<Order> orders) {
+        this.orders = orders;
     }
 
     public void setId(long id) {

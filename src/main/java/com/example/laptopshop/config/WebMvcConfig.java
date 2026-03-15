@@ -10,22 +10,30 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    // tắt security csrf
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll());
+        // tắt security csrf
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .authorizeHttpRequests(auth -> auth
+                                                .anyRequest().permitAll());
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/css/**")
-                .addResourceLocations("/resources/css/");
-        registry.addResourceHandler("/js/**")
-                .addResourceLocations("/resources/js/");
-    }
+        // cấu hình đường link
+        @Override
+        public void addResourceHandlers(ResourceHandlerRegistry registry) {
+                registry.addResourceHandler("/css/**")
+                                .addResourceLocations("/resources/css/");
+
+                registry.addResourceHandler("/js/**")
+                                .addResourceLocations("/resources/js/");
+
+                registry.addResourceHandler("/images/**")
+                                .addResourceLocations("/resources/images/");
+
+                registry.addResourceHandler("/client/**")
+                                .addResourceLocations("/resources/client/");
+        }
 }
