@@ -22,14 +22,13 @@
             }
         } else {
             if ($(this).scrollTop() > 55) {
-                $('.fixed-top').addClass('shadow').css('top', -55);
+                $('.fixed-top').addClass('shadow').css('top', 0);
             } else {
                 $('.fixed-top').removeClass('shadow').css('top', 0);
             }
-        } 
+        }
     });
-    
-    
+
    // Back to top button
    $(window).scroll(function () {
     if ($(this).scrollTop() > 300) {

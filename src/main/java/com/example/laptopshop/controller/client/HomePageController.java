@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class HomePageController {
 
-    @GetMapping("/user")
+    @GetMapping("/")
     public String getHomePage() {
         return "client/homepage/show";
     }

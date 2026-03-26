@@ -37,16 +37,6 @@ public class UserController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @RequestMapping("/")
-    public String getHomePage(Model model) {
-        List<User> arrUser = this.userService.getAllUserByEmail("1@gmail.com");
-        System.out.println(arrUser);
-        String test = this.userService.handleHello();
-        model.addAttribute("test", test);
-
-        return "hello"; // tìm đến đường dẫn view
-    }
-
     // table-user
     @RequestMapping("/admin/user")
     public String getUserPage(Model model) {
