@@ -2,8 +2,7 @@ package com.example.laptopshop.domain;
 
 import java.util.List;
 
-import org.hibernate.annotations.Cascade;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,6 +19,8 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     private String email;
+
+    @JsonIgnore
     private String password;
     private String fullName;
     private String address;
@@ -36,6 +37,7 @@ public class User {
 
     // one to many orders
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     List<Order> orders;
 
     // get và set cho role và orders

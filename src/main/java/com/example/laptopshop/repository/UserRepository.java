@@ -9,7 +9,7 @@ import com.example.laptopshop.domain.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    User save(User chubinh);
+    User save(User user);
 
     void deleteById(long id);
 

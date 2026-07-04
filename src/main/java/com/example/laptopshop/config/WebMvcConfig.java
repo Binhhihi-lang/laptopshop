@@ -1,5 +1,6 @@
 package com.example.laptopshop.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,19 +22,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 return http.build();
         }
 
-        // cấu hình đường link
+        // Lấy giá trị từ application.properties
+        // 1. Lấy giá trị đường dẫn vật lý (D:/Spring/laptopshop/uploads/) từ file
+        // application.properties
+        @Value("${upload.directory}")
+        private String uploadDirectory;
+
         @Override
         public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                registry.addResourceHandler("/css/**")
-                                .addResourceLocations("/resources/css/");
-
-                registry.addResourceHandler("/js/**")
-                                .addResourceLocations("/resources/js/");
-
-                registry.addResourceHandler("/images/**")
-                                .addResourceLocations("/resources/images/");
-
-                registry.addResourceHandler("/client/**")
-                                .addResourceLocations("/resources/client/");
+                // "file:///" là bắt buộc cho Windows để chỉ đường dẫn vật lý trên ổ cứng
+                registry.addResourceHandler("/images-upload/**")
+                                .addResourceLocations("file:///" + uploadDirectory);
         }
 }

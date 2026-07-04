@@ -2,7 +2,7 @@ package com.example.laptopshop.domain;
 
 import java.util.List;
 
-import jakarta.persistence.CascadeType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,7 +21,8 @@ public class Role {
 
     // role one - many - users Ctl + k + s
     @OneToMany(mappedBy = "role")
-
+    // thêm @JsonIgnore để tránh vòng lặp vô hạn khi lấy dữ liệu role và user
+    @JsonIgnore
     private List<User> users;
 
     public long getId() {
