@@ -12,10 +12,6 @@ import com.example.laptopshop.repository.UserRepository;
 @Service
 public class UserService {
 
-    public String handleHello() {
-        return "Hello from UserService";
-    }
-
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 

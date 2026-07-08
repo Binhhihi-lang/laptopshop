@@ -13,9 +13,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     void deleteById(long id);
 
-    // lắp ghép hàm để thêm tính năng
+    // tìm kiếm người dùng theo email
     List<User> findByEmail(String email);
 
+    // tìm kiếm người dùng theo id
     User findById(long id);
 
 }

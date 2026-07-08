@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cập nhật sản phẩm · Laptopshop Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/admin-style.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div id="sidebar-placeholder"></div>
+  <div class="admin-content-col">
+    <div id="header-placeholder"></div>
+    <main class="admin-main">
+      <div class="admin-page-title">
+        <div>
+          <h1>Cập nhật sản phẩm</h1>
+          <div class="subtitle" id="subtitleText">Đang tải thông tin...</div>
+        </div>
+        <a href="/admin/product/list.html" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Quay lại</a>
+      </div>
+
+      <form id="productForm">
+        <div class="row g-3" style="max-width: 900px;">
+          <div class="col-12">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Ảnh sản phẩm</h6>
+              <div class="d-flex align-items-center gap-3">
+                <img id="imagePreview" class="avatar-preview" style="border-radius:10px" src="" alt="">
+                <input type="file" class="form-control form-control-sm" id="inputFile" accept="image/*" style="max-width:280px">
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Thông tin cơ bản</h6>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Mã SKU</label>
+                  <input type="text" class="form-control" id="code" required>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Tên sản phẩm</label>
+                  <input type="text" class="form-control" id="name" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Danh mục</label>
+                  <select class="form-select" id="categoryId"></select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Giá bán (đ)</label>
+                  <input type="number" class="form-control" id="price" required min="0" step="1000">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Số lượng tồn kho</label>
+                  <input type="number" class="form-control" id="quantity" min="0">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Hãng sản xuất</label>
+                  <input type="text" class="form-control" id="factory">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Đối tượng sử dụng</label>
+                  <input type="text" class="form-control" id="target">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Mô tả ngắn</label>
+                  <input type="text" class="form-control" id="shortDesc">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Mô tả chi tiết</label>
+                  <textarea class="form-control" id="detailDesc" rows="4"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Cấu hình laptop</h6>
+              <div class="row g-3">
+                <div class="col-md-4"><label class="form-label">CPU</label><input type="text" class="form-control" id="cpu"></div>
+                <div class="col-md-4"><label class="form-label">RAM</label><input type="text" class="form-control" id="ram"></div>
+                <div class="col-md-4"><label class="form-label">Ổ cứng</label><input type="text" class="form-control" id="storage"></div>
+                <div class="col-md-4"><label class="form-label">Card đồ họa (GPU)</label><input type="text" class="form-control" id="gpu"></div>
+                <div class="col-md-4"><label class="form-label">Màn hình</label><input type="text" class="form-control" id="screen"></div>
+                <div class="col-md-4"><label class="form-label">Hệ điều hành</label><input type="text" class="form-control" id="os"></div>
+                <div class="col-md-4"><label class="form-label">Trọng lượng (kg)</label><input type="number" class="form-control" id="weight" step="0.1" min="0"></div>
+                <div class="col-md-4"><label class="form-label">Bảo hành (tháng)</label><input type="number" class="form-control" id="warrantyMonths" min="0"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="ls-card">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="active">
+                <label class="form-check-label" for="active">Đang bán (hiển thị cho khách)</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-ls-accent" id="submitBtn">Lưu thay đổi</button>
+            <a href="/admin/product/list.html" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/scripts.js"></script>
+<script src="/js/admin-api.js"></script>
+<script>
+initAdminLayout('product');
+
+const params = new URLSearchParams(window.location.search);
+const productId = params.get('id');
+if (!productId) window.location.href = '/admin/product/list.html';
+
+async function init() {
+  try {
+    const categories = await CategoryAPI.getAll();
+    const select = document.getElementById('categoryId');
+    select.innerHTML = '<option value="">-- Chọn danh mục --</option>' +
+      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+    const p = await ProductAPI.getById(productId);
+    document.getElementById('subtitleText').textContent = p.name;
+    document.getElementById('code').value = p.code || '';
+    document.getElementById('name').value = p.name || '';
+    document.getElementById('price').value = p.price || 0;
+    document.getElementById('quantity').value = p.quantity || 0;
+    document.getElementById('factory').value = p.factory || '';
+    document.getElementById('target').value = p.target || '';
+    document.getElementById('shortDesc').value = p.shortDesc || '';
+    document.getElementById('detailDesc').value = p.detailDesc || '';
+    document.getElementById('cpu').value = p.cpu || '';
+    document.getElementById('ram').value = p.ram || '';
+    document.getElementById('storage').value = p.storage || '';
+    document.getElementById('gpu').value = p.gpu || '';
+    document.getElementById('screen').value = p.screen || '';
+    document.getElementById('os').value = p.os || '';
+    document.getElementById('weight').value = p.weight || 0;
+    document.getElementById('warrantyMonths').value = p.warrantyMonths || 0;
+    document.getElementById('active').checked = !!p.active;
+    if (p.category) select.value = p.category.id;
+    document.getElementById('imagePreview').src = productImageUrl(p);
+  } catch (err) {
+    showToast('Không tải được thông tin sản phẩm: ' + err.message, 'danger');
+  }
+}
+init();
+
+document.getElementById('inputFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) document.getElementById('imagePreview').src = URL.createObjectURL(file);
+});
+
+document.getElementById('productForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang lưu...';
+
+  const formData = new FormData();
+  formData.append('code', document.getElementById('code').value);
+  formData.append('name', document.getElementById('name').value);
+  formData.append('price', document.getElementById('price').value);
+  formData.append('quantity', document.getElementById('quantity').value || 0);
+  formData.append('factory', document.getElementById('factory').value);
+  formData.append('target', document.getElementById('target').value);
+  formData.append('shortDesc', document.getElementById('shortDesc').value);
+  formData.append('detailDesc', document.getElementById('detailDesc').value);
+  formData.append('cpu', document.getElementById('cpu').value);
+  formData.append('ram', document.getElementById('ram').value);
+  formData.append('storage', document.getElementById('storage').value);
+  formData.append('gpu', document.getElementById('gpu').value);
+  formData.append('screen', document.getElementById('screen').value);
+  formData.append('os', document.getElementById('os').value);
+  formData.append('weight', document.getElementById('weight').value || 0);
+  formData.append('warrantyMonths', document.getElementById('warrantyMonths').value || 0);
+  formData.append('active', document.getElementById('active').checked);
+
+  const categoryId = document.getElementById('categoryId').value;
+  if (categoryId) formData.append('category.id', categoryId);
+
+  const file = document.getElementById('inputFile').files[0];
+  if (file) formData.append('inputFile', file);
+
+  try {
+    await ProductAPI.update(productId, formData);
+    showToast('Đã cập nhật sản phẩm.', 'success');
+    setTimeout(() => window.location.href = '/admin/product/list.html', 800);
+  } catch (err) {
+    showToast(err.message, 'danger');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Lưu thay đổi';
+  }
+});
+</script>
+</body>
+</html>

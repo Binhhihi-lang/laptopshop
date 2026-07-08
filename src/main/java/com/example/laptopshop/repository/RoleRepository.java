@@ -7,5 +7,7 @@ import com.example.laptopshop.domain.Role;
 
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
+
+    // tìm kiếm role theo tên để hiện thị ds role đổ vào combobox khi tạo/sửa user
     Role findByName(String name);
 }

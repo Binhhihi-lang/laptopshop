@@ -28,19 +28,13 @@ public class User {
 
     private String avatar;
 
-    // roleId
-    // User many to one Role
-
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
 
-    // one to many orders
     @OneToMany(mappedBy = "user")
     @JsonIgnore
     List<Order> orders;
-
-    // get và set cho role và orders
 
     public long getId() {
         return id;
@@ -119,5 +113,4 @@ public class User {
         return "User [id=" + id + ", email=" + email + ", password=" + password + ", fullName=" + fullName
                 + ", address=" + address + ", phone=" + phone + ", avatar=" + avatar + "]";
     }
-
 }

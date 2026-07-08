@@ -40,6 +40,13 @@
         </div>
         <div class="col-sm-6 col-lg-3">
           <div class="ls-card stat-card">
+            <div class="stat-icon" style="background:#FDE8EF;color:#C2185B;"><i class="bi bi-tags"></i></div>
+            <div class="stat-value" id="statCategories">—</div>
+            <div class="stat-label">Danh mục</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="ls-card stat-card">
             <div class="stat-icon stat-icon-orders"><i class="bi bi-receipt"></i></div>
             <div class="stat-value" id="statOrders">—</div>
             <div class="stat-label">Đơn hàng</div>
@@ -54,13 +61,29 @@
         </div>
       </div>
 
+      <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+          <div class="ls-card">
+            <h6 class="mb-3" style="font-family: var(--font-display);">Giá trị tồn kho theo danh mục</h6>
+            <div id="stockByCategory" class="text-muted small">Đang tính...</div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="ls-card">
+            <h6 class="mb-3" style="font-family: var(--font-display);">Sản phẩm sắp hết hàng (&lt; 5)</h6>
+            <div id="lowStockList" class="text-muted small">Đang tính...</div>
+          </div>
+        </div>
+      </div>
+
       <div class="ls-card">
         <h5 class="mb-3" style="font-family: var(--font-display);">Truy cập nhanh</h5>
         <div class="d-flex flex-wrap gap-2">
           <a href="/admin/user/list.html" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Quản lý người dùng</a>
-          <a href="/admin/user/create.html" class="btn btn-outline-secondary"><i class="bi bi-person-plus"></i> Thêm người dùng</a>
-          <a href="/admin/product/list.html" class="btn btn-outline-secondary disabled" tabindex="-1" aria-disabled="true"><i class="bi bi-laptop"></i> Quản lý sản phẩm (sắp có)</a>
+          <a href="/admin/category/list.html" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> Quản lý danh mục</a>
+          <a href="/admin/product/list.html" class="btn btn-outline-secondary"><i class="bi bi-laptop"></i> Quản lý sản phẩm</a>
           <a href="/admin/order/list.html" class="btn btn-outline-secondary disabled" tabindex="-1" aria-disabled="true"><i class="bi bi-receipt"></i> Quản lý đơn hàng (sắp có)</a>
+          <a href="/admin/coupon/list.html" class="btn btn-outline-secondary disabled" tabindex="-1" aria-disabled="true"><i class="bi bi-ticket-perforated"></i> Mã giảm giá (sắp có)</a>
         </div>
       </div>
     </main>
@@ -72,34 +95,49 @@
 <script src="/js/scripts.js"></script>
 <script src="/js/admin-api.js"></script>
 <script>
-
-
 initAdminLayout('dashboard');
 
 (async function loadStats() {
   try {
-    // File admin-api.js thực hiện một Request ngầm (AJAX) gọi đến endpoint @RestController của Java (ví dụ: GET /api/v1/users).
-    // Xử lý bất đồng bộ với Fetch API (Async / Await)
     const users = await UserAPI.getAll();
-
     document.getElementById('statUsers').textContent = users.length;
 
     const adminCount = users.filter(u => u.role && u.role.name && u.role.name.toUpperCase().includes('ADMIN')).length;
-    const userCount = users.length - adminCount;
-
-    // in số liệu ra các thẻ HTML
-    document.getElementById('statUsers').textContent = userCount;
     document.getElementById('statAdmins').textContent = adminCount;
-
   } catch (err) {
-
     document.getElementById('statUsers').textContent = '?';
     document.getElementById('statAdmins').textContent = '?';
     showToast('Không tải được số liệu người dùng: ' + err.message, 'danger');
   }
 
-  // Product/Order chưa có Service/API hoàn chỉnh -> để placeholder, cập nhật sau khi xong module đó.
-  document.getElementById('statProducts').textContent = '--';
+  try {
+    const [products, categories] = await Promise.all([ProductAPI.getAll(), CategoryAPI.getAll()]);
+    document.getElementById('statProducts').textContent = products.length;
+    document.getElementById('statCategories').textContent = categories.length;
+
+    // Giá trị tồn kho = tổng (giá x số lượng) gộp theo danh mục
+    const byCategory = {};
+    products.forEach(p => {
+      const key = p.category ? p.category.name : 'Chưa gán danh mục';
+      byCategory[key] = (byCategory[key] || 0) + (p.price * p.quantity);
+    });
+    const stockHtml = Object.entries(byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => `<div class="d-flex justify-content-between py-1"><span>${name}</span><span class="fw-semibold" style="color:var(--ls-text)">${formatCurrency(value)}</span></div>`)
+      .join('') || 'Chưa có dữ liệu.';
+    document.getElementById('stockByCategory').innerHTML = stockHtml;
+
+    // Sản phẩm sắp hết hàng
+    const lowStock = products.filter(p => p.quantity < 5).sort((a, b) => a.quantity - b.quantity);
+    document.getElementById('lowStockList').innerHTML = lowStock.length
+      ? lowStock.map(p => `<div class="d-flex justify-content-between py-1"><span>${p.name}</span><span class="fw-semibold text-danger">${p.quantity} còn lại</span></div>`).join('')
+      : 'Không có sản phẩm nào sắp hết hàng.';
+  } catch (err) {
+    document.getElementById('statProducts').textContent = '?';
+    document.getElementById('statCategories').textContent = '?';
+  }
+
+  // Order chưa có Service/API hoàn chỉnh -> để placeholder, cập nhật sau khi xong module đó.
   document.getElementById('statOrders').textContent = '--';
 })();
 </script>

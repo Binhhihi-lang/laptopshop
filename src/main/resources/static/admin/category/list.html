@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danh mục · Laptopshop Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/admin-style.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div id="sidebar-placeholder"></div>
+  <div class="admin-content-col">
+    <div id="header-placeholder"></div>
+    <main class="admin-main">
+      <div class="admin-page-title">
+        <div>
+          <h1>Danh mục</h1>
+          <div class="subtitle">Nhóm sản phẩm theo danh mục (Apple, Gaming, Văn phòng...)</div>
+        </div>
+        <a href="/admin/category/create.html" class="btn btn-ls-accent"><i class="bi bi-plus-lg"></i> Thêm danh mục</a>
+      </div>
+
+      <div class="ls-card">
+        <div id="loadingState" class="loading-state">
+          <div class="spinner-border spinner-border-sm text-secondary"></div> Đang tải danh sách...
+        </div>
+
+        <div id="emptyState" class="empty-state d-none">
+          <i class="bi bi-tags fs-1 d-block mb-2"></i>
+          Chưa có danh mục nào. Hãy thêm danh mục đầu tiên.
+        </div>
+
+        <div class="table-responsive d-none" id="tableWrap">
+          <table class="table ls-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Tên danh mục</th>
+                <th>Slug</th>
+                <th>Thứ tự</th>
+                <th>Trạng thái</th>
+                <th class="text-end">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="categoryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/scripts.js"></script>
+// 
+<script src="/js/admin-api.js"></script>
+<script>
+initAdminLayout('category');
+
+function statusBadge(active) {
+  return active
+    ? '<span class="role-badge role-admin">Đang hiện</span>'
+    : '<span class="role-badge role-user">Đang ẩn</span>';
+}
+
+// Render danh sách danh mục vào bảng
+function renderRows(categories) {
+  const body = document.getElementById('categoryTableBody');
+  body.innerHTML = categories.map(c => `
+    <tr>
+      <td><img class="avatar-thumb" style="border-radius:6px" src="${categoryImageUrl(c)}" alt=""></td>
+      <td>${c.name}</td>
+      <td class="text-muted">${c.slug || '—'}</td>
+      <td>${c.displayOrder}</td>
+      <td>${statusBadge(c.active)}</td>
+      <td class="text-end">
+        <a href="/admin/category/detail.html?id=${c.id}" class="btn btn-sm btn-outline-secondary" title="Xem"><i class="bi bi-eye"></i></a>
+        <a href="/admin/category/update.html?id=${c.id}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
+
+        // Gọi hàm xóa 
+        
+        <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="handleDelete(${c.id})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Xử lý xóa danh mục
+async function handleDelete(id) {
+  if (!confirm('Xóa danh mục này? Các sản phẩm thuộc danh mục sẽ mất liên kết.')) return;
+  try {
+    await CategoryAPI.remove(id);
+    showToast('Đã xóa danh mục.', 'success');
+    // 
+    init();
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+
+async function init() {
+  try {
+    const categories = await CategoryAPI.getAll();
+    categories.sort((a, b) => a.displayOrder - b.displayOrder);
+
+    // Ẩn trạng thái loading
+    document.getElementById('loadingState').classList.add('d-none');
+
+    document.getElementById('emptyState').classList.toggle('d-none', categories.length > 0);
+
+    document.getElementById('tableWrap').classList.toggle('d-none', categories.length === 0);
+
+    // đổ dữ liệu vào bảng 
+    renderRows(categories);
+  } catch (err) {
+    document.getElementById('loadingState').classList.add('d-none');
+    showToast('Không tải được danh sách danh mục: ' + err.message, 'danger');
+  }
+}
+
+// 
+init();
+</script>
+</body>
+</html>

@@ -17,7 +17,10 @@ public class OrderDetail {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     private long quantity;
-    private double price;
+    private double price; // giá tại thời điểm mua (giữ nguyên dù giá sản phẩm sau này đổi)
+    private String productCode; // mã sản phẩm tại thời điểm mua
+    private String productName; // tên sản phẩm tại thời điểm mua
+    private String productImage; // ảnh sản phẩm tại thời điểm mua
 
     @ManyToOne
     @JoinColumn(name = "order_id")
@@ -50,6 +53,30 @@ public class OrderDetail {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public String getProductCode() {
+        return productCode;
+    }
+
+    public void setProductCode(String productCode) {
+        this.productCode = productCode;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductImage() {
+        return productImage;
+    }
+
+    public void setProductImage(String productImage) {
+        this.productImage = productImage;
     }
 
     public Order getOrder() {
