@@ -165,6 +165,7 @@ document.getElementById('inputFile').addEventListener('change', (e) => {
   if (file) document.getElementById('imagePreview').src = URL.createObjectURL(file);
 });
 
+// Cập nhật sản phẩm khi nhấn nút submit
 document.getElementById('productForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const submitBtn = document.getElementById('submitBtn');
@@ -172,26 +173,37 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
   submitBtn.textContent = 'Đang lưu...';
 
   const formData = new FormData();
-  formData.append('code', document.getElementById('code').value);
-  formData.append('name', document.getElementById('name').value);
-  formData.append('price', document.getElementById('price').value);
-  formData.append('quantity', document.getElementById('quantity').value || 0);
-  formData.append('factory', document.getElementById('factory').value);
-  formData.append('target', document.getElementById('target').value);
-  formData.append('shortDesc', document.getElementById('shortDesc').value);
-  formData.append('detailDesc', document.getElementById('detailDesc').value);
-  formData.append('cpu', document.getElementById('cpu').value);
-  formData.append('ram', document.getElementById('ram').value);
-  formData.append('storage', document.getElementById('storage').value);
-  formData.append('gpu', document.getElementById('gpu').value);
-  formData.append('screen', document.getElementById('screen').value);
-  formData.append('os', document.getElementById('os').value);
-  formData.append('weight', document.getElementById('weight').value || 0);
-  formData.append('warrantyMonths', document.getElementById('warrantyMonths').value || 0);
-  formData.append('active', document.getElementById('active').checked);
+
+ // 1. Gom tất cả các trường text lồng vào 1 đối tượng
+  const productData = {
+    code: document.getElementById('code').value,
+    name: document.getElementById('name').value,
+    price: document.getElementById('price').value,
+    quantity: document.getElementById('quantity').value || 0,
+    factory: document.getElementById('factory').value,
+    target: document.getElementById('target').value,
+    shortDesc: document.getElementById('shortDesc').value,
+    detailDesc: document.getElementById('detailDesc').value,
+    cpu: document.getElementById('cpu').value,
+    ram: document.getElementById('ram').value,
+    storage: document.getElementById('storage').value,
+    gpu: document.getElementById('gpu').value,
+    screen: document.getElementById('screen').value,
+    os: document.getElementById('os').value,
+    weight: document.getElementById('weight').value || 0,
+    warrantyMonths: document.getElementById('warrantyMonths').value || 0,
+    active: document.getElementById('active').checked
+
+  };
+
 
   const categoryId = document.getElementById('categoryId').value;
-  if (categoryId) formData.append('category.id', categoryId);
+  if (categoryId) productData.category = { id: categoryId };
+
+  // Append chuỗi JSON này vào (Tính là 1 part)
+  formData.append("productInfo", new Blob([JSON.stringify(productData)], {
+    type: "application/json"
+  }));
 
   const file = document.getElementById('inputFile').files[0];
   if (file) formData.append('inputFile', file);

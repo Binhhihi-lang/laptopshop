@@ -26,9 +26,9 @@ public class Order {
     @Column(unique = true)
     private String orderCode; // mã đơn hàng hiển thị cho khách, ví dụ "DH07114752"
 
-    private double totalPrice; // Tổng tiền
-    private double discountAmount; // số tiền thực tế được giảm tại thời điểm đặt hàng (giữ nguyên dù coupon sau
-                                   // này đổi %)
+    private Long totalPrice; // Tổng tiền
+    private Long discountAmount; // số tiền thực tế được giảm tại thời điểm đặt hàng (giữ nguyên dù coupon sau
+                                 // này đổi %)
 
     private LocalDateTime orderDate; // ngày giờ đặt hàng, mặc định = thời điểm tạo Order (PrePersist)
 
@@ -77,19 +77,19 @@ public class Order {
         this.orderCode = orderCode;
     }
 
-    public double getTotalPrice() {
+    public Long getTotalPrice() {
         return totalPrice;
     }
 
-    public void setTotalPrice(double totalPrice) {
+    public void setTotalPrice(Long totalPrice) {
         this.totalPrice = totalPrice;
     }
 
-    public double getDiscountAmount() {
+    public Long getDiscountAmount() {
         return discountAmount;
     }
 
-    public void setDiscountAmount(double discountAmount) {
+    public void setDiscountAmount(Long discountAmount) {
         this.discountAmount = discountAmount;
     }
 

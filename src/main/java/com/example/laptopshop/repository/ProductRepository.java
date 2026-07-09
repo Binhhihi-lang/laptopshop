@@ -7,4 +7,8 @@ import com.example.laptopshop.domain.Product;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     Product findById(long id);
+
+    Product save(Product product);
+
+    void deleteById(long id);
 }

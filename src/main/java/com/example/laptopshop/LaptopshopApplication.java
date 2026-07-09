@@ -1,7 +1,10 @@
 package com.example.laptopshop;
 
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
+import org.springframework.context.annotation.Bean;
 
 // @SpringBootApplication(exclude = org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class)
 // include (bao gồm) >< exclude (loại trừ)

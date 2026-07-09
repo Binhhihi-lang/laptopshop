@@ -19,12 +19,20 @@ public class Coupon {
     @Column(unique = true, nullable = false)
     private String code; // mã giảm giá, ví dụ "GIAM10"
 
-    private int discountPercent; // phần trăm giảm, 0-100
+    // Kiểu dữ liệu int (Nguyên thủy - Primitive): Không bao giờ được phép null. Nếu
+    // bạn không gán giá trị, mặc định nó sẽ tự gán bằng 0.
+
+    // Kiểu dữ liệu Integer (Đối tượng - Wrapper Class): Được phép nhận giá trị
+    // null.
+    private Integer discountPercent; // Phần trăm giảm (0-100), để kiểu Integer để có thể nhận giá trị null
+
+    private Long discountAmount; // Số tiền giảm trực tiếp (ví dụ: 50000), để kiểu Long cho đồng bộ với tiền tệ
 
     private LocalDateTime expiryDate; // ngày hết hạn sử dụng
 
-    private int usageLimit = 100; // số lượt dùng tối đa
-    private int usedCount = 0; // số lượt đã dùng
+    private Integer usageLimit = 100; // số lượt dùng tối đa
+
+    private Integer usedCount = 0; // số lượt đã dùng
 
     private boolean active = true; // true: còn dùng được, false: đã khóa
 
@@ -41,12 +49,20 @@ public class Coupon {
         this.code = code;
     }
 
-    public int getDiscountPercent() {
+    public Integer getDiscountPercent() {
         return discountPercent;
     }
 
-    public void setDiscountPercent(int discountPercent) {
+    public void setDiscountPercent(Integer discountPercent) {
         this.discountPercent = discountPercent;
+    }
+
+    public Long getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(Long discountAmount) {
+        this.discountAmount = discountAmount;
     }
 
     public LocalDateTime getExpiryDate() {
@@ -57,19 +73,19 @@ public class Coupon {
         this.expiryDate = expiryDate;
     }
 
-    public int getUsageLimit() {
+    public Integer getUsageLimit() {
         return usageLimit;
     }
 
-    public void setUsageLimit(int usageLimit) {
+    public void setUsageLimit(Integer usageLimit) {
         this.usageLimit = usageLimit;
     }
 
-    public int getUsedCount() {
+    public Integer getUsedCount() {
         return usedCount;
     }
 
-    public void setUsedCount(int usedCount) {
+    public void setUsedCount(Integer usedCount) {
         this.usedCount = usedCount;
     }
 

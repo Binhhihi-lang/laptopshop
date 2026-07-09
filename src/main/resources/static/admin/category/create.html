@@ -77,6 +77,7 @@
 <script>
 initAdminLayout('category');
 
+// Hàm chuyển chuỗi thành slug (không dấu, viết thường, thay khoảng trắng bằng dấu gạch ngang)
 function slugify(text) {
   return text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -104,11 +105,14 @@ document.getElementById('categoryForm').addEventListener('submit', async (e) => 
   formData.append('description', document.getElementById('description').value);
   formData.append('displayOrder', document.getElementById('displayOrder').value || 0);
   formData.append('active', document.getElementById('active').checked);
+
   const file = document.getElementById('inputFile').files[0];
   if (file) formData.append('inputFile', file);
 
   try {
+    // Gọi API tạo danh mục mới
     await CategoryAPI.create(formData);
+
     showToast('Đã tạo danh mục thành công.', 'success');
     setTimeout(() => window.location.href = '/admin/category/list.html', 800);
   } catch (err) {

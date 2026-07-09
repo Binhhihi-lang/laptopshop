@@ -56,10 +56,15 @@
 
 <div id="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script src="/js/scripts.js"></script>
 // 
 <script src="/js/admin-api.js"></script>
 <script>
+
+
+// Truyền vào chuỗi 'category' để hệ thống biết bạn đang ở module Danh mục, 
+// từ đó tự động thêm class active nhằm bôi đậm hoặc làm nổi bật menu "Danh mục" trên thanh Sidebar.
 initAdminLayout('category');
 
 function statusBadge(active) {
@@ -82,8 +87,7 @@ function renderRows(categories) {
         <a href="/admin/category/detail.html?id=${c.id}" class="btn btn-sm btn-outline-secondary" title="Xem"><i class="bi bi-eye"></i></a>
         <a href="/admin/category/update.html?id=${c.id}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
 
-        // Gọi hàm xóa 
-        
+
         <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="handleDelete(${c.id})"><i class="bi bi-trash"></i></button>
       </td>
     </tr>
@@ -95,8 +99,10 @@ async function handleDelete(id) {
   if (!confirm('Xóa danh mục này? Các sản phẩm thuộc danh mục sẽ mất liên kết.')) return;
   try {
     await CategoryAPI.remove(id);
+
     showToast('Đã xóa danh mục.', 'success');
-    // 
+
+    // Gọi lại hàm init để cập nhật lại bảng
     init();
   } catch (err) {
     showToast(err.message, 'danger');
@@ -123,8 +129,10 @@ async function init() {
   }
 }
 
-// 
 init();
+
 </script>
+
+
 </body>
 </html>

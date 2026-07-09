@@ -30,33 +30,4 @@ public class ViewController {
     // Không cần nữa vì đã có static/admin/user/*.html tự được Spring Boot
     // serve trực tiếp, không cần Controller trung gian.
 
-    // ---- Product: TẠM GIỮ LẠI ----
-    // Sẽ xóa khi hoàn thành chuyển Product sang HTML tĩnh (bước kế tiếp).
-    // Hiện tại gọi vào các URL này vẫn sẽ lỗi (chưa có ViewResolver xử lý),
-    // nhưng để placeholder ở đây cho dễ nhớ còn thiếu gì.
-
-    @GetMapping("/admin/product")
-    public String getProductPage() {
-        return "admin/product/show";
-    }
-
-    @GetMapping("/admin/product/create")
-    public String getCreateProductPage() {
-        return "admin/product/create";
-    }
-
-    @GetMapping("/admin/product/update/{id}")
-    public String getUpdateProductPage() {
-        return "admin/product/update";
-    }
-
-    @GetMapping("/admin/product/delete/{id}")
-    public String getDeleteProductPage() {
-        return "admin/product/delete";
-    }
-
-    @GetMapping("/admin/product/{id}")
-    public String getInfoProductPage() {
-        return "admin/product/detail";
-    }
 }

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết coupon · Laptopshop Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/admin-style.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div id="sidebar-placeholder"></div>
+  <div class="admin-content-col">
+    <div id="header-placeholder"></div>
+    <main class="admin-main">
+      <div class="admin-page-title">
+        <div>
+          <h1>Chi tiết coupon</h1>
+          <div class="subtitle" id="subtitleText">Đang tải...</div>
+        </div>
+        <a href="/admin/coupon/list.html" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Quay lại</a>
+      </div>
+
+      <div class="row g-3" style="max-width: 700px;" id="detailWrap">
+        <div class="col-12">
+          <div class="ls-card">
+            <div class="loading-state"><div class="spinner-border spinner-border-sm text-secondary"></div> Đang tải...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/scripts.js"></script>
+<script src="/js/admin-api.js"></script>
+<script>
+initAdminLayout('coupon');
+const params = new URLSearchParams(window.location.search);
+const couponId = params.get('id');
+if (!couponId) window.location.href = '/admin/coupon/list.html';
+
+function specRow(label, value) {
+  return `<dt class="col-5 text-muted fw-normal">${label}</dt><dd class="col-7">${value ?? '—'}</dd>`;
+}
+
+(async function () {
+  try {
+    const c = await CouponAPI.getById(couponId);
+    document.getElementById('subtitleText').textContent = c.code;
+
+    const expired = c.expiryDate && new Date(c.expiryDate) < new Date(new Date().toDateString());
+    const statusBadge = expired
+      ? '<span class="role-badge role-user">Hết hạn</span>'
+      : (c.active
+          ? '<span class="role-badge role-admin">Đang hoạt động</span>'
+          : '<span class="role-badge role-user">Tạm dừng</span>');
+
+    document.getElementById('detailWrap').innerHTML = `
+      <div class="col-12">
+        <div class="ls-card d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div>
+            <div class="fs-4 fw-semibold" style="font-family: var(--font-display);">${c.code}</div>
+            <div class="fs-5 fw-semibold" style="color: var(--ls-accent-dark);">Giảm ${formatDiscount(c)}</div>
+          </div>
+          ${statusBadge}
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="ls-card">
+          <h6 class="mb-3" style="font-family: var(--font-display);">Thông tin sử dụng</h6>
+          <dl class="row mb-0">
+            ${specRow('Hạn sử dụng', formatDate(c.expiryDate))}
+            ${specRow('Giới hạn lượt dùng', c.usageLimit ? c.usageLimit : 'Không giới hạn')}
+            ${specRow('Đã sử dụng', c.usedCount ?? 0)}
+          </dl>
+        </div>
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <a href="/admin/coupon/update.html?id=${c.id}" class="btn btn-ls-accent"><i class="bi bi-pencil"></i> Chỉnh sửa</a>
+        <button class="btn btn-outline-danger" onclick="handleDelete(${c.id})"><i class="bi bi-trash"></i> Xóa</button>
+      </div>
+    `;
+  } catch (err) {
+    document.getElementById('detailWrap').innerHTML = `<div class="col-12"><div class="text-danger">Không tải được: ${err.message}</div></div>`;
+  }
+})();
+
+async function handleDelete(id) {
+  if (!confirm('Xóa coupon này? Hành động không thể hoàn tác.')) return;
+  try {
+    await CouponAPI.remove(id);
+    showToast('Đã xóa coupon.', 'success');
+    setTimeout(() => window.location.href = '/admin/coupon/list.html', 600);
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+</script>
+</body>
+</html>

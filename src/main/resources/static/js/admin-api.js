@@ -6,24 +6,40 @@ const API_BASE = '/api/v1';
  * Gọi API và tự parse JSON, tự ném lỗi kèm message rõ ràng khi request thất bại.
  */
 async function apiRequest(path, options = {}) {
-  // xử lý bất động bộ gọi dữ liệu
-  const response = await fetch(`${API_BASE}${path}`, options);
+  try {
+    // 1. Gọi dữ liệu
+    const response = await fetch(`${API_BASE}${path}`, options);
 
-  if (response.status === 204) return null; // No Content (vd sau khi xóa)
+    if (response.status === 204) return null;
 
-  // Lấy content-type để biết response trả về là JSON hay không
-  const contentType = response.headers.get('content-type') || '';
+    // 2. Kiểm tra kiểu dữ liệu trả về
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json') ? await response.json() : null; 
 
-  // Nếu content-type là JSON thì parse ra object, còn không thì trả về null
-  // await response.json() để biến chuỗi chữ thành Object Javascript.
-  const data = contentType.includes('application/json') ? await response.json() : null;
+    // 3. Nếu Server trả về mã lỗi (4xx, 5xx)
+    if (!response.ok) {
+      console.group("[API ERROR DETECTED]");
+      console.error(`Đường dẫn lỗi: ${API_BASE}${path}`);
+      console.error(`Mã trạng thái (Status): ${response.status}`);
+      console.error("Dữ liệu lỗi chi tiết từ Server trả về:", data);
+      console.groupEnd();
 
-  // 
-  if (!response.ok) {
-    const message = (data && (data.message || data.error)) || `Đã có lỗi xảy ra (mã ${response.status})`;
-    throw new Error(message);
+      const message = (data && (data.message || data.error)) || `Đã có lỗi xảy ra (mã ${response.status})`;
+      throw new Error(message); // Ném lỗi ra ngoài để file HTML bắt được và hiện showToast
+    }
+    
+    return data;
+
+  } catch (networkError) {
+    // LỖI ĐỘC LẬP (Mất mạng, hoặc bị Tomcat ngắt kết nối ngang xương)
+    console.group(" [CRITICAL NETWORK/SERVER ERROR]");
+    console.error("Chi tiết lỗi hệ thống:", networkError);
+    console.warn("Đoạn này thường kích hoạt khi file quá to, Tomcat bóp nghẹt băng thông và ép hủy Request!");
+    console.groupEnd();
+
+    // Vẫn phải throw tiếp để nút "Lưu sản phẩm" ở Frontend không bị kẹt chữ "Đang lưu..."
+    throw new Error(networkError.message || "Không thể kết nối đến máy chủ.");
   }
-  return data;
 }
 
 const UserAPI = {
@@ -53,6 +69,38 @@ const ProductAPI = {
   update: (id, formData) => apiRequest(`/products/${id}`, { method: 'PUT', body: formData }),
   remove: (id) => apiRequest(`/products/${id}`, { method: 'DELETE' }),
 };
+
+
+const CouponAPI = {
+  getAll: () => apiRequest('/coupons'),
+  getById: (id) => apiRequest(`/coupons/${id}`),
+  create: (payload) => apiRequest('/coupons', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }),
+  update: (id, payload) => apiRequest(`/coupons/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }),
+  remove: (id) => apiRequest(`/coupons/${id}`, { method: 'DELETE' }),
+};
+
+// Định dạng yyyy-MM-dd -> dd/MM/yyyy, dùng chung cho coupon
+function formatDate(isoDate) {
+  if (!isoDate) return 'Không giới hạn';
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Hiển thị hình thức giảm giá của coupon: theo % hoặc theo số tiền cố định.
+// Coupon chỉ có đúng 1 trong 2 trường discountPercent/discountAmount khác null.
+function formatDiscount(coupon) {
+  if (coupon.discountAmount != null) return formatCurrency(coupon.discountAmount);
+  if (coupon.discountPercent != null) return coupon.discountPercent + '%';
+  return '—';
+}
 
 // Các hàm tiện ích (helper functions) để hiển thị hình ảnh người dùng, sản phẩm, danh mục
 // Khớp với WebMvcConfig: /images-upload/** -> file:///{upload.directory}

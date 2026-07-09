@@ -58,7 +58,7 @@ public class UserRestController {
 
         // Upload avatar nếu có
         if (file != null && !file.isEmpty()) {
-            String avatar = this.uploadService.handleSaveUploadFile(file, "Avatar");
+            String avatar = this.uploadService.handleSaveUploadFile(file, "avatar");
             newUser.setAvatar(avatar);
         }
 
@@ -92,9 +92,9 @@ public class UserRestController {
         if (file != null && !file.isEmpty()) {
             // Xóa file cũ
             if (currentUser.getAvatar() != null) {
-                this.uploadService.handleDeleteFile(currentUser.getAvatar(), "Avatar");
+                this.uploadService.handleDeleteFile(currentUser.getAvatar(), "avatar");
             }
-            String avatarUpdate = this.uploadService.handleSaveUploadFile(file, "Avatar");
+            String avatarUpdate = this.uploadService.handleSaveUploadFile(file, "avatar");
             currentUser.setAvatar(avatarUpdate);
         }
 
@@ -117,7 +117,7 @@ public class UserRestController {
 
         // Xóa avatar trước
         if (user.getAvatar() != null) {
-            this.uploadService.handleDeleteFile(user.getAvatar(), "Avatar");
+            this.uploadService.handleDeleteFile(user.getAvatar(), "avatar");
         }
 
         this.userService.deleteUserById(id);

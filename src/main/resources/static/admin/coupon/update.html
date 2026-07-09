@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cập nhật coupon · Laptopshop Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="/css/admin-style.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div id="sidebar-placeholder"></div>
+  <div class="admin-content-col">
+    <div id="header-placeholder"></div>
+    <main class="admin-main">
+      <div class="admin-page-title">
+        <div>
+          <h1>Cập nhật coupon</h1>
+          <div class="subtitle" id="subtitleText">Đang tải thông tin...</div>
+        </div>
+        <a href="/admin/coupon/list.html" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Quay lại</a>
+      </div>
+
+      <form id="couponForm" novalidate>
+        <div class="row g-3" style="max-width: 700px;">
+          <div class="col-12">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Thông tin coupon</h6>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Mã coupon</label>
+                  <input type="text" class="form-control text-uppercase" id="code" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Hạn sử dụng</label>
+                  <input type="date" class="form-control" id="expiryDate">
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label d-block">Hình thức giảm giá <span class="text-danger">*</span></label>
+                  <div class="d-flex gap-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="discountType" id="typePercent" value="percent">
+                      <label class="form-check-label" for="typePercent">Theo phần trăm (%)</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="discountType" id="typeAmount" value="amount">
+                      <label class="form-check-label" for="typeAmount">Theo số tiền cố định (đ)</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6" id="discountPercentWrap">
+                  <label class="form-label">Phần trăm giảm giá (%)</label>
+                  <input type="number" class="form-control" id="discountPercent" min="1" max="100">
+                </div>
+                <div class="col-md-6 d-none" id="discountAmountWrap">
+                  <label class="form-label">Số tiền giảm (đ)</label>
+                  <input type="number" class="form-control" id="discountAmount" min="1" step="1000">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Giới hạn lượt dùng</label>
+                  <input type="number" class="form-control" id="usageLimit" min="0">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Đã sử dụng</label>
+                  <input type="text" class="form-control" id="usedCount" disabled>
+                  <div class="form-text">Số lượt đã dùng do hệ thống tự tính, không chỉnh sửa tại đây.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="ls-card">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="active">
+                <label class="form-check-label" for="active">Kích hoạt (cho phép áp dụng)</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-ls-accent" id="submitBtn">Lưu thay đổi</button>
+            <a href="/admin/coupon/list.html" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/scripts.js"></script>
+<script src="/js/admin-api.js"></script>
+<script>
+initAdminLayout('coupon');
+
+const params = new URLSearchParams(window.location.search);
+const couponId = params.get('id');
+if (!couponId) window.location.href = '/admin/coupon/list.html';
+
+const discountPercentWrap = document.getElementById('discountPercentWrap');
+const discountAmountWrap = document.getElementById('discountAmountWrap');
+const discountPercentInput = document.getElementById('discountPercent');
+const discountAmountInput = document.getElementById('discountAmount');
+
+function syncDiscountTypeUI() {
+  const type = document.querySelector('input[name="discountType"]:checked').value;
+  const isPercent = type === 'percent';
+
+  discountPercentWrap.classList.toggle('d-none', !isPercent);
+  discountAmountWrap.classList.toggle('d-none', isPercent);
+
+  // required chỉ áp dụng cho ô đang hiển thị, tránh checkValidity() chặn nhầm ô đang ẩn
+  discountPercentInput.required = isPercent;
+  discountAmountInput.required = !isPercent;
+}
+
+document.querySelectorAll('input[name="discountType"]').forEach(el => {
+  el.addEventListener('change', syncDiscountTypeUI);
+});
+
+async function init() {
+  try {
+    const c = await CouponAPI.getById(couponId);
+    document.getElementById('subtitleText').textContent = c.code;
+    document.getElementById('code').value = c.code || '';
+    document.getElementById('expiryDate').value = c.expiryDate || '';
+    document.getElementById('usageLimit').value = c.usageLimit ?? 0;
+    document.getElementById('usedCount').value = c.usedCount ?? 0;
+    document.getElementById('active').checked = !!c.active;
+
+    // Coupon đang là loại số tiền cố định nếu discountAmount khác null, ngược lại là %
+    const isAmountType = c.discountAmount != null;
+    document.getElementById(isAmountType ? 'typeAmount' : 'typePercent').checked = true;
+    discountPercentInput.value = c.discountPercent ?? '';
+    discountAmountInput.value = c.discountAmount ?? '';
+
+    syncDiscountTypeUI();
+  } catch (err) {
+    showToast('Không tải được thông tin coupon: ' + err.message, 'danger');
+  }
+}
+init();
+
+document.getElementById('couponForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!e.target.checkValidity()) { e.target.reportValidity(); return; }
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang lưu...';
+
+  const isPercent = document.querySelector('input[name="discountType"]:checked').value === 'percent';
+
+  const couponData = {
+    code: document.getElementById('code').value.trim().toUpperCase(),
+    discountPercent: isPercent ? Number(discountPercentInput.value) : null,
+    discountAmount: isPercent ? null : Number(discountAmountInput.value),
+    expiryDate: document.getElementById('expiryDate').value || null,
+    usageLimit: Number(document.getElementById('usageLimit').value) || 0,
+    active: document.getElementById('active').checked
+  };
+
+  try {
+    await CouponAPI.update(couponId, couponData);
+    
+    showToast('Đã cập nhật coupon.', 'success');
+    setTimeout(() => window.location.href = '/admin/coupon/list.html', 800);
+  } catch (err) {
+    showToast(err.message, 'danger');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Lưu thay đổi';
+  }
+});
+</script>
+</body>
+</html>

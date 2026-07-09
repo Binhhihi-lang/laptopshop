@@ -125,8 +125,11 @@ function applyFilter() {
   }
 
   document.getElementById('totalCount').textContent = `${filtered.length} sản phẩm`;
+
   document.getElementById('emptyState').classList.toggle('d-none', filtered.length > 0);
+
   document.getElementById('tableWrap').classList.toggle('d-none', filtered.length === 0);
+  
   renderRows(filtered);
 }
 
@@ -147,6 +150,7 @@ async function init() {
     });
 
     document.getElementById('loadingState').classList.add('d-none');
+    // trong filter sẽ hiện thị dữ liệu sản phẩm 
     applyFilter();
   } catch (err) {
     document.getElementById('loadingState').classList.add('d-none');
