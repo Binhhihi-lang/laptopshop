@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.laptopshop.domain.Coupon;
@@ -56,7 +57,8 @@ public class CouponRestController {
         return ResponseEntity.noContent().build();
     }
 
-    // Bắt lỗi nghiệp vụ (trùng mã, sai % giảm giá, không tìm thấy...) và trả JSON { message }
+    // Bắt lỗi nghiệp vụ (trùng mã, sai % giảm giá, không tìm thấy...) và trả JSON {
+    // message }
     // để đúng format mà admin-api.js đang parse (data.message).
     @ExceptionHandler({ IllegalArgumentException.class, NoSuchElementException.class })
     public ResponseEntity<Map<String, String>> handleBusinessError(RuntimeException ex) {

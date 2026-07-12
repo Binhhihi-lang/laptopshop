@@ -155,7 +155,7 @@ async function init() {
     if (p.category) select.value = p.category.id;
     document.getElementById('imagePreview').src = productImageUrl(p);
   } catch (err) {
-    showToast('Không tải được thông tin sản phẩm: ' + err.message, 'danger');
+    showToast('Có lỗi: ' + err.message, 'danger');
   }
 }
 init();

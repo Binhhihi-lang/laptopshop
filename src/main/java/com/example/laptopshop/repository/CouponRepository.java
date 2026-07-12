@@ -9,8 +9,7 @@ import com.example.laptopshop.domain.Coupon;
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
     Coupon save(Coupon coupon);
 
-    void deleteById(long id);
-
+    // Tìm coupon theo id thì làm cả xóa và cập nhật
     Coupon findById(long id);
 
     Optional<Coupon> findByCodeIgnoreCase(String code);

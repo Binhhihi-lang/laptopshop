@@ -35,6 +35,7 @@
                   <input type="text" class="form-control text-uppercase" id="code" required placeholder="vd: SALE50">
                   <div class="form-text">Mã sẽ tự động viết hoa, không được trùng.</div>
                 </div>
+
                 <div class="col-md-6">
                   <label class="form-label">Hạn sử dụng</label>
                   <input type="date" class="form-control" id="expiryDate">
@@ -119,7 +120,9 @@ function syncDiscountTypeUI() {
 document.querySelectorAll('input[name="discountType"]').forEach(el => {
   el.addEventListener('change', syncDiscountTypeUI);
 });
+
 syncDiscountTypeUI();
+
 
 document.getElementById('couponForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -150,6 +153,7 @@ document.getElementById('couponForm').addEventListener('submit', async (e) => {
     submitBtn.textContent = 'Lưu coupon';
   }
 });
+
 </script>
 </body>
 </html>

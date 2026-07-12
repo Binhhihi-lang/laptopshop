@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.Category;
 import com.example.laptopshop.domain.Product;
+import com.example.laptopshop.dto.response.ApiResponse;
+import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.service.CategoryService;
 import com.example.laptopshop.service.ProductService;
 import com.example.laptopshop.service.UploadService;
@@ -33,23 +35,25 @@ public class ProductRestController {
     // ResponseEntity (kèm HTTP status code: 200 OK, 201 Created, 404 Not Found...).
 
     @GetMapping
-    public ResponseEntity<List<Product>> getAllProducts() {
-        return ResponseEntity.ok(this.productService.getAllProducts());
+    public ApiResponse<List<Product>> getAllProducts() {
+        ApiResponse<List<Product>> response = new ApiResponse<>();
+        response.setResult(this.productService.getAllProducts());
+        return response;
     }
 
     // 2. Lấy chi tiết sản phẩm theo ID
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable long id) {
+    public ApiResponse<Product> getProductById(@PathVariable long id) {
+        ApiResponse<Product> response = new ApiResponse<>();
         Product product = this.productService.getProductById(id);
-        if (product == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(product);
+
+        response.setResult(product);
+        return response;
     }
 
     // 3. Tạo mới sản phẩm (hỗ trợ upload ảnh sản phẩm)
     @PostMapping
-    public ResponseEntity<Product> createProduct(
+    public ApiResponse<Product> createProduct(
             // lấy dữ liệu từ form-data (multipart/form-data) -> @ModelAttribute
             // cách 2 để sử dụng @RequestPart để lấy dữ liệu JSON từ form-data để không bị
             // tràn bộ nhớ khi có nhiều trường text
@@ -70,20 +74,19 @@ public class ProductRestController {
         }
 
         Product savedProduct = this.productService.handleSaveProduct(newProduct);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
+        ApiResponse<Product> response = new ApiResponse<>();
+        response.setResult(savedProduct);
+        return response;
     }
 
     // 4. Cập nhật sản phẩm
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(
+    public ApiResponse<Product> updateProduct(
             @PathVariable long id,
             @RequestPart("productInfo") Product productUpdate,
             @RequestParam(value = "inputFile", required = false) MultipartFile file) {
 
         Product currentProduct = this.productService.getProductById(id);
-        if (currentProduct == null) {
-            return ResponseEntity.notFound().build();
-        }
 
         // Cập nhật thông tin
         currentProduct.setCode(productUpdate.getCode());
@@ -120,22 +123,23 @@ public class ProductRestController {
         }
 
         Product updatedProduct = this.productService.handleSaveProduct(currentProduct);
-        return ResponseEntity.ok(updatedProduct);
+        ApiResponse<Product> response = new ApiResponse<>();
+        response.setResult(updatedProduct);
+        return response;
     }
 
     // 5. Xóa sản phẩm
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable long id) {
+    public ApiResponse<Void> deleteProduct(@PathVariable long id) {
         Product product = this.productService.getProductById(id);
-        if (product == null) {
-            return ResponseEntity.notFound().build();
-        }
 
         if (product.getImage() != null) {
             this.uploadService.handleDeleteFile(product.getImage(), "product");
         }
 
         this.productService.deleteProductById(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Sản phẩm đã được xóa thành công");
+        return response;
     }
 }

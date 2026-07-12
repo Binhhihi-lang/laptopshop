@@ -35,6 +35,7 @@ public class CouponService {
         validateCode(coupon.getCode());
         String normalizedCode = coupon.getCode().trim().toUpperCase();
 
+        // Kiểm tra trùng code (không phân biệt hoa thường)
         if (this.couponRepository.existsByCodeIgnoreCase(normalizedCode)) {
             throw new IllegalArgumentException("Mã coupon '" + normalizedCode + "' đã tồn tại.");
         }
@@ -85,6 +86,7 @@ public class CouponService {
         return this.couponRepository.save(coupon);
     }
 
+    // Xóa coupon theo id
     public void deleteCoupon(long id) {
         Coupon coupon = getCouponById(id);
         this.couponRepository.delete(coupon);

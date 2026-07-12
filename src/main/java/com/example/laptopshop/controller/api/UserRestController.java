@@ -11,6 +11,8 @@ import com.example.laptopshop.domain.User;
 import com.example.laptopshop.service.UploadService;
 import com.example.laptopshop.service.UserService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserRestController {
@@ -47,6 +49,7 @@ public class UserRestController {
     // diện)
     @PostMapping
     public ResponseEntity<User> createUser(
+            @Valid
             // Nhận dữ liệu người dùng từ form-data, ánh xạ vào đối tượng User
             @ModelAttribute User newUser,
             // Nhận file từ form-data với key là "inputFile", không bắt buộc phải có
@@ -74,7 +77,7 @@ public class UserRestController {
     // 4. Cập nhật thông tin người dùng
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(
-            @PathVariable long id,
+            @Valid @PathVariable long id,
             @ModelAttribute User userUpdate,
             @RequestParam(value = "inputFile", required = false) MultipartFile file) {
 

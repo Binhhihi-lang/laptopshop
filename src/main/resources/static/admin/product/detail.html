@@ -105,7 +105,7 @@ function specRow(label, value) {
       </div>
     `;
   } catch (err) {
-    document.getElementById('detailWrap').innerHTML = `<div class="col-12"><div class="text-danger">Không tải được: ${err.message}</div></div>`;
+    document.getElementById('detailWrap').innerHTML = `<div class="col-12"><div class="text-danger">Có lỗi: ${err.message}</div></div>`;
   }
 })();
 

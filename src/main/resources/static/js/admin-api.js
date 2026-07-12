@@ -1,45 +1,38 @@
 // Toàn bộ lời gọi API dùng cho khu vực Admin.
-// Sau này thêm ProductAPI, OrderAPI... thì viết tiếp vào file này.
 const API_BASE = '/api/v1';
 
 /**
  * Gọi API và tự parse JSON, tự ném lỗi kèm message rõ ràng khi request thất bại.
  */
 async function apiRequest(path, options = {}) {
-  try {
-    // 1. Gọi dữ liệu
-    const response = await fetch(`${API_BASE}${path}`, options);
+    // 1. Gọi dữ liệu từ Server
+    const responseApi = await fetch(`${API_BASE}${path}`, options);
 
-    if (response.status === 204) return null;
+    // 2. Xử lý trường hợp Xóa thành công (HTTP 204 No Content - Không có body JSON)
+    if (responseApi.status === 204) return null;
 
-    // 2. Kiểm tra kiểu dữ liệu trả về
-    const contentType = response.headers.get('content-type') || '';
-    const data = contentType.includes('application/json') ? await response.json() : null; 
-
-    // 3. Nếu Server trả về mã lỗi (4xx, 5xx)
-    if (!response.ok) {
-      console.group("[API ERROR DETECTED]");
-      console.error(`Đường dẫn lỗi: ${API_BASE}${path}`);
-      console.error(`Mã trạng thái (Status): ${response.status}`);
-      console.error("Dữ liệu lỗi chi tiết từ Server trả về:", data);
-      console.groupEnd();
-
-      const message = (data && (data.message || data.error)) || `Đã có lỗi xảy ra (mã ${response.status})`;
-      throw new Error(message); // Ném lỗi ra ngoài để file HTML bắt được và hiện showToast
+    // 3. Đọc dữ liệu JSON từ Server trả về ApiResponse chuẩn hóa (có code, message, result)
+    let dataJson = null;
+    const contentType = responseApi.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        dataJson = await responseApi.json();
     }
-    
-    return data;
 
-  } catch (networkError) {
-    // LỖI ĐỘC LẬP (Mất mạng, hoặc bị Tomcat ngắt kết nối ngang xương)
-    console.group(" [CRITICAL NETWORK/SERVER ERROR]");
-    console.error("Chi tiết lỗi hệ thống:", networkError);
-    console.warn("Đoạn này thường kích hoạt khi file quá to, Tomcat bóp nghẹt băng thông và ép hủy Request!");
-    console.groupEnd();
+    // 4. Nếu Server trả về mã lỗi HTTP (4xx, 5xx) hoặc mã code nghiệp vụ khác 1000
+    if (!responseApi.ok || (dataJson && dataJson.code && dataJson.code !== 1000)) {
 
-    // Vẫn phải throw tiếp để nút "Lưu sản phẩm" ở Frontend không bị kẹt chữ "Đang lưu..."
-    throw new Error(networkError.message || "Không thể kết nối đến máy chủ.");
-  }
+        // Ưu tiên lấy câu message báo lỗi nghiệp vụ từ Backend (ví dụ: "Không tìm thấy mã giảm giá")
+        const message = (dataJson && dataJson.message) || `Đã có lỗi xảy ra (mã ${responseApi.status})`;
+        throw new Error(message); // Ném lỗi để file HTML hứng và hiện showToast
+    }
+
+    // Nếu Backend dùng ApiResponse chuẩn hóa (có trường result)
+    // thì trả thẳng dataJson.result ra ngoài. Nếu không thì trả về dataJson thuần.
+    if (dataJson && dataJson.result !== undefined) {
+        return dataJson.result;
+    }
+
+    return dataJson;
 }
 
 const UserAPI = {
@@ -70,6 +63,7 @@ const ProductAPI = {
   remove: (id) => apiRequest(`/products/${id}`, { method: 'DELETE' }),
 };
 
+// FormData (Multipart) sinh ra là để giải quyết các form dữ liệu có đính kèm file vật lý (như ảnh sản phẩm, file tài liệu, avatar).
 
 const CouponAPI = {
   getAll: () => apiRequest('/coupons'),

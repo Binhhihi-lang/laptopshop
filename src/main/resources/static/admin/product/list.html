@@ -154,7 +154,7 @@ async function init() {
     applyFilter();
   } catch (err) {
     document.getElementById('loadingState').classList.add('d-none');
-    showToast('Không tải được danh sách sản phẩm: ' + err.message, 'danger');
+    showToast('Có lỗi: ' + err.message, 'danger');
   }
 }
 init();
