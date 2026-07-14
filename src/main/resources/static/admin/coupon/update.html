@@ -144,7 +144,7 @@ async function init() {
 
     syncDiscountTypeUI();
   } catch (err) {
-    showToast('Không tải được thông tin coupon: ' + err.message, 'danger');
+    showToast('Có lỗi: ' + err.message, 'danger');
   }
 }
 init();
@@ -174,7 +174,7 @@ document.getElementById('couponForm').addEventListener('submit', async (e) => {
     showToast('Đã cập nhật coupon.', 'success');
     setTimeout(() => window.location.href = '/admin/coupon/list.html', 800);
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Lưu thay đổi';
   }

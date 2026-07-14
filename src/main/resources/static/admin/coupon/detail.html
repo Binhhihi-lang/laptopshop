@@ -98,7 +98,7 @@ async function handleDelete(id) {
     showToast('Đã xóa coupon.', 'success');
     setTimeout(() => window.location.href = '/admin/coupon/list.html', 600);
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 </script>

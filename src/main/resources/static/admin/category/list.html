@@ -105,7 +105,7 @@ async function handleDelete(id) {
     // Gọi lại hàm init để cập nhật lại bảng
     init();
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 
@@ -125,7 +125,7 @@ async function init() {
     renderRows(categories);
   } catch (err) {
     document.getElementById('loadingState').classList.add('d-none');
-    showToast('Không tải được danh sách danh mục: ' + err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 

@@ -2,11 +2,14 @@ package com.example.laptopshop.service;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 
 import com.example.laptopshop.domain.Coupon;
+import com.example.laptopshop.dto.request.Coupon.CouponCreationRequest;
+import com.example.laptopshop.dto.request.Coupon.CouponUpdateRequest;
+import com.example.laptopshop.exception.AppException;
+import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.CouponRepository;
 
 @Service
@@ -25,25 +28,26 @@ public class CouponService {
     public Coupon getCouponById(long id) {
         Coupon coupon = this.couponRepository.findById(id);
         if (coupon == null) {
-            throw new NoSuchElementException("Không tìm thấy mã giảm giá với id = " + id);
+            throw new AppException(ErrorCode.COUPON_NOT_FOUND);
         }
         return coupon;
     }
 
-    // Tạo mới coupon, kiểm tra trùng code, validate discountPercent/discountAmount
-    public Coupon createCoupon(Coupon coupon) {
-        validateCode(coupon.getCode());
-        String normalizedCode = coupon.getCode().trim().toUpperCase();
+    // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity rồi lưu DB.
+    // Controller không còn hứng trực tiếp bằng Entity Coupon nữa, giống cách làm
+    // với User/Product/Category.
+    public Coupon createCoupon(CouponCreationRequest request) {
+        validateCode(request.getCode(), null);
+        validateDiscountValue(request.getDiscountPercent(), request.getDiscountAmount());
 
-        // Kiểm tra trùng code (không phân biệt hoa thường)
-        if (this.couponRepository.existsByCodeIgnoreCase(normalizedCode)) {
-            throw new IllegalArgumentException("Mã coupon '" + normalizedCode + "' đã tồn tại.");
-        }
+        Coupon coupon = new Coupon();
+        coupon.setCode(request.getCode().trim().toUpperCase());
+        coupon.setDiscountPercent(request.getDiscountPercent());
+        coupon.setDiscountAmount(request.getDiscountAmount());
+        coupon.setExpiryDate(request.getExpiryDate());
+        coupon.setUsageLimit(
+                request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
 
-        validateDiscountValue(coupon.getDiscountPercent(), coupon.getDiscountAmount());
-
-        coupon.setCode(normalizedCode);
-        coupon.setUsageLimit(coupon.getUsageLimit() == null || coupon.getUsageLimit() < 0 ? 0 : coupon.getUsageLimit());
         // Coupon mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         coupon.setUsedCount(0);
 
@@ -51,37 +55,22 @@ public class CouponService {
     }
 
     // Cập nhật thông tin coupon theo id
-    public Coupon updateCoupon(long id, Coupon payload) {
+    public Coupon updateCoupon(long id, CouponUpdateRequest request) {
         Coupon coupon = getCouponById(id);
 
-        // Kiểm tra nếu code mới khác code cũ, thì mới kiểm tra trùng lặp
-        if (payload.getCode() != null && !payload.getCode().isBlank()) {
-            String newCode = payload.getCode().trim().toUpperCase();
-            boolean isDifferentCode = !newCode.equalsIgnoreCase(coupon.getCode());
-            if (isDifferentCode && this.couponRepository.existsByCodeIgnoreCase(newCode)) {
-                throw new IllegalArgumentException("Mã coupon '" + newCode + "' đã tồn tại.");
-            }
-            coupon.setCode(newCode);
-        }
+        validateCode(request.getCode(), id);
+        validateDiscountValue(request.getDiscountPercent(), request.getDiscountAmount());
 
-        // Form update luôn gửi lên cả 2 trường discountPercent/discountAmount, chỉ 1
-        // trong 2 có giá trị tùy theo loại giảm giá admin chọn -> validate rồi set
-        // đè cả 2 để đảm bảo không còn giữ lại giá trị cũ của loại kia.
-        validateDiscountValue(payload.getDiscountPercent(), payload.getDiscountAmount());
-        coupon.setDiscountPercent(payload.getDiscountPercent());
-        coupon.setDiscountAmount(payload.getDiscountAmount());
-
-        if (payload.getExpiryDate() != null) {
-            coupon.setExpiryDate(payload.getExpiryDate());
-        }
-
-        if (payload.getUsageLimit() != null && payload.getUsageLimit() >= 0) {
-            coupon.setUsageLimit(payload.getUsageLimit());
-        }
+        coupon.setCode(request.getCode().trim().toUpperCase());
+        coupon.setDiscountPercent(request.getDiscountPercent());
+        coupon.setDiscountAmount(request.getDiscountAmount());
+        coupon.setExpiryDate(request.getExpiryDate());
+        coupon.setUsageLimit(
+                request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
+        coupon.setActive(request.isActive());
 
         // usedCount KHÔNG cho cập nhật thủ công qua form update, chỉ hệ thống tự tăng
         // khi coupon được áp dụng vào đơn hàng
-        coupon.setActive(payload.isActive());
 
         return this.couponRepository.save(coupon);
     }
@@ -130,9 +119,21 @@ public class CouponService {
         return 0;
     }
 
-    private void validateCode(String code) {
+    // Validate code + kiểm tra trùng lặp, dùng chung cho cả create (currentId =
+    // null) và update (currentId = id hiện tại, loại trừ chính nó khỏi kiểm tra
+    // trùng).
+    private void validateCode(String code, Long currentId) {
         if (code == null || code.isBlank()) {
-            throw new IllegalArgumentException("Mã coupon không được để trống.");
+            throw new AppException(ErrorCode.COUPON_CODE_REQUIRED);
+        }
+
+        String normalized = code.trim();
+        boolean exists = currentId == null
+                ? this.couponRepository.existsByCodeIgnoreCase(normalized)
+                : this.couponRepository.existsByCodeIgnoreCaseAndIdNot(normalized, currentId);
+
+        if (exists) {
+            throw new AppException(ErrorCode.COUPON_ALREADY_EXISTS);
         }
     }
 
@@ -143,16 +144,15 @@ public class CouponService {
         boolean hasAmount = discountAmount != null;
 
         if (hasPercent == hasAmount) {
-            throw new IllegalArgumentException(
-                    "Chỉ được chọn 1 trong 2 hình thức giảm giá: theo phần trăm hoặc theo số tiền cố định.");
+            throw new AppException(ErrorCode.INVALID_COUPON_CONFIG);
         }
 
         if (hasPercent && (discountPercent < 1 || discountPercent > 100)) {
-            throw new IllegalArgumentException("Phần trăm giảm giá phải nằm trong khoảng 1-100.");
+            throw new AppException(ErrorCode.INVALID_DISCOUNT_PERCENT);
         }
 
         if (hasAmount && discountAmount <= 0) {
-            throw new IllegalArgumentException("Số tiền giảm giá phải lớn hơn 0.");
+            throw new AppException(ErrorCode.INVALID_DISCOUNT_AMOUNT);
         }
     }
 }

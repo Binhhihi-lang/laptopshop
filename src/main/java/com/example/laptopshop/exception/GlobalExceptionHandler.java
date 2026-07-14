@@ -2,7 +2,11 @@ package com.example.laptopshop.exception;
 
 import com.example.laptopshop.dto.response.ApiResponse;
 
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,7 +30,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
     }
 
-    // BẪY 2: Chuyên bắt lỗi Validate form (khi dùng @Valid / @NotBlank trong DTO)
+    // Chuyên bắt lỗi Validate form (khi dùng @Valid / @NotBlank trong DTO)
     // Ví dụ: Người dùng để trống tên sản phẩm, giá tiền bị âm...
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException exception) {
@@ -39,19 +43,7 @@ public class GlobalExceptionHandler {
         apiResponse.setMessage(errorCode.getMessage());
 
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
-    }
 
-    // BẪY 3: Chuyên bắt lỗi Database (Ví dụ: Thêm trùng mã code Coupon hoặc mã SKU
-    // Laptop)
-    @ExceptionHandler(value = DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleSqlException(DataIntegrityViolationException exception) {
-        ApiResponse<Void> apiResponse = new ApiResponse<>();
-        ErrorCode errorCode = ErrorCode.PRODUCT_ALREADY_EXISTS; // Mặc định là lỗi trùng dữ liệu
-
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
-
-        return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
     }
 
     // Bắt các lỗi ngầm định, lỗi hệ thống chưa phân loại (NullPointer, SQL,

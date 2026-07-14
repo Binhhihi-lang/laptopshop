@@ -111,7 +111,7 @@ async function handleDelete(id) {
     allCoupons = allCoupons.filter(c => c.id !== id);
     applyFilter();
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 
@@ -149,7 +149,7 @@ async function init() {
     applyFilter();
   } catch (err) {
     document.getElementById('loadingState').classList.add('d-none');
-    showToast('Không tải được danh sách coupon: ' + err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 init();

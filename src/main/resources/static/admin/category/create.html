@@ -116,7 +116,7 @@ document.getElementById('categoryForm').addEventListener('submit', async (e) => 
     showToast('Đã tạo danh mục thành công.', 'success');
     setTimeout(() => window.location.href = '/admin/category/list.html', 800);
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Lưu danh mục';
   }

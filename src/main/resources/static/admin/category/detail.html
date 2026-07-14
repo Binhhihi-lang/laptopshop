@@ -76,7 +76,7 @@ async function handleDelete(id) {
     showToast('Đã xóa danh mục.', 'success');
     setTimeout(() => window.location.href = '/admin/category/list.html', 600);
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
   }
 }
 </script>

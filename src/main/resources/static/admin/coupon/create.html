@@ -145,10 +145,10 @@ document.getElementById('couponForm').addEventListener('submit', async (e) => {
 
   try {
     await CouponAPI.create(couponData);
-    showToast('Đã tạo coupon thành công.', 'success');
+    showToast('Đã tạo coupon thành công.', 'success'); 
     setTimeout(() => window.location.href = '/admin/coupon/list.html', 800);
   } catch (err) {
-    showToast(err.message, 'danger');
+    showToast("Có lỗi: " + err.message, 'danger');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Lưu coupon';
   }
