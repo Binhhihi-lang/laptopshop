@@ -6,7 +6,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserCreationRequest {
 
     @NotBlank(message = "USER_EMAIL_EMPTY")
-    @Email(message = "INVALID_USER_DATA")
+    @Email(message = "INVALID_EMAIL")
+    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$", message = "INVALID_EMAIL")
     private String email;
 
     @NotBlank(message = "USER_PASSWORD_EMPTY")

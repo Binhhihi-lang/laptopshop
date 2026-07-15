@@ -2,8 +2,16 @@ package com.example.laptopshop.dto.request.User;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+
 public class UserUpdateRequest {
-    private String email; // Dùng để validate trùng lặp nếu họ muốn đổi email
+    @NotBlank(message = "USER_EMAIL_EMPTY")
+    @Email(message = "INVALID_EMAIL")
+    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$", message = "INVALID_EMAIL")
+    private String email;
+
     private String fullName;
     private String phone;
     private String address;
@@ -61,4 +69,5 @@ public class UserUpdateRequest {
     public void setInputFile(MultipartFile inputFile) {
         this.inputFile = inputFile;
     }
+
 }

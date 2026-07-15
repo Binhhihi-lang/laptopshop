@@ -52,7 +52,7 @@ public class CategoryRestController {
         return response;
     }
 
-    // 4. Cập nhật danh mục
+    // Cập nhật danh mục
     @PutMapping("/{id}")
     public ApiResponse<Category> updateCategory(@PathVariable long id, @ModelAttribute CategoryUpdateRequest request) {
         Category updatedCategory = this.categoryService.handleUpdateCategory(id, request);
@@ -68,7 +68,7 @@ public class CategoryRestController {
         Category category = this.categoryService.getCategoryById(id);
 
         if (category.getImage() != null) {
-            this.uploadService.handleDeleteFile(category.getImage(), "category");
+            this.uploadService.handleDeleteFile(category.getImage());
         }
 
         this.categoryService.deleteCategoryById(id);

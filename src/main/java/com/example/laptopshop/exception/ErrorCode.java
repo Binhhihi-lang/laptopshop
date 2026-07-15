@@ -4,9 +4,10 @@ import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
     // === SYSTEM ERRORS (9000 - 9999) ===
+    INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST),
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống không xác định!", HttpStatus.INTERNAL_SERVER_ERROR),
     DB_VIOLATION(9001, "Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc cơ sở dữ liệu!", HttpStatus.BAD_REQUEST),
-    INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST),
+    
 
     // === USER MODULE (1000 - 1999) ===
     USER_NOT_FOUND(1001, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
@@ -17,7 +18,9 @@ public enum ErrorCode {
     UNAUTHORIZED(1006, "Bạn không có quyền truy cập chức năng này", HttpStatus.FORBIDDEN),
     USER_EMAIL_EMPTY(1007, "Email người dùng không được để trống", HttpStatus.BAD_REQUEST),
     USER_EMAIL_ALREADY_EXISTS(1008, "Email người dùng đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
-    USER_PASSWORD_EMPTY(1009, "Mật khẩu người dùng không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL(1009, "Email người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
+    USER_PASSWORD_EMPTY(1010, "Mật khẩu người dùng không được để trống", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_FOUND(1011, "Không tìm thấy quyền người dùng", HttpStatus.NOT_FOUND),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),

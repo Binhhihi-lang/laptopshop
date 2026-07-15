@@ -53,14 +53,17 @@ public class UserService {
     }
 
     public Role getRoleByName(String name) {
-        return this.roleRepository.findByName(name);
+        Role role = this.roleRepository.findByName(name);
+        if (role == null) {
+            throw new AppException(ErrorCode.ROLE_NOT_FOUND);
+        }
+        return role;
     }
 
     // Validate
 
     public void validateEmail(String email, Long currentId) {
-        if (email == null || email.isBlank())
-            throw new AppException(ErrorCode.USER_EMAIL_EMPTY);
+
         // Nếu mà trùng email mà khác Id thì ném lỗi
         String normalized = email.trim();
         boolean exists = currentId == null
@@ -122,6 +125,8 @@ public class UserService {
         existingUser.setPhone(request.getPhone());
         existingUser.setAddress(request.getAddress());
 
+        Role role = getRoleByName(request.getRoleName());
+        existingUser.setRole(role);
         // 4. Xử lý đổi ảnh avatar mới nếu có gửi lên file mới
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {

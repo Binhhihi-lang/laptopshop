@@ -124,7 +124,7 @@ public class ProductService {
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             if (currentProduct.getImage() != null) {
-                this.uploadService.handleDeleteFile(currentProduct.getImage(), "product");
+                this.uploadService.handleDeleteFile(currentProduct.getImage());
             }
             String newImage = this.uploadService.handleSaveUploadFile(file, "product");
             currentProduct.setImage(newImage);

@@ -66,7 +66,7 @@ public class ProductRestController {
         Product product = this.productService.getProductById(id);
 
         if (product.getImage() != null) {
-            this.uploadService.handleDeleteFile(product.getImage(), "product");
+            this.uploadService.handleDeleteFile(product.getImage());
         }
 
         this.productService.deleteProductById(id);

@@ -10,8 +10,11 @@ public class CouponCreationRequest {
     private String code;
 
     private Integer discountPercent;
+
     private Long discountAmount;
+
     private LocalDateTime expiryDate;
+
     private Integer usageLimit;
 
     public String getCode() {

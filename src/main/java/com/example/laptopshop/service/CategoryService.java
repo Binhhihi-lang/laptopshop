@@ -83,7 +83,7 @@ public class CategoryService {
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             if (existingCategory.getImage() != null) {
-                this.uploadService.handleDeleteFile(existingCategory.getImage(), "category");
+                this.uploadService.handleDeleteFile(existingCategory.getImage());
             }
             String newImage = this.uploadService.handleSaveUploadFile(file, "category");
             existingCategory.setImage(newImage);

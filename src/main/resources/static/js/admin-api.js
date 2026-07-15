@@ -58,7 +58,8 @@ const CategoryAPI = {
 const ProductAPI = {
   getAll: () => apiRequest('/products'),
   getById: (id) => apiRequest(`/products/${id}`),
-  create: (formData) => apiRequest('/products', { method: 'POST', body: formData }),
+  create: (formData) => apiRequest('/products', { 
+    method: 'POST', body: formData }),
   update: (id, formData) => apiRequest(`/products/${id}`, { method: 'PUT', body: formData }),
   remove: (id) => apiRequest(`/products/${id}`, { method: 'DELETE' }),
 };
@@ -97,19 +98,18 @@ function formatDiscount(coupon) {
 }
 
 // Các hàm tiện ích (helper functions) để hiển thị hình ảnh người dùng, sản phẩm, danh mục
-// Khớp với WebMvcConfig: /images-upload/** -> file:///{upload.directory}
 function avatarUrl(user) {
-  if (user.avatar) return `/images-upload/avatar/${user.avatar}`;
+  if (user.avatar) return user.avatar;
   return `https://ui-avatars.com/api/?background=17B890&color=fff&name=${encodeURIComponent(user.fullName || user.email)}`;
 }
 
 function productImageUrl(product) {
-  if (product.image) return `/images-upload/product/${product.image}`;
+  if (product.image) return product.image;
   return `https://ui-avatars.com/api/?background=6B7280&color=fff&name=${encodeURIComponent(product.name || 'SP')}`;
 }
 
 function categoryImageUrl(category) {
-  if (category.image) return `/images-upload/category/${category.image}`;
+  if (category.image) return category.image;
   return `https://ui-avatars.com/api/?background=2F5FD6&color=fff&name=${encodeURIComponent(category.name || 'DM')}`;
 }
 

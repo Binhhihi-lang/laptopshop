@@ -21,13 +21,9 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    @NotBlank(message = "Email không được để trống") // Chặn trường hợp gửi chuỗi rỗng hoặc chỉ có dấu cách
-    @Email(message = "Định dạng email không hợp lệ") // Tự động check đuôi @gmail.com, @yahoo.com...
     private String email;
 
     @JsonIgnore
-    @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
     private String password;
 
     private String fullName;

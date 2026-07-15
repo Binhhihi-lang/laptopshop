@@ -2,13 +2,11 @@ package com.example.laptopshop.exception;
 
 import com.example.laptopshop.dto.response.ApiResponse;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -32,18 +30,33 @@ public class GlobalExceptionHandler {
 
     // Chuyên bắt lỗi Validate form (khi dùng @Valid / @NotBlank trong DTO)
     // Ví dụ: Người dùng để trống tên sản phẩm, giá tiền bị âm...
-    @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException exception) {
-        String errorMessage = exception.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+    // Cho phép bắt cả 2 loại Exception validation
+    @ExceptionHandler(value = { MethodArgumentNotValidException.class, BindException.class })
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception exception) {
+        String errorMessage = "INVALID_KEY";
+
+        // Trích xuất thông tin lỗi từ đúng loại Exception tương ứng
+        if (exception instanceof MethodArgumentNotValidException ex) {
+            FieldError fieldError = ex.getBindingResult().getFieldError();
+            if (fieldError != null) {
+                errorMessage = fieldError.getDefaultMessage();
+            }
+        } else if (exception instanceof BindException ex) {
+            FieldError fieldError = ex.getBindingResult().getFieldError();
+            if (fieldError != null) {
+                errorMessage = fieldError.getDefaultMessage();
+            }
+        }
+
+        // Tạo đối tượng ErrorCode từ message key nhận được (VD: "INVALID_EMAIL",
+        // "USER_EMAIL_EMPTY")
         ErrorCode errorCode = ErrorCode.valueOf(errorMessage);
 
-        // hàm builder() trong ApiResponse để tạo đối tượng ApiResponse
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(errorCode.getCode());
         apiResponse.setMessage(errorCode.getMessage());
 
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
-
     }
 
     // Bắt các lỗi ngầm định, lỗi hệ thống chưa phân loại (NullPointer, SQL,

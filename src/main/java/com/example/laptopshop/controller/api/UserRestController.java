@@ -2,6 +2,7 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.domain.User;
@@ -10,6 +11,8 @@ import com.example.laptopshop.dto.request.User.UserUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.service.UploadService;
 import com.example.laptopshop.service.UserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -44,7 +47,7 @@ public class UserRestController {
     // 3. Tạo mới người dùng (Nhận dữ liệu dạng form-data để hỗ trợ upload ảnh đại
     // diện)
     @PostMapping
-    public ApiResponse<User> createUser(@ModelAttribute UserCreationRequest request) {
+    public ApiResponse<User> createUser(@Valid @ModelAttribute UserCreationRequest request) {
 
         User savedUser = this.userService.handleCreateUser(request);
         ApiResponse<User> response = new ApiResponse<>();
@@ -54,22 +57,23 @@ public class UserRestController {
 
     // 4. Cập nhật thông tin người dùng
     @PutMapping("/{id}")
-    public ApiResponse<User> updateUser(@PathVariable Long id, @ModelAttribute UserUpdateRequest request) {
-
+    public ApiResponse<User> updateUser(
+            @PathVariable Long id,
+            @Valid @ModelAttribute UserUpdateRequest request) {
         User updatedUser = this.userService.handleUpdateUser(id, request);
         ApiResponse<User> response = new ApiResponse<>();
         response.setResult(updatedUser);
         return response;
     }
 
-    // 5. Xóa người dùng
+    // Xóa người dùng
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteUser(@PathVariable long id) {
         User user = this.userService.getUserByID(id);
 
         // Xóa avatar trước
         if (user.getAvatar() != null) {
-            this.uploadService.handleDeleteFile(user.getAvatar(), "avatar");
+            this.uploadService.handleDeleteFile(user.getAvatar());
         }
 
         this.userService.deleteUserById(id);
