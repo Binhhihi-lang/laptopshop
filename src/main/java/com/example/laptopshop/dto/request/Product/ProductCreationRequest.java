@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.laptopshop.domain.Category;
+
 public class ProductCreationRequest {
 
     @NotBlank(message = "PRODUCT_CODE_EMPTY")
@@ -29,10 +31,9 @@ public class ProductCreationRequest {
     private Double weight;
     private Integer warrantyMonths;
 
-    @NotNull(message = "PRODUCT_CATEGORY_REQUIRED")
-    private Long categoryId;
+    private Category category;
 
-    private MultipartFile inputFile; // Hứng file ảnh sản phẩm trực tiếp trong DTO này luôn, giống UserCreationRequest
+    private MultipartFile inputFile; // Hứng file ảnh sản phẩm trực tiếp trong DTO này luôn,
 
     public String getCode() {
         return code;
@@ -162,19 +163,19 @@ public class ProductCreationRequest {
         this.warrantyMonths = warrantyMonths;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
-
     public MultipartFile getInputFile() {
         return inputFile;
     }
 
     public void setInputFile(MultipartFile inputFile) {
         this.inputFile = inputFile;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
     }
 }

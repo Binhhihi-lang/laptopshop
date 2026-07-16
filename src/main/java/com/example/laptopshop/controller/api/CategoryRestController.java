@@ -11,6 +11,8 @@ import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.service.CategoryService;
 import com.example.laptopshop.service.UploadService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/categories")
 public class CategoryRestController {
@@ -45,7 +47,7 @@ public class CategoryRestController {
     // tiếp bằng Entity Category nữa, toàn bộ map dữ liệu/validate/xử lý ảnh nằm
     // ở Service)
     @PostMapping
-    public ApiResponse<Category> createCategory(@ModelAttribute CategoryCreationRequest request) {
+    public ApiResponse<Category> createCategory(@Valid @ModelAttribute CategoryCreationRequest request) {
         Category savedCategory = this.categoryService.handleCreateCategory(request);
         ApiResponse<Category> response = new ApiResponse<>();
         response.setResult(savedCategory);
@@ -54,7 +56,8 @@ public class CategoryRestController {
 
     // Cập nhật danh mục
     @PutMapping("/{id}")
-    public ApiResponse<Category> updateCategory(@PathVariable long id, @ModelAttribute CategoryUpdateRequest request) {
+    public ApiResponse<Category> updateCategory(@PathVariable long id,
+            @Valid @ModelAttribute CategoryUpdateRequest request) {
         Category updatedCategory = this.categoryService.handleUpdateCategory(id, request);
         ApiResponse<Category> response = new ApiResponse<>();
         response.setResult(updatedCategory);

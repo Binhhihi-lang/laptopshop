@@ -17,6 +17,8 @@ import com.example.laptopshop.dto.request.Coupon.CouponUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.service.CouponService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1")
 public class CouponRestController {
@@ -43,8 +45,9 @@ public class CouponRestController {
 
     // Coupon không có ảnh nên vẫn nhận JSON thuần qua @RequestBody, chỉ đổi từ
     // hứng trực tiếp Entity Coupon sang DTO CouponCreationRequest.
+    // test postman = raw json
     @PostMapping("/coupons")
-    public ApiResponse<Coupon> createCoupon(@RequestBody CouponCreationRequest request) {
+    public ApiResponse<Coupon> createCoupon(@Valid @RequestBody CouponCreationRequest request) {
         Coupon created = this.couponService.createCoupon(request);
         ApiResponse<Coupon> response = new ApiResponse<>();
         response.setResult(created);
@@ -52,7 +55,7 @@ public class CouponRestController {
     }
 
     @PutMapping("/coupons/{id}")
-    public ApiResponse<Coupon> updateCoupon(@PathVariable long id, @RequestBody CouponUpdateRequest request) {
+    public ApiResponse<Coupon> updateCoupon(@Valid @PathVariable long id, @RequestBody CouponUpdateRequest request) {
         Coupon updated = this.couponService.updateCoupon(id, request);
         ApiResponse<Coupon> response = new ApiResponse<>();
         response.setResult(updated);

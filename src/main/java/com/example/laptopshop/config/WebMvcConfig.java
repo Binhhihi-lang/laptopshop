@@ -22,16 +22,4 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 return http.build();
         }
 
-        // Lấy giá trị từ application.properties
-        // 1. Lấy giá trị đường dẫn vật lý (D:/Spring/laptopshop/uploads/) từ file
-        // application.properties
-        @Value("${upload.directory}")
-        private String uploadDirectory;
-
-        @Override
-        public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                // "file:///" là bắt buộc cho Windows để chỉ đường dẫn vật lý trên ổ cứng
-                registry.addResourceHandler("/images-upload/**")
-                                .addResourceLocations("file:///" + uploadDirectory);
-        }
 }

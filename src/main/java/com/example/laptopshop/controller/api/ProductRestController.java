@@ -3,6 +3,7 @@ package com.example.laptopshop.controller.api;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.dto.request.Product.ProductCreationRequest;
@@ -10,6 +11,8 @@ import com.example.laptopshop.dto.request.Product.ProductUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.service.ProductService;
 import com.example.laptopshop.service.UploadService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -43,8 +46,11 @@ public class ProductRestController {
     // phẩm, giống cách làm với User -> Controller không còn hứng trực tiếp bằng
     // Entity Product nữa, toàn bộ map dữ liệu/validate/xử lý ảnh nằm ở Service)
     @PostMapping
-    public ApiResponse<Product> createProduct(@ModelAttribute ProductCreationRequest request) {
-        Product savedProduct = this.productService.handleCreateProduct(request);
+    public ApiResponse<Product> createProduct(
+            @Valid @RequestPart("productInfo") ProductCreationRequest request,
+            @RequestPart(value = "inputFile", required = false) MultipartFile inputFile) {
+
+        Product savedProduct = this.productService.handleCreateProduct(request, inputFile);
         ApiResponse<Product> response = new ApiResponse<>();
         response.setResult(savedProduct);
         return response;
@@ -52,7 +58,8 @@ public class ProductRestController {
 
     // 4. Cập nhật sản phẩm
     @PutMapping("/{id}")
-    public ApiResponse<Product> updateProduct(@PathVariable long id, @ModelAttribute ProductUpdateRequest request) {
+    public ApiResponse<Product> updateProduct(@PathVariable long id,
+            @Valid @ModelAttribute ProductUpdateRequest request) {
         Product updatedProduct = this.productService.handleUpdateProduct(id, request);
         ApiResponse<Product> response = new ApiResponse<>();
         response.setResult(updatedProduct);

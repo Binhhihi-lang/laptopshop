@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.laptopshop.domain.Category;
+
 public class ProductUpdateRequest {
 
     @NotBlank(message = "PRODUCT_CODE_EMPTY")
@@ -31,8 +33,7 @@ public class ProductUpdateRequest {
     private Integer warrantyMonths;
     private boolean active;
 
-    @NotNull(message = "PRODUCT_CATEGORY_REQUIRED")
-    private Long categoryId;
+    private Category category;
 
     private MultipartFile inputFile; // Nhận ảnh mới nếu admin muốn đổi ảnh sản phẩm
 
@@ -180,19 +181,19 @@ public class ProductUpdateRequest {
         this.active = active;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
-
     public MultipartFile getInputFile() {
         return inputFile;
     }
 
     public void setInputFile(MultipartFile inputFile) {
         this.inputFile = inputFile;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
     }
 }

@@ -47,12 +47,11 @@ public class ProductService {
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh và
     // gán Category, rồi lưu DB. Controller không còn hứng trực tiếp bằng Entity
     // Product nữa, giống cách làm với User.
-    public Product handleCreateProduct(ProductCreationRequest request) {
+    public Product handleCreateProduct(ProductCreationRequest request, MultipartFile file) {
         // 1. Validate dữ liệu thô từ DTO
         validateCode(request.getCode(), null);
         validateName(request.getName());
         validatePrice(request.getPrice());
-        Category category = validateAndGetCategory(request.getCategoryId());
 
         // 2. Map dữ liệu từ DTO sang Entity Product
         Product newProduct = new Product();
@@ -72,14 +71,13 @@ public class ProductService {
         newProduct.setOs(request.getOs());
         newProduct.setWeight(request.getWeight());
         newProduct.setWarrantyMonths(request.getWarrantyMonths());
-        newProduct.setCategory(category);
+        newProduct.setCategory(request.getCategory());
 
         // Sản phẩm mới tạo luôn bắt đầu từ 0 lượt bán, không cho client tự set qua form
         // create
         newProduct.setSold(0);
 
         // 3. Xử lý upload ảnh sản phẩm nếu có
-        MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             String image = this.uploadService.handleSaveUploadFile(file, "product");
             newProduct.setImage(image);
@@ -96,7 +94,6 @@ public class ProductService {
         validateCode(request.getCode(), id);
         validateName(request.getName());
         validatePrice(request.getPrice());
-        Category category = validateAndGetCategory(request.getCategoryId());
 
         // 3. Đổ dữ liệu mới từ DTO đè lên Entity cũ
         currentProduct.setCode(request.getCode().trim().toUpperCase());
@@ -117,7 +114,7 @@ public class ProductService {
         currentProduct.setWeight(request.getWeight());
         currentProduct.setWarrantyMonths(request.getWarrantyMonths());
         currentProduct.setActive(request.isActive());
-        currentProduct.setCategory(category);
+        currentProduct.setCategory(request.getCategory());
 
         // 4. Xử lý đổi ảnh mới nếu admin gửi lên file mới, xóa ảnh cũ trước khi lưu ảnh
         // mới
@@ -134,9 +131,6 @@ public class ProductService {
     }
 
     private void validateCode(String code, Long currentId) {
-        if (code == null || code.isBlank()) {
-            throw new AppException(ErrorCode.PRODUCT_CODE_REQUIRED);
-        }
 
         String normalized = code.trim();
         boolean exists = currentId == null
@@ -160,11 +154,4 @@ public class ProductService {
         }
     }
 
-    private Category validateAndGetCategory(Long categoryId) {
-        if (categoryId == null || categoryId <= 0) {
-            throw new AppException(ErrorCode.PRODUCT_CATEGORY_REQUIRED);
-        }
-        // getCategoryById tự ném AppException(CATEGORY_NOT_FOUND) nếu không tồn tại
-        return this.categoryService.getCategoryById(categoryId);
-    }
 }

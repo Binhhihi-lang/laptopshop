@@ -119,13 +119,10 @@ public class CouponService {
         return 0;
     }
 
-    // Validate code + kiểm tra trùng lặp, dùng chung cho cả create (currentId =
-    // null) và update (currentId = id hiện tại, loại trừ chính nó khỏi kiểm tra
+    // Validate code + kiểm tra trùng lặp, dùng chung cho cả create và update
+    // (currentId = id hiện tại, loại trừ chính nó khỏi kiểm tra
     // trùng).
     private void validateCode(String code, Long currentId) {
-        if (code == null || code.isBlank()) {
-            throw new AppException(ErrorCode.COUPON_CODE_REQUIRED);
-        }
 
         String normalized = code.trim();
         boolean exists = currentId == null
