@@ -1,145 +1,185 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tổng quan · Laptopshop Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<link rel="stylesheet" href="/css/admin-style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tổng quan · Laptopshop Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/admin-style.css">
 </head>
+
 <body>
-<div class="admin-shell">
-  <div id="sidebar-placeholder"></div>
-  <div class="admin-content-col">
-    <div id="header-placeholder"></div>
-    <main class="admin-main">
-      <div class="admin-page-title">
-        <div>
-          <h1>Tổng quan</h1>
-          <div class="subtitle">Số liệu nhanh về cửa hàng của bạn</div>
+  <div class="admin-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="admin-content-col">
+      <div id="header-placeholder"></div>
+      <main class="admin-main">
+        <div class="admin-page-title">
+          <div>
+            <h1>Tổng quan</h1>
+            <div class="subtitle">Số liệu nhanh về cửa hàng của bạn</div>
+          </div>
         </div>
-      </div>
 
-      <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-lg-3">
-          <div class="ls-card stat-card">
-            <div class="stat-icon stat-icon-users"><i class="bi bi-people"></i></div>
-            <div class="stat-value" id="statUsers">—</div>
-            <div class="stat-label">Người dùng</div>
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="ls-card stat-card">
+              <div class="stat-icon stat-icon-users"><i class="bi bi-people"></i></div>
+              <div class="stat-value" id="statUsers">—</div>
+              <div class="stat-label">Người dùng</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="ls-card stat-card">
+              <div class="stat-icon stat-icon-products"><i class="bi bi-laptop"></i></div>
+              <div class="stat-value" id="statProducts">—</div>
+              <div class="stat-label">Sản phẩm</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="ls-card stat-card">
+              <div class="stat-icon" style="background:#FDE8EF;color:#C2185B;"><i class="bi bi-tags"></i></div>
+              <div class="stat-value" id="statCategories">—</div>
+              <div class="stat-label">Danh mục</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="ls-card stat-card">
+              <div class="stat-icon stat-icon-orders"><i class="bi bi-receipt"></i></div>
+              <div class="stat-value" id="statOrders">—</div>
+              <div class="stat-label">Đơn hàng</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="ls-card stat-card">
+              <div class="stat-icon stat-icon-admins"><i class="bi bi-shield-check"></i></div>
+              <div class="stat-value" id="statAdmins">—</div>
+              <div class="stat-label">Quản trị viên</div>
+            </div>
           </div>
         </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="ls-card stat-card">
-            <div class="stat-icon stat-icon-products"><i class="bi bi-laptop"></i></div>
-            <div class="stat-value" id="statProducts">—</div>
-            <div class="stat-label">Sản phẩm</div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="ls-card stat-card">
-            <div class="stat-icon" style="background:#FDE8EF;color:#C2185B;"><i class="bi bi-tags"></i></div>
-            <div class="stat-value" id="statCategories">—</div>
-            <div class="stat-label">Danh mục</div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="ls-card stat-card">
-            <div class="stat-icon stat-icon-orders"><i class="bi bi-receipt"></i></div>
-            <div class="stat-value" id="statOrders">—</div>
-            <div class="stat-label">Đơn hàng</div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="ls-card stat-card">
-            <div class="stat-icon stat-icon-admins"><i class="bi bi-shield-check"></i></div>
-            <div class="stat-value" id="statAdmins">—</div>
-            <div class="stat-label">Quản trị viên</div>
-          </div>
-        </div>
-      </div>
 
-      <div class="row g-3 mb-4">
-        <div class="col-lg-6">
-          <div class="ls-card">
-            <h6 class="mb-3" style="font-family: var(--font-display);">Giá trị tồn kho theo danh mục</h6>
-            <div id="stockByCategory" class="text-muted small">Đang tính...</div>
+        <div class="row g-3 mb-4">
+          <div class="col-lg-6">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Giá trị tồn kho theo danh mục</h6>
+              <div id="stockByCategory" class="text-muted small">Đang tính...</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="ls-card">
+              <h6 class="mb-3" style="font-family: var(--font-display);">Sản phẩm sắp hết hàng (&lt; 5)</h6>
+              <div id="lowStockList" class="text-muted small">Đang tính...</div>
+            </div>
           </div>
         </div>
-        <div class="col-lg-6">
-          <div class="ls-card">
-            <h6 class="mb-3" style="font-family: var(--font-display);">Sản phẩm sắp hết hàng (&lt; 5)</h6>
-            <div id="lowStockList" class="text-muted small">Đang tính...</div>
-          </div>
-        </div>
-      </div>
 
-      <div class="ls-card">
-        <h5 class="mb-3" style="font-family: var(--font-display);">Truy cập nhanh</h5>
-        <div class="d-flex flex-wrap gap-2">
-          <a href="/admin/user/list.html" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Quản lý người dùng</a>
-          <a href="/admin/category/list.html" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> Quản lý danh mục</a>
-          <a href="/admin/product/list.html" class="btn btn-outline-secondary"><i class="bi bi-laptop"></i> Quản lý sản phẩm</a>
-          <a href="/admin/order/list.html" class="btn btn-outline-secondary disabled" tabindex="-1" aria-disabled="true"><i class="bi bi-receipt"></i> Quản lý đơn hàng (sắp có)</a>
-          <a href="/admin/coupon/list.html" class="btn btn-outline-secondary disabled" tabindex="-1" aria-disabled="true"><i class="bi bi-ticket-perforated"></i> Mã giảm giá (sắp có)</a>
+        <div class="ls-card">
+          <h5 class="mb-3" style="font-family: var(--font-display);">Truy cập nhanh</h5>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="/admin/user/list.html" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Quản lý người
+              dùng</a>
+            <a href="/admin/category/list.html" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> Quản lý
+              danh mục</a>
+            <a href="/admin/product/list.html" class="btn btn-outline-secondary"><i class="bi bi-laptop"></i> Quản lý
+              sản phẩm</a>
+            <a href="/admin/order/list.html" class="btn btn-outline-secondary disabled" tabindex="-1"
+              aria-disabled="true"><i class="bi bi-receipt"></i> Quản lý đơn hàng (sắp có)</a>
+            <a href="/admin/coupon/list.html" class="btn btn-outline-secondary" tabindex="-1"><i
+                class="bi bi-ticket-perforated"></i> Mã giảm giá</a>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
-</div>
 
-<div id="toast-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/js/scripts.js"></script>
-<script src="/js/admin-api.js"></script>
-<script>
-initAdminLayout('dashboard');
+  <div id="toast-container"></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/scripts.js"></script>
+  <script src="/js/admin-api.js"></script>
+  <script>
+    initAdminLayout('dashboard');
 
-(async function loadStats() {
-  try {
-    const users = await UserAPI.getAll();
-    document.getElementById('statUsers').textContent = users.length;
+    (async function loadStates() {
+      try {
+        const users = await UserAPI.getAll();
+        document.getElementById('statUsers').textContent = users.length;
 
-    const adminCount = users.filter(u => u.role && u.role.name && u.role.name.toUpperCase().includes('ADMIN')).length;
-    document.getElementById('statAdmins').textContent = adminCount;
-  } catch (err) {
-    document.getElementById('statUsers').textContent = '?';
-    document.getElementById('statAdmins').textContent = '?';
-    showToast('Không tải được số liệu người dùng: ' + err.message, 'danger');
-  }
+        const adminCount = users.filter(u => u.role && u.role.name && u.role.name.toUpperCase().includes('ADMIN')).length;
+        document.getElementById('statAdmins').textContent = adminCount;
+      } catch (err) {
+        document.getElementById('statUsers').textContent = '?';
+        document.getElementById('statAdmins').textContent = '?';
+        showToast('Không tải được số liệu người dùng: ' + err.message, 'danger');
+      }
 
-  try {
-    const [products, categories] = await Promise.all([ProductAPI.getAll(), CategoryAPI.getAll()]);
-    document.getElementById('statProducts').textContent = products.length;
-    document.getElementById('statCategories').textContent = categories.length;
+      try {
+        const [products, categories] = await Promise.all([ProductAPI.getAll(), CategoryAPI.getAll()]);
+        document.getElementById('statProducts').textContent = products.length;
+        document.getElementById('statCategories').textContent = categories.length;
 
-    // Giá trị tồn kho = tổng (giá x số lượng) gộp theo danh mục
-    const byCategory = {};
-    products.forEach(p => {
-      const key = p.category ? p.category.name : 'Chưa gán danh mục';
-      byCategory[key] = (byCategory[key] || 0) + (p.price * p.quantity);
+        // Giá trị tồn kho = tổng (giá x số lượng) gộp theo danh mục
+        const byCategory = {};
+        products.forEach(p => {
+          const key = p.category ? p.category.name : 'Chưa gán danh mục';
+          byCategory[key] = (byCategory[key] || 0) + (p.price * p.quantity);
+        });
+        const stockHtml = Object.entries(byCategory)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, value]) => `<div class="d-flex justify-content-between py-1"><span>${name}</span><span class="fw-semibold" style="color:var(--ls-text)">${formatCurrency(value)}</span></div>`)
+          .join('') || 'Chưa có dữ liệu.';
+        document.getElementById('stockByCategory').innerHTML = stockHtml;
+
+        // Sản phẩm sắp hết hàng
+        const lowStock = products.filter(p => p.quantity < 5).sort((a, b) => a.quantity - b.quantity);
+        document.getElementById('lowStockList').innerHTML = lowStock.length
+          ? lowStock.map(p => `<div class="d-flex justify-content-between py-1"><span>${p.name}</span><span class="fw-semibold text-danger">${p.quantity} còn lại</span></div>`).join('')
+          : 'Không có sản phẩm nào sắp hết hàng.';
+      } catch (err) {
+        document.getElementById('statProducts').textContent = '?';
+        document.getElementById('statCategories').textContent = '?';
+      }
+
+      // Order chưa có Service/API hoàn chỉnh -> để placeholder, cập nhật sau khi xong module đó.
+      document.getElementById('statOrders').textContent = '--';
+    })();
+
+    // LOGIC XỬ LÝ ĐĂNG XUẤT (LOGOUT)
+    document.addEventListener('click', async function (e) {
+      // Tìm thẻ <a> hoặc <button> có hành vi logout (qua href, class hoặc id)
+      const logoutBtn = e.target.closest('#logoutBtn, .logout-btn, [href*="logout"]');
+
+      if (logoutBtn) {
+        e.preventDefault(); // Chặn hành vi chuyển trang mặc định của thẻ HTML
+
+        if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
+          try {
+            // Gọi hàm logout từ file admin-api.js của bạn
+            // Lưu ý: Hãy đổi thành AuthAPI.logout() hoặc logout() tùy theo cách bạn khai báo trong file đó nhé!
+            if (typeof AuthAPI !== 'undefined' && typeof AuthAPI.logout === 'function') {
+              await AuthAPI.logout();
+            } else if (typeof logout === 'function') {
+              await logout();
+            }
+          } catch (err) {
+            console.warn('Lỗi gọi API logout ở server (hoặc token hết hạn):', err.message);
+          } finally {
+            // Bất kể API logout của server trả về thành công hay lỗi (ví dụ token hết hạn)
+            // Ta vẫn phải xóa token ở client và đá về trang login
+            localStorage.removeItem('accessToken');
+            window.location.href = '/admin/dashboard/login.html';
+          }
+        }
+      }
     });
-    const stockHtml = Object.entries(byCategory)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, value]) => `<div class="d-flex justify-content-between py-1"><span>${name}</span><span class="fw-semibold" style="color:var(--ls-text)">${formatCurrency(value)}</span></div>`)
-      .join('') || 'Chưa có dữ liệu.';
-    document.getElementById('stockByCategory').innerHTML = stockHtml;
 
-    // Sản phẩm sắp hết hàng
-    const lowStock = products.filter(p => p.quantity < 5).sort((a, b) => a.quantity - b.quantity);
-    document.getElementById('lowStockList').innerHTML = lowStock.length
-      ? lowStock.map(p => `<div class="d-flex justify-content-between py-1"><span>${p.name}</span><span class="fw-semibold text-danger">${p.quantity} còn lại</span></div>`).join('')
-      : 'Không có sản phẩm nào sắp hết hàng.';
-  } catch (err) {
-    document.getElementById('statProducts').textContent = '?';
-    document.getElementById('statCategories').textContent = '?';
-  }
-
-  // Order chưa có Service/API hoàn chỉnh -> để placeholder, cập nhật sau khi xong module đó.
-  document.getElementById('statOrders').textContent = '--';
-})();
-</script>
+  </script>
 </body>
+
 </html>

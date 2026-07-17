@@ -21,6 +21,12 @@ async function loadPartial(targetSelector, url) {
  * Gọi ở cuối mỗi trang admin: initAdminLayout('user');
  */
 function initAdminLayout(activePage) {
+
+  const token = localStorage.getItem('accessToken');
+  // Nếu hoàn toàn không có token, đá ngay về trang login mà không cần đợi API gọi lỗi
+  if (!token) {
+    window.location.href = '/admin/login.html';
+  }
   Promise.all([
     loadPartial('#sidebar-placeholder', '/admin/layout/sidebar.html'),
     loadPartial('#header-placeholder', '/admin/layout/header.html'),
@@ -52,8 +58,21 @@ function showToast(message, type = 'success') {
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>`;
   container.appendChild(toastEl);
-  
+
   const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
   toast.show();
   toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Chặn hành vi cuộn trang lên đầu của thẻ <a href="#">
+            
+            if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?')) {
+                logout(); 
+            }
+        });
+    }
+});

@@ -11,7 +11,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     void deleteById(long id);
 
     // tìm kiếm người dùng theo email
-    List<User> findByEmail(String email);
+    User findByEmail(String email);
 
     boolean existsByEmailIgnoreCase(String email);
 

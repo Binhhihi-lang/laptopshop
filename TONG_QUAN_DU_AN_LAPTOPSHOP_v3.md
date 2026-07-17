@@ -72,9 +72,9 @@ laptopshop/
 │   ├── repository/
 │   │   ├── UserRepository.java
 │   │   ├── RoleRepository.java
-│   │   ├── ProductRepository.java   ⚠️ cần bổ sung existsByCodeIgnoreCase(...), existsByCodeIgnoreCaseAndIdNot(...)
+│   │   ├── ProductRepository.java
 │   │   ├── CategoryRepository.java  ✅ existsByNameIgnoreCase(...)
-│   │   └── CouponRepository.java    ⚠️ cần bổ sung existsByCodeIgnoreCase(...), existsByCodeIgnoreCaseAndIdNot(...)
+│   │   └── CouponRepository.java
 │   └── service/
 │       ├── UserService.java
 │       ├── UploadService.java
@@ -88,8 +88,8 @@ laptopshop/
         ├── admin/layout/header.html, sidebar.html
         ├── admin/user/list.html, create.html, update.html, detail.html         ✅ Đầy đủ
         ├── admin/coupon/list.html, create.html, update.html, detail.html       ✅ Đầy đủ (hỗ trợ chọn % hoặc số tiền cố định)
-        ├── admin/product/                                                      ❌ CHƯA CÓ — bước ưu tiên cao nhất tiếp theo
-        ├── admin/category/                                                     ❌ CHƯA CÓ
+        ├── admin/product/                                                      Đã có
+        ├── admin/category/                                                     Đã có
         ├── client/home.html                 ⚠️ hiện chưa có nội dung đáng kể
         ├── css/admin-style.css, client-style.css
         └── js/scripts.js, admin-api.js (đã có CouponAPI, formatDiscount()), client-api.js ⚠️ còn trống/chưa đáng kể
@@ -102,7 +102,7 @@ laptopshop/
 Hiện tại `domain/` có 8 thành phần chính:
 
 | Entity / Enum | Bảng DB        | Vai trò                               |
-| ------------- | -------------- | -------------------------------------- |
+| ------------- | -------------- | ------------------------------------- |
 | `Role`        | `roles`        | Vai trò tài khoản                     |
 | `User`        | `users`        | Người dùng / quản trị viên            |
 | `Category`    | `categories`   | Danh mục hoặc nhóm sản phẩm           |
@@ -145,20 +145,23 @@ Các field đáng chú ý:
 
 ## 4. Trạng thái từng module
 
-| Module              | Backend                                        | Frontend                                  | Ghi chú                                                          |
-| ------------------- | ----------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
-| **User Admin**      | ✅ Đầy đủ (chuẩn DTO)                            | ✅ Đầy đủ                                  | Module mẫu — pattern DTO gốc để nhân bản cho các module khác      |
-| **Role**            | ✅ Đầy đủ                                        | —                                          | Phục vụ dropdown chọn vai trò                                    |
-| **Dashboard Admin** | ✅ Cơ bản                                        | ✅ Cơ bản                                  | Product/Order còn cần số liệu thật                               |
-| **Category Admin**  | ✅ Đầy đủ (đã refactor DTO, tự xử lý ảnh)         | ❌ Chưa có giao diện admin/category/**    | Backend xong hoàn toàn, chỉ còn thiếu HTML                       |
-| **Product Admin**   | ✅ Đầy đủ (đã refactor DTO, validate code trùng)  | ❌ Chưa có giao diện admin/product/**     | **Ưu tiên cao nhất tiếp theo** — backend đã sẵn sàng chờ giao diện |
-| **Coupon**          | ✅ Đầy đủ (2 kiểu giảm giá, DTO, ErrorCode chuẩn) | ✅ Đầy đủ (list/create/update/detail)      | Module hoàn chỉnh thứ 2 sau User                                  |
-| **Order Admin**     | ⚠️ Mới có entity                                 | ❌ Chưa có                                 | Chưa có repository/service/controller — module lớn tiếp theo      |
-| **OrderDetail**     | ⚠️ Mới có entity                                 | —                                          | Phục vụ chi tiết đơn hàng, cần field snapshot đã có sẵn            |
-| **Client Home**     | ⚠️ Có thể dùng Product API                       | ⚠️ `home.html` còn trống/chưa đáng kể      | Cần dựng giao diện và gọi API                                     |
-| **Client API JS**   | —                                                | ⚠️ `client-api.js` còn trống/chưa đáng kể  | Cần thêm hàm gọi API phía client                                  |
-| **Cart**            | ❌ Chưa có                                       | ❌ Chưa có                                 | Cần thiết kế riêng, thường đi kèm session hoặc bảng riêng          |
-| **Auth/Security**   | ⚠️ `permitAll()` tạm thời, chưa có JWT           | —                                          | Rủi ro lớn nhất về mặt "sẵn sàng phỏng vấn" — xem mục 10           |
+| Module              | Backend                                                            | Frontend                                  | Ghi chú                                                      |
+| ------------------- | ------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------ |
+| **User Admin**      | ✅ Đầy đủ (chuẩn DTO)                                              | ✅ Đầy đủ                                 | Module mẫu — pattern DTO gốc để nhân bản cho các module khác |
+| **Role**            | ✅ Đầy đủ                                                          | —                                         | Phục vụ dropdown chọn vai trò                                |
+| **Dashboard Admin** | ✅ Cơ bản                                                          | ✅ Có                                     |
+| bản                 | Product/Order còn cần số liệu thật                                 |
+| **Category Admin**  | ✅ Đầy đủ (đã refactor DTO, tự xử lý ảnh)                          | Có                                        |
+| category/\*\*       | Backend xong hoàn toàn, chỉ còn thiếu HTML                         |
+| **Product Admin**   | ✅ Đầy đủ (đã refactor DTO, validate code trùng)                   | Có                                        |
+| /product/\*\*       | **Ưu tiên cao nhất tiếp theo** — backend đã sẵn sàng chờ giao diện |
+| **Coupon**          | ✅ Đầy đủ (2 kiểu giảm giá, DTO, ErrorCode chuẩn)                  | ✅ Đầy đủ (list/create/update/detail)     | Module hoàn chỉnh thứ 2 sau User                             |
+| **Order Admin**     | ⚠️ Mới có entity                                                   | ❌ Chưa có                                | Chưa có repository/service/controller — module lớn tiếp theo |
+| **OrderDetail**     | ⚠️ Mới có entity                                                   | —                                         | Phục vụ chi tiết đơn hàng, cần field snapshot đã có sẵn      |
+| **Client Home**     | ⚠️ Có thể dùng Product API                                         | ⚠️ `home.html` còn trống/chưa đáng kể     | Cần dựng giao diện và gọi API                                |
+| **Client API JS**   | —                                                                  | ⚠️ `client-api.js` còn trống/chưa đáng kể | Cần thêm hàm gọi API phía client                             |
+| **Cart**            | ❌ Chưa có                                                         | ❌ Chưa có                                | Cần thiết kế riêng, thường đi kèm session hoặc bảng riêng    |
+| **Auth/Security**   | ⚠️ `permitAll()` tạm thời, chưa có JWT                             | —                                         | Rủi ro lớn nhất về mặt "sẵn sàng phỏng vấn" — xem mục 10     |
 
 ---
 
@@ -196,10 +199,6 @@ Thứ tự học/module mẫu tham khảo theo độ hoàn thiện hiện tại:
 ---
 
 ## 7. Các điểm lệch cần nhớ để sửa sau
-
-1. **Upload folder đang lệch chữ hoa/thường**
-
-   Backend đang gọi `UploadService` với folder `Avatar`/`Product`, trong khi helper frontend tạo URL `/images-upload/avatar/...` và `/images-upload/product/...`. Trên Windows thường vẫn chạy vì không phân biệt hoa/thường, nhưng nên thống nhất để tránh lỗi khi chuyển môi trường (đặc biệt khi deploy lên Linux server).
 
 2. **Client còn rất sơ khai**
 
@@ -291,6 +290,8 @@ Hoặc chạy trực tiếp `LaptopshopApplication.java` từ IDE.
 ### Xác nhận kỹ thuật
 
 - Các thay đổi trên là refactor tầng Service/Controller/DTO, **chưa build lại project sau cùng** — cần bạn tự chạy `mvnw.cmd -q -DskipTests compile` sau khi bổ sung các method Repository còn thiếu (mục 7.4) và các mã `ErrorCode` mới nếu có.
+
+  Đã xong tất cả các DTO và đưa csdl lên aiven.io và cloudinary để lưu trữ ảnh
 
 ---
 

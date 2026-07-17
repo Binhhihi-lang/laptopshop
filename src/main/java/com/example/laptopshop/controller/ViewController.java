@@ -17,8 +17,8 @@ public class ViewController {
     }
 
     @GetMapping("/admin")
-    public String getDashboardPage() {
-        return "redirect:/admin/dashboard/show.html";
+    public String getLoginPage() {
+        return "redirect:/admin/dashboard/login.html";
     }
 
     @GetMapping("/product/{id}")

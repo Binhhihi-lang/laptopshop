@@ -5,34 +5,62 @@ const API_BASE = '/api/v1';
  * Gọi API và tự parse JSON, tự ném lỗi kèm message rõ ràng khi request thất bại.
  */
 async function apiRequest(path, options = {}) {
-    // 1. Gọi dữ liệu từ Server
-    const responseApi = await fetch(`${API_BASE}${path}`, options);
-
-    // 2. Xử lý trường hợp Xóa thành công (HTTP 204 No Content - Không có body JSON)
-    if (responseApi.status === 204) return null;
-
-    // 3. Đọc dữ liệu JSON từ Server trả về ApiResponse chuẩn hóa (có code, message, result)
-    let dataJson = null;
-    const contentType = responseApi.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-        dataJson = await responseApi.json();
+    // 0. Gắn sẵn Authorization: Bearer <token> nếu đã đăng nhập.
+    const token = localStorage.getItem('accessToken');
+    const headers = { ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+ 
+    // 1. Gọi dữ liệu
+    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+ 
+    // 2. Token thiếu/sai/hết hạn -> Tự động đăng xuất
+    if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        window.location.href = '/admin/login.html';
+        return null;
     }
 
-    // 4. Nếu Server trả về mã lỗi HTTP (4xx, 5xx) hoặc mã code nghiệp vụ khác 1000
-    if (!responseApi.ok || (dataJson && dataJson.code && dataJson.code !== 1000)) {
+    if (response.status === 204) return null;
 
-        // Ưu tiên lấy câu message báo lỗi nghiệp vụ từ Backend (ví dụ: "Không tìm thấy mã giảm giá")
-        const message = (dataJson && dataJson.message) || `Đã có lỗi xảy ra (mã ${responseApi.status})`;
+    // 3. Đọc dữ liệu JSON từ Server (Chỉ đọc 1 lần duy nhất và lưu vào dataJson)
+    let dataJson = null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType && contentType.includes('application/json')) {
+        dataJson = await response.json();  // là 1 APi response 
+    }
+ 
+    // 4. Nếu Server trả về mã lỗi HTTP (4xx, 5xx) hoặc mã code nghiệp vụ khác 1000 (Ví dụ: 9999)
+    if (!response.ok || (dataJson && dataJson.code && dataJson.code !== 1000)) {
+        // Ưu tiên lấy câu message báo lỗi nghiệp vụ từ Backend (ví dụ: "INVALID_EMAIL")
+        const message = (dataJson && dataJson.message) || `Đã có lỗi xảy ra (mã ${response.status})`;
         throw new Error(message); // Ném lỗi để file HTML hứng và hiện showToast
     }
 
+    // 5. Trả về kết quả
     // Nếu Backend dùng ApiResponse chuẩn hóa (có trường result)
-    // thì trả thẳng dataJson.result ra ngoài. Nếu không thì trả về dataJson thuần.
     if (dataJson && dataJson.result !== undefined) {
-        return dataJson.result;
+        return dataJson.result; // trả về result bên trong API response 
     }
-
+    
     return dataJson;
+}
+ 
+const AuthAPI = {
+  login: (email, password) => apiRequest('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  }),
+};
+ 
+// Đăng xuất: xóa token khỏi trình duyệt và quay về trang login.
+// Lưu ý: đây chỉ là "quên token" phía client. Server chưa có cơ chế thu hồi
+// (blacklist) token cũ -> nếu ai đó vẫn giữ token thì token đó còn hạn vẫn dùng
+// được cho tới khi hết hạn. Muốn thu hồi thật sự cần thêm Redis (đã ghi chú
+// trong tài liệu JWT bạn gửi, để làm ở giai đoạn sau).
+function logout() {
+  localStorage.removeItem('accessToken');
+  window.location.href = '/admin/login.html';
 }
 
 const UserAPI = {
