@@ -1,5 +1,5 @@
 // Toàn bộ lời gọi API dùng cho khu vực Admin.
-const API_BASE = '/api/v1';
+const API_BASE = '/api/v1/admin';
 
 /**
  * Gọi API và tự parse JSON, tự ném lỗi kèm message rõ ràng khi request thất bại.
@@ -60,7 +60,7 @@ const AuthAPI = {
 // trong tài liệu JWT bạn gửi, để làm ở giai đoạn sau).
 function logout() {
   localStorage.removeItem('accessToken');
-  window.location.href = '/admin/login.html';
+  window.location.href = '/admin/dashboard/login.html';
 }
 
 const UserAPI = {

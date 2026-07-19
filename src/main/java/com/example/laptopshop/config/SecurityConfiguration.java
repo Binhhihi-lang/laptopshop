@@ -35,8 +35,8 @@ public class SecurityConfiguration {
 
     // 2. Cấu hình phân quyền API
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity
                 // mặc định bật cấu hình csrf : là bảo vệ endpoint attack CROT
                 .csrf(AbstractHttpConfigurer::disable) // Tắt CSRF vì làm API (Stateless)
                 // Không dùng session của server nữa, mọi request tự chứng minh danh tính bằng
@@ -44,27 +44,19 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Cho phép tải toàn bộ tài nguyên tĩnh phục vụ giao diện (BẬT LÊN)
+                        // 1. Cho phép tải toàn bộ tài nguyên tĩnh phục vụ giao diện
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/favicon.ico").permitAll()
-                        // Cấu hình các API Public (Ai cũng có thể truy cập mà không cần Token)
-                        .requestMatchers("/api/v1/auth/**").permitAll() // API đăng nhập, introspect
-                        .requestMatchers("/admin/**").permitAll() // trang login
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll() // Khách xem sản phẩm
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll() // Khách xem danh mục
 
-                        // Toàn bộ khu vực quản trị chỉ ADMIN mới được vào. Sửa lại đúng theo path THẬT
-                        // đang tồn tại trong dự án (trước đây rule "/api/v1/admin/**" không khớp
-                        // controller nào cả nên hoàn toàn không có tác dụng).
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/roles/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/coupons/**").hasRole("ADMIN") // Chỉ ADMIN mới quản lý coupon
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasRole("ADMIN")
+                        // Các tài nguyên giao diện của admin
+                        .requestMatchers("/admin/**").permitAll()
+                        .requestMatchers("/api/v1/admin/auth/**").permitAll()
+
+                        // Toàn bộ khu vực quản trị chỉ ADMIN mới được vào.
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
+                        // Của khách hàng
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/client/**").permitAll()
 
                         // Tất cả các request khác đều bắt buộc phải đăng nhập (Có token hợp lệ)
                         .anyRequest().authenticated())
@@ -79,7 +71,7 @@ public class SecurityConfiguration {
                 // whitelabel error mặc định của Spring
                 );
 
-        return http.build();
+        return httpSecurity.build();
     }
 
     // 4. Bean giải mã & verify chữ ký JWT (đối xứng, thuật toán HS512, cùng key

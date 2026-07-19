@@ -75,18 +75,11 @@ public class UserService {
         }
     }
 
-    public void validatePassword(String password) {
-        if (password == null || password.length() < 8) {
-            throw new AppException(ErrorCode.INVALID_PASSWORD);
-        }
-    }
-
     // nhận về DTO UserCreationRequest, validate dữ liệu, map sang Entity User, mã
     // hóa mật khẩu, lưu xuống DB
     public User handleCreateUser(UserCreationRequest request) {
         // 1. Validate dữ liệu thô từ DTO
         validateEmail(request.getEmail(), null);
-        validatePassword(request.getPassword());
 
         // 2. Map dữ liệu từ DTO sang Entity User
         User newUser = new User();
@@ -106,8 +99,7 @@ public class UserService {
             newUser.setAvatar(avatarName);
         }
 
-        // 5. Tìm và gán Role (Giả định logic gán role của bạn)
-        // newUser.setRole(this.getRoleByName(request.getRoleName()));
+        newUser.setRole(this.getRoleByName(request.getRoleName()));
 
         return this.userRepository.save(newUser);
     }

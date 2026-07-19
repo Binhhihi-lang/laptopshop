@@ -18,7 +18,7 @@ import com.nimbusds.jose.JOSEException;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/admin/auth")
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;

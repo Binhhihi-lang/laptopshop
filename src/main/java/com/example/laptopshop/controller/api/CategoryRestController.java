@@ -14,7 +14,7 @@ import com.example.laptopshop.service.UploadService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/categories")
+@RequestMapping("/api/v1/admin/categories")
 public class CategoryRestController {
 
     private final CategoryService categoryService;

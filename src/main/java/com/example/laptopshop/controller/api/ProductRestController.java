@@ -15,7 +15,7 @@ import com.example.laptopshop.service.UploadService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/v1/admin/products")
 public class ProductRestController {
 
     private final ProductService productService;

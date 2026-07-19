@@ -15,7 +15,7 @@ import com.example.laptopshop.service.UserService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/v1/admin/users")
 public class UserRestController {
 
     private final UserService userService;

@@ -11,7 +11,7 @@ public class UserCreationRequest {
     private String email;
 
     @NotBlank(message = "USER_PASSWORD_EMPTY")
-    @Size(min = 8, message = "INVALID_PASSWORD")
+    @Size(min = 6, message = "INVALID_PASSWORD")
     private String password;
 
     private String fullName;

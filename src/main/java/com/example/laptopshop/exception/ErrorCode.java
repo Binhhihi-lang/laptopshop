@@ -7,13 +7,12 @@ public enum ErrorCode {
     INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST),
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống không xác định!", HttpStatus.INTERNAL_SERVER_ERROR),
     DB_VIOLATION(9001, "Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc cơ sở dữ liệu!", HttpStatus.BAD_REQUEST),
-    
 
     // === USER MODULE (1000 - 1999) ===
     USER_NOT_FOUND(1001, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     USER_EXISTS(1002, "Người dùng (Email) đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_USER_DATA(1003, "Dữ liệu người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
-    INVALID_PASSWORD(1004, "Mật khẩu phải có ít nhất 8 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD(1004, "Mật khẩu phải có ít nhất 6 ký tự", HttpStatus.BAD_REQUEST),
     UNAUTHENTICATED(1005, "Đăng nhập thất bại, sai tài khoản hoặc mật khẩu", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1006, "Bạn không có quyền truy cập chức năng này", HttpStatus.FORBIDDEN),
     USER_EMAIL_EMPTY(1007, "Email người dùng không được để trống", HttpStatus.BAD_REQUEST),

@@ -20,7 +20,7 @@ import com.example.laptopshop.service.CouponService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/admin")
 public class CouponRestController {
 
     private final CouponService couponService;

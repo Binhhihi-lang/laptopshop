@@ -12,7 +12,7 @@ import com.example.laptopshop.repository.RoleRepository;
 // Controller nhỏ, chỉ phục vụ lấy danh sách Role để đổ vào dropdown ở giao diện
 // (form tạo/sửa User cần chọn ROLE_ADMIN / ROLE_USER)
 @RestController
-@RequestMapping("/api/v1/roles")
+@RequestMapping("/api/v1/admin/roles")
 public class RoleRestController {
 
     private final RoleRepository roleRepository;

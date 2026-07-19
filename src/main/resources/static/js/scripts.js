@@ -21,25 +21,53 @@ async function loadPartial(targetSelector, url) {
  * Gọi ở cuối mỗi trang admin: initAdminLayout('user');
  */
 function initAdminLayout(activePage) {
-
   const token = localStorage.getItem('accessToken');
-  // Nếu hoàn toàn không có token, đá ngay về trang login mà không cần đợi API gọi lỗi
-  if (!token) {
-    window.location.href = '/admin/login.html';
-  }
+
   Promise.all([
     loadPartial('#sidebar-placeholder', '/admin/layout/sidebar.html'),
     loadPartial('#header-placeholder', '/admin/layout/header.html'),
   ]).then(() => {
+    // 1. Đánh dấu active menu
     document.querySelectorAll('.admin-sidebar .nav-link').forEach((link) => {
       if (link.dataset.page === activePage) link.classList.add('active');
     });
+
+    // 2. Toggle sidebar mobile
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
       document.getElementById('adminSidebar')?.classList.toggle('open');
     });
+
+    // hiển thị tên ADMIN
+    try {
+      const base64Url = token.split('.')[1]; 
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/'); 
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const payloadData = JSON.parse(jsonPayload);
+      const adminNameEl = document.getElementById("adminName");
+      if (adminNameEl && payloadData.sub) {
+          adminNameEl.innerText = payloadData.sub; // Set họ tên user vào thẻ <small id="adminName">
+      }
+    } catch (error) {
+      console.error("Lỗi giải mã token hiển thị tên admin:", error);
+    }
+
+
+    // Đăng xuất 
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?')) {
+                logout(); // Gọi hàm logout() trong file admin-js của bạn
+            }
+        });
+    }
+
   });
 }
-
 /**
  * Hiện toast thông báo góc phải màn hình. Cần có <div id="toast-container"> trong trang.
  */
@@ -63,16 +91,3 @@ function showToast(message, type = 'success') {
   toast.show();
   toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
-document.addEventListener('DOMContentLoaded', () => {
-    const logoutBtn = document.getElementById('logoutBtn');
-    
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Chặn hành vi cuộn trang lên đầu của thẻ <a href="#">
-            
-            if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?')) {
-                logout(); 
-            }
-        });
-    }
-});

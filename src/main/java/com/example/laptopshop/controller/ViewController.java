@@ -13,21 +13,12 @@ public class ViewController {
 
     @GetMapping("/")
     public String getHomePage() {
-        return "redirect:/client/home.html";
+        return "redirect:/client/index.html";
     }
 
     @GetMapping("/admin")
     public String getLoginPage() {
         return "redirect:/admin/dashboard/login.html";
     }
-
-    @GetMapping("/product/{id}")
-    public String getProductDetailPage(@PathVariable long id) {
-        return "redirect:/client/product-detail.html?id=" + id;
-    }
-
-    // ---- Đã XÓA 5 mapping /admin/user/** ----
-    // Không cần nữa vì đã có static/admin/user/*.html tự được Spring Boot
-    // serve trực tiếp, không cần Controller trung gian.
 
 }
