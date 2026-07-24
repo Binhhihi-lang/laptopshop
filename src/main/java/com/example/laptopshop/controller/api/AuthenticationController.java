@@ -2,6 +2,7 @@ package com.example.laptopshop.controller.api;
 
 import java.text.ParseException;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +30,7 @@ public class AuthenticationController {
 
     // Đăng nhập bằng email + password, trả về JWT nếu đúng
     @PostMapping("/login")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request) {
         AuthenticationResponse result = this.authenticationService.authenticate(request);
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
@@ -38,6 +40,7 @@ public class AuthenticationController {
 
     // Kiểm tra 1 token còn hợp lệ không (chữ ký đúng + chưa hết hạn)
     @PostMapping("/introspect")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request)
             throws JOSEException, ParseException {
         IntrospectResponse result = this.authenticationService.introspect(request);

@@ -26,6 +26,11 @@ public class SecurityConfiguration {
     // ký token
     @Value("${jwt.signerKey}")
     private String signerKey;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    public SecurityConfiguration(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -66,9 +71,9 @@ public class SecurityConfiguration {
                         .jwt(jwtConfigurer -> jwtConfigurer
                                 .decoder(jwtDecoder())
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                // Token thiếu/sai/hết hạn -> trả JSON đúng format ApiResponse thay vì
-                // whitelabel error mặc định của Spring
-                );
+                        // bắt lỗi 401
+                        // Token thiếu/sai/hết hạn -> trả JSON đúng format ApiResponse
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint));
 
         return httpSecurity.build();
     }
