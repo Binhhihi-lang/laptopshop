@@ -1,26 +1,17 @@
-package com.example.laptopshop.dto.request.User;
+package com.example.laptopshop.dto.response.User;
 
 import java.util.List;
 
-import org.springframework.web.multipart.MultipartFile;
+public class UserResponse {
 
-import jakarta.validation.constraints.NotEmpty;
-
-public class UserUpdateRequest {
-    private String email; // Dùng để validate trùng lặp nếu họ muốn đổi email
+    private String id;
+    private String email;
     private String fullName;
     private String phone;
     private String address;
-
-    @NotEmpty(message = "USER_ROLES_EMPTY")
+    private String avatar;
     private List<String> roleNames;
 
-    private MultipartFile inputFile; // Nhận ảnh mới nếu họ muốn đổi avatar
-
-    public UserUpdateRequest() {
-    }
-
-    // Getter và Setter thuần
     public String getEmail() {
         return email;
     }
@@ -53,12 +44,12 @@ public class UserUpdateRequest {
         this.address = address;
     }
 
-    public MultipartFile getInputFile() {
-        return inputFile;
+    public String getAvatar() {
+        return avatar;
     }
 
-    public void setInputFile(MultipartFile inputFile) {
-        this.inputFile = inputFile;
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 
     public List<String> getRoleNames() {
@@ -69,4 +60,11 @@ public class UserUpdateRequest {
         this.roleNames = roleNames;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 }

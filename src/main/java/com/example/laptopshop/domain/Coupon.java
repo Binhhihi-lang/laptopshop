@@ -13,8 +13,8 @@ import jakarta.persistence.Table;
 @Table(name = "coupons")
 public class Coupon {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @Column(unique = true, nullable = false)
     private String code; // mã giảm giá, ví dụ "GIAM10"
@@ -35,11 +35,6 @@ public class Coupon {
     private Integer usedCount = 0; // số lượt đã dùng
 
     private boolean active = true; // true: còn dùng được, false: đã khóa
-
-    // TODO: t getter/setter
-    public long getId() {
-        return id;
-    }
 
     public String getCode() {
         return code;
@@ -95,5 +90,13 @@ public class Coupon {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

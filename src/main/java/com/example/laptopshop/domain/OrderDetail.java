@@ -14,8 +14,8 @@ import jakarta.persistence.Table;
 public class OrderDetail {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
     private long quantity;
     private double price; // giá tại thời điểm mua (giữ nguyên dù giá sản phẩm sau này đổi)
     private String productCode; // mã sản phẩm tại thời điểm mua
@@ -30,14 +30,6 @@ public class OrderDetail {
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public long getQuantity() {
         return quantity;
@@ -93,5 +85,13 @@ public class OrderDetail {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

@@ -5,7 +5,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -86,11 +85,14 @@ public class SecurityConfiguration {
     }
 
     // 5. Map claim "scope" trong token (vd giá trị "ADMIN") thành quyền Spring
+    // Customize lại SCOPE_ADMIN
     // Security "ROLE_ADMIN" -> để .hasRole("ADMIN") ở trên hoạt động đúng
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_"); // lấy chữ 'ADMIN' trong claim 'scope', rồi thêm chữ
+                                                                 // 'ROLE_' vào đằng trước"
+        // Chỉ định ĐÚNG NƠI lấy quyền: Tìm cái key tên là "scope" trong Payload
         grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
 
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

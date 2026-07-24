@@ -46,15 +46,20 @@ if (!userId) window.location.href = '/admin/user/list.html';
   try {
     const u = await UserAPI.getById(userId);
     document.getElementById('subtitleText').textContent = u.email;
-    const roleName = u.role ? u.role.name : 'Chưa gán';
-    const roleClass = roleName.toUpperCase().includes('ADMIN') ? 'role-admin' : 'role-user';
+    // UserResponse trả roleNames (List<String>), 1 user giờ có thể có nhiều
+    // vai trò cùng lúc -> hiển thị mỗi role 1 badge riêng
+    const roleNames = u.roleNames && u.roleNames.length ? u.roleNames : ['Chưa gán'];
+    const roleBadges = roleNames.map(name => {
+      const cls = name.toUpperCase().includes('ADMIN') ? 'role-admin' : 'role-user';
+      return `<span class="role-badge ${cls} me-1">${name}</span>`;
+    }).join('');
 
     document.getElementById('detailCard').innerHTML = `
       <div class="d-flex align-items-center gap-3 mb-4">
         <img class="avatar-preview" src="${avatarUrl(u)}" alt="">
         <div>
           <div class="fs-5 fw-semibold">${u.fullName || '(chưa đặt tên)'}</div>
-          <span class="role-badge ${roleClass}">${roleName}</span>
+          <div>${roleBadges}</div>
         </div>
       </div>
       <dl class="row mb-0">

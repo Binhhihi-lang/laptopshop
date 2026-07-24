@@ -8,75 +8,82 @@ import org.springframework.stereotype.Service;
 import com.example.laptopshop.domain.Coupon;
 import com.example.laptopshop.dto.request.Coupon.CouponCreationRequest;
 import com.example.laptopshop.dto.request.Coupon.CouponUpdateRequest;
+import com.example.laptopshop.dto.response.Coupon.CouponResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
+import com.example.laptopshop.mapper.CouponMapper;
 import com.example.laptopshop.repository.CouponRepository;
 
 @Service
 public class CouponService {
 
     private final CouponRepository couponRepository;
+    private final CouponMapper couponMapper;
 
-    public CouponService(CouponRepository couponRepository) {
+    public CouponService(CouponRepository couponRepository, CouponMapper couponMapper) {
         this.couponRepository = couponRepository;
+        this.couponMapper = couponMapper;
     }
 
-    public List<Coupon> getAllCoupons() {
-        return this.couponRepository.findAll();
+    public List<CouponResponse> getAllCoupons() {
+        List<Coupon> couList = this.couponRepository.findAll();
+        return this.couponMapper.toResponseList(couList);
     }
 
-    public Coupon getCouponById(long id) {
-        Coupon coupon = this.couponRepository.findById(id);
-        if (coupon == null) {
-            throw new AppException(ErrorCode.COUPON_NOT_FOUND);
-        }
-        return coupon;
+    public Coupon getCouponById(String id) {
+        return this.couponRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
+    }
+
+    public CouponResponse getCouponResponseById(String id) {
+        Coupon coupon = getCouponById(id);
+        return this.couponMapper.toResponse(coupon);
     }
 
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity rồi lưu DB.
     // Controller không còn hứng trực tiếp bằng Entity Coupon nữa, giống cách làm
     // với User/Product/Category.
-    public Coupon createCoupon(CouponCreationRequest request) {
+    public CouponResponse createCoupon(CouponCreationRequest request) {
         validateCode(request.getCode(), null);
         validateDiscountValue(request.getDiscountPercent(), request.getDiscountAmount());
 
-        Coupon coupon = new Coupon();
+        // Map các field thuần (discountPercent, discountAmount, expiryDate) từ DTO
+        // sang Entity qua MapStruct. code/usageLimit/usedCount KHÔNG được map ở
+        // đây (đã ignore trong CouponMapper) vì cần xử lý riêng bên dưới.
+        Coupon coupon = this.couponMapper.toEntity(request);
         coupon.setCode(request.getCode().trim().toUpperCase());
-        coupon.setDiscountPercent(request.getDiscountPercent());
-        coupon.setDiscountAmount(request.getDiscountAmount());
-        coupon.setExpiryDate(request.getExpiryDate());
         coupon.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
 
         // Coupon mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         coupon.setUsedCount(0);
-
-        return this.couponRepository.save(coupon);
+        Coupon couponSaved = this.couponRepository.save(coupon);
+        return this.couponMapper.toResponse(couponSaved);
     }
 
     // Cập nhật thông tin coupon theo id
-    public Coupon updateCoupon(long id, CouponUpdateRequest request) {
+    public CouponResponse updateCoupon(String id, CouponUpdateRequest request) {
         Coupon coupon = getCouponById(id);
 
         validateCode(request.getCode(), id);
         validateDiscountValue(request.getDiscountPercent(), request.getDiscountAmount());
 
+        // Đổ các field thuần (discountPercent, discountAmount, expiryDate, active)
+        // từ DTO đè lên Entity cũ qua MapStruct (@MappingTarget), rồi set riêng
+        // code/usageLimit bên dưới
+        this.couponMapper.updateEntity(request, coupon);
         coupon.setCode(request.getCode().trim().toUpperCase());
-        coupon.setDiscountPercent(request.getDiscountPercent());
-        coupon.setDiscountAmount(request.getDiscountAmount());
-        coupon.setExpiryDate(request.getExpiryDate());
         coupon.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
-        coupon.setActive(request.isActive());
 
         // usedCount KHÔNG cho cập nhật thủ công qua form update, chỉ hệ thống tự tăng
         // khi coupon được áp dụng vào đơn hàng
-
-        return this.couponRepository.save(coupon);
+        Coupon couponUpdated = this.couponRepository.save(coupon);
+        return this.couponMapper.toResponse(couponUpdated);
     }
 
     // Xóa coupon theo id
-    public void deleteCoupon(long id) {
+    public void deleteCoupon(String id) {
         Coupon coupon = getCouponById(id);
         this.couponRepository.delete(coupon);
     }
@@ -122,7 +129,7 @@ public class CouponService {
     // Validate code + kiểm tra trùng lặp, dùng chung cho cả create và update
     // (currentId = id hiện tại, loại trừ chính nó khỏi kiểm tra
     // trùng).
-    private void validateCode(String code, Long currentId) {
+    private void validateCode(String code, String currentId) {
 
         String normalized = code.trim();
         boolean exists = currentId == null

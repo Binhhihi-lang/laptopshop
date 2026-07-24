@@ -2,7 +2,6 @@ package com.example.laptopshop.domain;
 
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,8 +13,8 @@ import jakarta.persistence.Table;
 @Table(name = "categories")
 public class Category {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     private String name; // Tên danh mục, ví dụ: "Laptop Gaming", "Laptop Văn phòng", "Laptop Đồ họa"
     private String slug; // Dùng cho URL/lọc, ví dụ: laptop-gaming, laptop-van-phong
@@ -26,16 +25,7 @@ public class Category {
 
     // 1 category - nhiều product
     @OneToMany(mappedBy = "category")
-    @JsonIgnore // tránh vòng lặp vô hạn khi lấy dữ liệu category kèm danh sách product
     private List<Product> products;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public String getName() {
         return name;
@@ -97,5 +87,13 @@ public class Category {
     public String toString() {
         return "Category [id=" + id + ", name=" + name + ", slug=" + slug + ", description=" + description
                 + ", image=" + image + ", displayOrder=" + displayOrder + ", active=" + active + "]";
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

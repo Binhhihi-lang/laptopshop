@@ -16,8 +16,8 @@ import jakarta.persistence.Table;
 @Table(name = "products")
 public class Product {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     // Mã SKU sản phẩm, ví dụ "IP15PM-256" — CHỈ dùng để hiển thị/tìm kiếm,
     // KHÔNG dùng để join dữ liệu (OrderDetail vẫn join qua id chuẩn quan hệ).
@@ -58,14 +58,6 @@ public class Product {
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getCode() {
@@ -243,5 +235,13 @@ public class Product {
                 + sold + ", factory=" + factory + ", target=" + target + ", cpu=" + cpu + ", ram=" + ram
                 + ", storage=" + storage + ", gpu=" + gpu + ", screen=" + screen + ", os=" + os + ", weight="
                 + weight + ", warrantyMonths=" + warrantyMonths + ", active=" + active + "]";
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

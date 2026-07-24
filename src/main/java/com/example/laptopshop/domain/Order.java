@@ -20,8 +20,8 @@ import jakarta.persistence.Table;
 @Table(name = "orders")
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @Column(unique = true)
     private String orderCode; // mã đơn hàng hiển thị cho khách, ví dụ "DH07114752"
@@ -58,15 +58,6 @@ public class Order {
         if (this.status == null) {
             this.status = OrderStatus.PENDING;
         }
-    }
-
-    // getter/setter
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getOrderCode() {
@@ -131,6 +122,14 @@ public class Order {
 
     public void setOrderDetails(List<OrderDetail> orderDetails) {
         this.orderDetails = orderDetails;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
 }

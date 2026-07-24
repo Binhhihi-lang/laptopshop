@@ -1,5 +1,7 @@
 package com.example.laptopshop.dto.request.User;
 
+import java.util.List;
+
 import jakarta.validation.constraints.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,7 +19,12 @@ public class UserCreationRequest {
     private String fullName;
     private String address;
     private String phone;
-    private String roleName;
+
+    // Đổi từ roleName (String, 1 role) sang roleNames (List<String>, nhiều
+    // role). Form-data gửi nhiều field cùng tên "roleNames" (vd checkbox nhiều
+    // lựa chọn), Spring tự bind thành List<String>.
+    @NotEmpty(message = "USER_ROLES_EMPTY")
+    private List<String> roleNames;
 
     private MultipartFile inputFile; // Hứng file ảnh avatar trực tiếp trong DTO này luôn!
 
@@ -49,14 +56,6 @@ public class UserCreationRequest {
         return address;
     }
 
-    public MultipartFile getInputFile() {
-        return inputFile;
-    }
-
-    public void setInputFile(MultipartFile inputFile) {
-        this.inputFile = inputFile;
-    }
-
     public void setAddress(String address) {
         this.address = address;
     }
@@ -69,12 +68,20 @@ public class UserCreationRequest {
         this.phone = phone;
     }
 
-    public String getRoleName() {
-        return roleName;
+    public void setRoleNames(List<String> roleNames) {
+        this.roleNames = roleNames;
     }
 
-    public void setRoleName(String roleName) {
-        this.roleName = roleName;
+    public MultipartFile getInputFile() {
+        return inputFile;
+    }
+
+    public void setInputFile(MultipartFile inputFile) {
+        this.inputFile = inputFile;
+    }
+
+    public List<String> getRoleNames() {
+        return roleNames;
     }
 
 }

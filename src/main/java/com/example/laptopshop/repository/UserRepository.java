@@ -1,14 +1,10 @@
 package com.example.laptopshop.repository;
 
-import java.util.List;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.laptopshop.domain.User;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, String> {
     User save(User user);
-
-    void deleteById(long id);
 
     // tìm kiếm người dùng theo email
     User findByEmail(String email);
@@ -18,9 +14,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Dùng cho Chỉnh sửa: Kiểm tra email có trùng với ai khác hay không
     // Nếu email trùng với chính nó thì không sao, nhưng nếu trùng với người khác
     // thì báo lỗi
-    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, String id);
 
-    // tìm kiếm người dùng theo id
-    User findById(long id);
-
+    boolean existsByEmail(String email);
 }

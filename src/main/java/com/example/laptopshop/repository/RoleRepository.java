@@ -1,11 +1,13 @@
 package com.example.laptopshop.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.laptopshop.domain.Role;
 
-public interface RoleRepository extends JpaRepository<Role, Long> {
+public interface RoleRepository extends JpaRepository<Role, String> {
 
     // tìm kiếm role theo tên để hiện thị ds role đổ vào combobox khi tạo/sửa user
-    Role findByName(String name);
+    Optional<Role> findByName(String name);
 }

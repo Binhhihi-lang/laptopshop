@@ -344,14 +344,12 @@ Dưới đây là lộ trình được sắp theo mức độ **"nhà tuyển d�
 ### Gợi ý thứ tự làm cụ thể (rút gọn thành checklist)
 
 1. ✅ ~~User/Product/Category/Coupon CRUD chuẩn DTO~~ (đã xong)
-2. ⬜ `GlobalExceptionHandler` + bật `@Valid`
-3. ⬜ Giao diện admin Product + Category (đang có backend, thiếu HTML)
-4. ⬜ Spring Security + JWT + phân quyền
-5. ⬜ Cart + Order + OrderDetail (kèm `@Transactional`)
-6. ⬜ Pagination cho Product/Order
-7. ⬜ Unit test cho Service quan trọng
-8. ⬜ Swagger + Dockerize
-9. ⬜ (Tùy thời gian) Thanh toán thật, Redis cache, CI
+2. ⬜ Spring Security + JWT + phân quyền
+3. ⬜ Cart + Order + OrderDetail (kèm `@Transactional`)
+4. ⬜ Pagination cho Product/Order
+5. ⬜ Unit test cho Service quan trọng
+6. ⬜ Swagger + Dockerize
+7. ⬜ (Tùy thời gian) Thanh toán thật, Redis cache, CI
 
 Nếu mục tiêu gần nhất là buổi phỏng vấn thực tập, ưu tiên **1 → 4 → 5** trước — đó là bộ 3 chủ đề gần như chắc chắn được hỏi (xử lý lỗi, bảo mật, transaction), sau đó mới quay lại làm đẹp giao diện Product/Category.
 

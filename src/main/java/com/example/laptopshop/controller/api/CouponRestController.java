@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.laptopshop.domain.Coupon;
 import com.example.laptopshop.dto.request.Coupon.CouponCreationRequest;
 import com.example.laptopshop.dto.request.Coupon.CouponUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
+import com.example.laptopshop.dto.response.Coupon.CouponResponse;
 import com.example.laptopshop.service.CouponService;
 
 import jakarta.validation.Valid;
@@ -30,16 +30,18 @@ public class CouponRestController {
     }
 
     @GetMapping("/coupons")
-    public ApiResponse<List<Coupon>> getAllCoupons() {
-        ApiResponse<List<Coupon>> response = new ApiResponse<>();
-        response.setResult(this.couponService.getAllCoupons());
+    public ApiResponse<List<CouponResponse>> getAllCoupons() {
+        List<CouponResponse> coupons = this.couponService.getAllCoupons();
+        ApiResponse<List<CouponResponse>> response = new ApiResponse<>();
+        response.setResult(coupons);
         return response;
     }
 
     @GetMapping("/coupons/{id}")
-    public ApiResponse<Coupon> getCouponById(@PathVariable long id) {
-        ApiResponse<Coupon> response = new ApiResponse<>();
-        response.setResult(this.couponService.getCouponById(id));
+    public ApiResponse<CouponResponse> getCouponById(@PathVariable String id) {
+        CouponResponse coupon = this.couponService.getCouponResponseById(id);
+        ApiResponse<CouponResponse> response = new ApiResponse<>();
+        response.setResult(coupon);
         return response;
     }
 
@@ -47,23 +49,27 @@ public class CouponRestController {
     // hứng trực tiếp Entity Coupon sang DTO CouponCreationRequest.
     // test postman = raw json
     @PostMapping("/coupons")
-    public ApiResponse<Coupon> createCoupon(@Valid @RequestBody CouponCreationRequest request) {
-        Coupon created = this.couponService.createCoupon(request);
-        ApiResponse<Coupon> response = new ApiResponse<>();
+    public ApiResponse<CouponResponse> createCoupon(@Valid @RequestBody CouponCreationRequest request) {
+        CouponResponse created = this.couponService.createCoupon(request);
+        ApiResponse<CouponResponse> response = new ApiResponse<>();
         response.setResult(created);
         return response;
     }
 
+    // Sửa lại vị trí @Valid: đặt trên @PathVariable long id không có tác dụng gì
+    // (kiểu long không có gì để validate), @Valid phải nằm ở @RequestBody mới
+    // kích hoạt @NotBlank/@NotNull bên trong CouponUpdateRequest.
     @PutMapping("/coupons/{id}")
-    public ApiResponse<Coupon> updateCoupon(@Valid @PathVariable long id, @RequestBody CouponUpdateRequest request) {
-        Coupon updated = this.couponService.updateCoupon(id, request);
-        ApiResponse<Coupon> response = new ApiResponse<>();
+    public ApiResponse<CouponResponse> updateCoupon(@PathVariable String id,
+            @Valid @RequestBody CouponUpdateRequest request) {
+        CouponResponse updated = this.couponService.updateCoupon(id, request);
+        ApiResponse<CouponResponse> response = new ApiResponse<>();
         response.setResult(updated);
         return response;
     }
 
     @DeleteMapping("/coupons/{id}")
-    public ApiResponse<Void> deleteCoupon(@PathVariable long id) {
+    public ApiResponse<Void> deleteCoupon(@PathVariable String id) {
         this.couponService.deleteCoupon(id);
         ApiResponse<Void> response = new ApiResponse<>();
         response.setResult(null);

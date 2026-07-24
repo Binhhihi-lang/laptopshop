@@ -61,9 +61,14 @@
                 <label class="form-label">Địa chỉ</label>
                 <input type="text" class="form-control" id="address">
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Vai trò</label>
-                <select class="form-select" id="roleName"></select>
+              <div class="col-12">
+                <label class="form-label d-block">Vai trò <span class="text-danger">*</span></label>
+                <div id="roleNamesWrap" class="d-flex flex-wrap gap-3">
+                  <span class="text-muted small">Đang tải danh sách vai trò...</span>
+                </div>
+                <div class="invalid-feedback d-block d-none" id="roleNamesError">
+                  Chọn ít nhất 1 vai trò.
+                </div>
               </div>
             </div>
 
@@ -85,12 +90,18 @@
   <script>
     initAdminLayout('user');
 
-    // load danh sách Quyền từ API và hiển thị lên select
+    // load danh sách Quyền từ API và hiển thị thành nhóm checkbox (thay vì
+    // dropdown chọn 1) vì 1 user giờ có thể có nhiều Role cùng lúc
     (async function loadRoles() {
       try {
         const roles = await RoleAPI.getAll();
-        const select = document.getElementById('roleName');
-        select.innerHTML = roles.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        const wrap = document.getElementById('roleNamesWrap');
+        wrap.innerHTML = roles.map(r => `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="roleNames" value="${r.name}" id="role-${r.name}">
+            <label class="form-check-label" for="role-${r.name}">${r.name}</label>
+          </div>
+        `).join('');
       } catch (err) {
         showToast('Không tải được danh sách vai trò: ' + err.message, 'danger');
       }
@@ -107,11 +118,15 @@
       e.preventDefault();
       if (!e.target.checkValidity()) { e.target.reportValidity(); return; }
 
+      // Checkbox group không có validate "required" tự nhiên của HTML form
+      // -> tự kiểm tra phải chọn ít nhất 1 vai trò
+      const checkedRoles = Array.from(document.querySelectorAll('input[name="roleNames"]:checked'));
+      document.getElementById('roleNamesError').classList.toggle('d-none', checkedRoles.length > 0);
+      if (checkedRoles.length === 0) return;
+
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Đang lưu...';
-
-      console.log("Giá trị roleName chuẩn bị gửi đi:", document.getElementById('roleName').value);
 
       const formData = new FormData();
       formData.append('email', document.getElementById('email').value);
@@ -119,8 +134,10 @@
       formData.append('fullName', document.getElementById('fullName').value);
       formData.append('phone', document.getElementById('phone').value);
       formData.append('address', document.getElementById('address').value);
-      formData.append('roleName', document.getElementById('roleName').value);
 
+      // FormData cho phép nhiều entry cùng key "roleNames" -> Spring tự bind
+      // thành List<String> roleNames trong UserCreationRequest
+      checkedRoles.forEach(cb => formData.append('roleNames', cb.value));
 
       const file = document.getElementById('inputFile').files[0];
       if (file) formData.append('inputFile', file);

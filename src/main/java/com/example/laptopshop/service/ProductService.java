@@ -3,74 +3,78 @@ package com.example.laptopshop.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.laptopshop.domain.Category;
 import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.dto.request.Product.ProductCreationRequest;
 import com.example.laptopshop.dto.request.Product.ProductUpdateRequest;
+import com.example.laptopshop.dto.response.Product.ProductResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
+import com.example.laptopshop.mapper.ProductMapper;
 import com.example.laptopshop.repository.ProductRepository;
 
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final CategoryService categoryService;
     private final UploadService uploadService;
+    private final ProductMapper productMapper;
 
-    public ProductService(ProductRepository productRepository, CategoryService categoryService,
-            UploadService uploadService) {
+    public ProductService(ProductRepository productRepository,
+            UploadService uploadService, ProductMapper productMapper) {
         this.productRepository = productRepository;
-        this.categoryService = categoryService;
         this.uploadService = uploadService;
+        this.productMapper = productMapper;
     }
 
-    public List<Product> getAllProducts() {
-        return this.productRepository.findAll();
+    public Product getProductById(String id) {
+        return this.productRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
-    public Product getProductById(long id) {
-        Product product = this.productRepository.findById(id);
-        if (product == null) {
-            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
-        }
-        return product;
-    }
-
-    public void deleteProductById(long id) {
+    public void deleteProductById(String id) {
         Product product = getProductById(id); // kiểm tra tồn tại, không thì throw lỗi
         this.productRepository.delete(product);
     }
 
+    // ---- Các method trả Response DTO: LUÔN @Transactional để Hibernate Session
+    // còn mở trong lúc MapStruct đọc product.getCategory() (quan hệ @ManyToOne),
+    // tránh LazyInitializationException nếu Category được khai báo FetchType.LAZY
+    // ----
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getAllProductResponses() {
+        List<Product> products = this.productRepository.findAll();
+        return this.productMapper.toResponseList(products);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse getProductResponseById(String id) {
+        Product product = getProductById(id);
+        return this.productMapper.toResponse(product);
+    }
+
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh và
-    // gán Category, rồi lưu DB. Controller không còn hứng trực tiếp bằng Entity
-    // Product nữa, giống cách làm với User.
-    public Product handleCreateProduct(ProductCreationRequest request, MultipartFile file) {
+    // gán Category, lưu DB rồi map luôn sang Response TRONG CÙNG transaction
+    // trước khi trả về Controller. Controller không còn hứng trực tiếp bằng
+    // Entity Product nữa, giống cách làm với User.
+    @Transactional
+    public ProductResponse handleCreateProduct(ProductCreationRequest request, MultipartFile file) {
         // 1. Validate dữ liệu thô từ DTO
         validateCode(request.getCode(), null);
         validateName(request.getName());
         validatePrice(request.getPrice());
 
-        // 2. Map dữ liệu từ DTO sang Entity Product
-        Product newProduct = new Product();
+        // 2. Map các field thuần (price, shortDesc, detailDesc, factory, target,
+        // cpu, ram, storage, gpu, screen, os, weight, warrantyMonths) từ DTO sang
+        // Entity qua MapStruct. code/name/quantity/sold/category/image KHÔNG được
+        // map ở đây (đã ignore trong ProductMapper) vì cần xử lý riêng bên dưới.
+        Product newProduct = this.productMapper.toEntity(request);
         newProduct.setCode(request.getCode().trim().toUpperCase());
         newProduct.setName(request.getName().trim());
-        newProduct.setPrice(request.getPrice());
-        newProduct.setShortDesc(request.getShortDesc());
-        newProduct.setDetailDesc(request.getDetailDesc());
         newProduct.setQuantity(request.getQuantity() == null ? 0 : request.getQuantity());
-        newProduct.setFactory(request.getFactory());
-        newProduct.setTarget(request.getTarget());
-        newProduct.setCpu(request.getCpu());
-        newProduct.setRam(request.getRam());
-        newProduct.setStorage(request.getStorage());
-        newProduct.setGpu(request.getGpu());
-        newProduct.setScreen(request.getScreen());
-        newProduct.setOs(request.getOs());
-        newProduct.setWeight(request.getWeight());
-        newProduct.setWarrantyMonths(request.getWarrantyMonths());
         newProduct.setCategory(request.getCategory());
 
         // Sản phẩm mới tạo luôn bắt đầu từ 0 lượt bán, không cho client tự set qua form
@@ -83,10 +87,12 @@ public class ProductService {
             newProduct.setImage(image);
         }
 
-        return this.productRepository.save(newProduct);
+        Product saved = this.productRepository.save(newProduct);
+        return this.productMapper.toResponse(saved);
     }
 
-    public Product handleUpdateProduct(long id, ProductUpdateRequest request) {
+    @Transactional
+    public ProductResponse handleUpdateProduct(String id, ProductUpdateRequest request) {
         // 1. Tìm Product cũ trong DB, không thấy thì ném lỗi
         Product currentProduct = getProductById(id);
 
@@ -95,25 +101,14 @@ public class ProductService {
         validateName(request.getName());
         validatePrice(request.getPrice());
 
-        // 3. Đổ dữ liệu mới từ DTO đè lên Entity cũ
+        // 3. Đổ các field thuần (price, mô tả, thông số kỹ thuật, active) từ DTO đè
+        // lên Entity cũ qua MapStruct (@MappingTarget), rồi set riêng
+        // code/name/quantity/sold/category bên dưới
+        this.productMapper.updateEntity(request, currentProduct);
         currentProduct.setCode(request.getCode().trim().toUpperCase());
         currentProduct.setName(request.getName().trim());
-        currentProduct.setPrice(request.getPrice());
-        currentProduct.setShortDesc(request.getShortDesc());
-        currentProduct.setDetailDesc(request.getDetailDesc());
         currentProduct.setQuantity(request.getQuantity() == null ? 0 : request.getQuantity());
         currentProduct.setSold(request.getSold() == null ? currentProduct.getSold() : request.getSold());
-        currentProduct.setFactory(request.getFactory());
-        currentProduct.setTarget(request.getTarget());
-        currentProduct.setCpu(request.getCpu());
-        currentProduct.setRam(request.getRam());
-        currentProduct.setStorage(request.getStorage());
-        currentProduct.setGpu(request.getGpu());
-        currentProduct.setScreen(request.getScreen());
-        currentProduct.setOs(request.getOs());
-        currentProduct.setWeight(request.getWeight());
-        currentProduct.setWarrantyMonths(request.getWarrantyMonths());
-        currentProduct.setActive(request.isActive());
         currentProduct.setCategory(request.getCategory());
 
         // 4. Xử lý đổi ảnh mới nếu admin gửi lên file mới, xóa ảnh cũ trước khi lưu ảnh
@@ -127,10 +122,11 @@ public class ProductService {
             currentProduct.setImage(newImage);
         }
 
-        return this.productRepository.save(currentProduct);
+        Product saved = this.productRepository.save(currentProduct);
+        return this.productMapper.toResponse(saved);
     }
 
-    private void validateCode(String code, Long currentId) {
+    private void validateCode(String code, String currentId) {
 
         String normalized = code.trim();
         boolean exists = currentId == null

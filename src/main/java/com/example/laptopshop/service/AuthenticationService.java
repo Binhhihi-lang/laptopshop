@@ -4,13 +4,14 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.laptopshop.domain.Role;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Auth.AuthenticationRequest;
 import com.example.laptopshop.dto.request.Auth.IntrospectRequest;
@@ -53,9 +54,11 @@ public class AuthenticationService {
     // Đăng nhập: kiểm tra email + password (so khớp bằng BCrypt), đúng thì phát
     // hành JWT
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        User user = this.userService.getUserByEmail(request.getEmail().trim());
+        // UserService.getUserByEmail trả về User đơn (null nếu không tìm thấy),
+        // khác bản trước đây trả List<User>.
+        User user = this.userService.getUserByEmail(request.getEmail().trim().toLowerCase());
         if (user == null) {
-            throw new AppException(ErrorCode.USER_NOT_FOUND);
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
         boolean authenticated = this.passwordEncoder.matches(request.getPassword(), user.getPassword());
@@ -69,33 +72,6 @@ public class AuthenticationService {
         response.setToken(token);
         response.setAuthenticated(true);
         return response;
-    }
-
-    // Tạo JWT: Header (thuật toán HS512) + Payload (thông tin user) rồi ký bằng
-    // SIGNER_KEY
-    private String generateToken(User user) {
-        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
-
-        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getFullName())
-                .issuer("laptopshop.com")
-                .issueTime(new Date())
-                .expirationTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
-                .jwtID(UUID.randomUUID().toString())
-                .claim("userId", user.getId())
-                //
-                .claim("scope", buildScope(user))
-                .build();
-
-        Payload payload = new Payload(claimsSet.toJSONObject());
-        JWSObject jwsObject = new JWSObject(header, payload);
-
-        try {
-            jwsObject.sign(new MACSigner(signerKey.getBytes()));
-            return jwsObject.serialize();
-        } catch (JOSEException e) {
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
-        }
     }
 
     // Introspect: kiểm tra 1 token có đúng chữ ký (do chính SIGNER_KEY này ký) và
@@ -114,13 +90,43 @@ public class AuthenticationService {
         return response;
     }
 
-    // Claim "scope" chứa tên Role (vd "ADMIN") -> JwtAuthenticationConverter bên
-    // SecurityConfiguration sẽ map thành quyền "ROLE_ADMIN", khớp với
-    // .hasRole("ADMIN")
-    private String buildScope(User user) {
-        if (user.getRole() != null) {
-            return user.getRole().getName();
+    // Tạo JWT: Header (thuật toán HS512) + Payload (thông tin user) rồi ký bằng
+    // SIGNER_KEY
+    private String generateToken(User user) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .subject(user.getEmail())
+                .issuer("laptopshop.com")
+                .issueTime(new Date())
+                .expirationTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
+                .jwtID(UUID.randomUUID().toString())
+                .claim("userId", user.getId())
+                .claim("scope", buildScope(user))
+                .build();
+
+        Payload payload = new Payload(claimsSet.toJSONObject());
+        JWSObject jwsObject = new JWSObject(header, payload);
+
+        try {
+            jwsObject.sign(new MACSigner(signerKey.getBytes()));
+            return jwsObject.serialize();
+        } catch (JOSEException e) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
-        return "";
+    }
+
+    // Claim "scope" chứa các tên Role cách nhau bởi khoảng trắng (vd "ADMIN
+    // STAFF") -> JwtGrantedAuthoritiesConverter bên SecurityConfiguration TỰ
+    // ĐỘNG split chuỗi theo khoảng trắng thành nhiều quyền "ROLE_ADMIN",
+    // "ROLE_STAFF"... đây là hành vi mặc định của Spring Security, không cần
+    // cấu hình gì thêm ở SecurityConfiguration.
+    private String buildScope(User user) {
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return "";
+        }
+        return user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.joining(" "));
     }
 }

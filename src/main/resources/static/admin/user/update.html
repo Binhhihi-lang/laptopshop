@@ -52,13 +52,18 @@
                 <label class="form-label">Số điện thoại</label>
                 <input type="text" class="form-control" id="phone">
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Vai trò</label>
-                <select class="form-select" id="roleName"></select>
-              </div>
               <div class="col-12">
                 <label class="form-label">Địa chỉ</label>
                 <input type="text" class="form-control" id="address">
+              </div>
+              <div class="col-12">
+                <label class="form-label d-block">Vai trò <span class="text-danger">*</span></label>
+                <div id="roleNamesWrap" class="d-flex flex-wrap gap-3">
+                  <span class="text-muted small">Đang tải danh sách vai trò...</span>
+                </div>
+                <div class="invalid-feedback d-block d-none" id="roleNamesError">
+                  Chọn ít nhất 1 vai trò.
+                </div>
               </div>
             </div>
 
@@ -86,16 +91,24 @@
 
     async function init() {
       try {
-        const roles = await RoleAPI.getAll();
-        document.getElementById('roleName').innerHTML = roles.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        const [roles, user] = await Promise.all([RoleAPI.getAll(), UserAPI.getById(userId)]);
 
-        const user = await UserAPI.getById(userId);
+        // Hiển thị nhóm checkbox, tick sẵn những role user đang có
+        // (UserResponse trả roleNames: List<String>)
+        const currentRoles = new Set(user.roleNames || []);
+        document.getElementById('roleNamesWrap').innerHTML = roles.map(r => `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="roleNames" value="${r.name}"
+              id="role-${r.name}" ${currentRoles.has(r.name) ? 'checked' : ''}>
+            <label class="form-check-label" for="role-${r.name}">${r.name}</label>
+          </div>
+        `).join('');
+
         document.getElementById('subtitleText').textContent = user.email;
         document.getElementById('email').value = user.email;
         document.getElementById('fullName').value = user.fullName || '';
         document.getElementById('phone').value = user.phone || '';
         document.getElementById('address').value = user.address || '';
-        document.getElementById('roleName').value = user.role ? user.role.name : '';
         document.getElementById('avatarPreview').src = avatarUrl(user); // hàm helper avatatURL 
       } catch (err) {
         showToast('Không tải được thông tin người dùng: ' + err.message, 'danger');
@@ -110,6 +123,13 @@
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Checkbox group không có validate "required" tự nhiên của HTML form
+      // -> tự kiểm tra phải chọn ít nhất 1 vai trò
+      const checkedRoles = Array.from(document.querySelectorAll('input[name="roleNames"]:checked'));
+      document.getElementById('roleNamesError').classList.toggle('d-none', checkedRoles.length > 0);
+      if (checkedRoles.length === 0) return;
+
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Đang lưu...';
@@ -119,13 +139,15 @@
       formData.append('fullName', document.getElementById('fullName').value);
       formData.append('phone', document.getElementById('phone').value);
       formData.append('address', document.getElementById('address').value);
-      formData.append('roleName', document.getElementById('roleName').value);
+
+      // FormData cho phép nhiều entry cùng key "roleNames" -> Spring tự bind
+      // thành List<String> roleNames trong UserUpdateRequest
+      checkedRoles.forEach(cb => formData.append('roleNames', cb.value));
 
       const file = document.getElementById('inputFile').files[0];
       if (file) formData.append('inputFile', file);
 
       try {
-        console.log(formData);
         await UserAPI.update(userId, formData);
         showToast('Đã cập nhật người dùng.', 'success');
         setTimeout(() => window.location.href = '/admin/user/list.html', 800);
