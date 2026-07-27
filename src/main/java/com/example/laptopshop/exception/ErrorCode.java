@@ -21,13 +21,12 @@ public enum ErrorCode {
     USER_NOT_FOUND(1001, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     USER_EXISTS(1002, "Người dùng (Email) đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_USER_DATA(1003, "Dữ liệu người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
-    INVALID_PASSWORD(1004, "Mật khẩu phải có ít nhất 6 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD(1008, "Mật khẩu phải có ít nhất {min} ký tự", HttpStatus.BAD_REQUEST),
     UNAUTHENTICATED(1005, "Đăng nhập thất bại, sai tài khoản hoặc mật khẩu", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1006, "Bạn không có quyền truy cập chức năng này", HttpStatus.FORBIDDEN),
     USER_EMAIL_EMPTY(1007, "Email người dùng không được để trống", HttpStatus.BAD_REQUEST),
     USER_EMAIL_ALREADY_EXISTS(1008, "Email người dùng đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL(1009, "Email người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
-    USER_PASSWORD_EMPTY(1010, "Mật khẩu người dùng không được để trống", HttpStatus.BAD_REQUEST),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),

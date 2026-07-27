@@ -2,11 +2,14 @@ package com.example.laptopshop.dto.request.User;
 
 import java.util.List;
 
+import com.example.laptopshop.validator.PasswordConstraint;
 import jakarta.validation.constraints.*;
+import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.Getter;
 
 @Getter
+@Setter
 public class UserCreationRequest {
 
     @NotBlank(message = "USER_EMAIL_EMPTY")
@@ -14,8 +17,7 @@ public class UserCreationRequest {
     @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$", message = "INVALID_EMAIL")
     private String email;
 
-    @NotBlank(message = "USER_PASSWORD_EMPTY")
-    @Size(min = 6, message = "INVALID_PASSWORD")
+    @PasswordConstraint(min = 6, message = "INVALID_PASSWORD")
     private String password;
 
     private String fullName;

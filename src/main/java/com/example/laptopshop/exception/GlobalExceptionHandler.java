@@ -2,6 +2,7 @@ package com.example.laptopshop.exception;
 
 import com.example.laptopshop.dto.response.ApiResponse;
 
+import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,6 +12,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Map;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,33 +34,60 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
     }
 
-    // Chuyên bắt lỗi Validate form (khi dùng @Valid / @NotBlank trong DTO)
+    // bắt lỗi Validate form (khi dùng @Valid / @NotBlank trong DTO)
     // Ví dụ: Người dùng để trống tên sản phẩm, giá tiền bị âm...
     // Cho phép bắt cả 2 loại Exception validation
     @ExceptionHandler(value = { MethodArgumentNotValidException.class, BindException.class })
     public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception exception) {
         String errorMessage = "INVALID_KEY";
+        Map<String, Object> attributes = null; // Map để chứa các thuộc tính (như min, max...) từ annotation
 
         // Trích xuất thông tin lỗi từ đúng loại Exception tương ứng
         if (exception instanceof MethodArgumentNotValidException ex) {
             FieldError fieldError = ex.getBindingResult().getFieldError();
             if (fieldError != null) {
                 errorMessage = fieldError.getDefaultMessage();
+                try {
+                    // Lấy ra các attribute từ custom annotation
+                    var constraintViolation = fieldError.unwrap(ConstraintViolation.class);
+                    attributes = constraintViolation.getConstraintDescriptor().getAttributes();
+                    log.info(attributes.toString());
+                } catch (IllegalArgumentException e) {
+                    // Catch lỗi nếu unwrap không thành công
+                }
             }
-        } else if (exception instanceof BindException ex) {
+        } else if (exception instanceof BindException ex) { // thuộc BindEx khi sử dụng công nghệ JSP , Themlyf
             FieldError fieldError = ex.getBindingResult().getFieldError();
             if (fieldError != null) {
                 errorMessage = fieldError.getDefaultMessage();
+                try {
+                    var constraintViolation = fieldError.unwrap(ConstraintViolation.class);
+                    attributes = constraintViolation.getConstraintDescriptor().getAttributes();
+                } catch (IllegalArgumentException e) {
+                }
             }
         }
 
-        // Tạo đối tượng ErrorCode từ message key nhận được (VD: "INVALID_EMAIL",
-        // "USER_EMAIL_EMPTY")
-        ErrorCode errorCode = ErrorCode.valueOf(errorMessage);
+        // Tạo đối tượng ErrorCode từ message key nhận được (VD: "INVALID_PASSWORD")
+        ErrorCode errorCode;
+        try {
+            // đổi sang ErrorCode
+            errorCode = ErrorCode.valueOf(errorMessage);
+        } catch (IllegalArgumentException e) {
+            errorCode = ErrorCode.INVALID_KEY; // Fallback nếu key không tồn tại trong Enum
+        }
+
+        // Xử lý binding biến {min} vào message
+        String finalMessage = errorCode.getMessage();
+        if (attributes != null && finalMessage.contains("{min}")) {
+            // Lấy giá trị min ra từ danh sách attributes và thay thế vào chuỗi string
+            String minValue = String.valueOf(attributes.get("min"));
+            finalMessage = finalMessage.replace("{min}", minValue);
+        }
 
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
+        apiResponse.setMessage(finalMessage); // Dùng chuỗi finalMessage đã được map dữ liệu
 
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
     }

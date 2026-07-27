@@ -2,6 +2,7 @@ package com.example.laptopshop.dto.request.User;
 
 import java.util.List;
 
+import com.example.laptopshop.validator.PasswordConstraint;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.NotEmpty;
