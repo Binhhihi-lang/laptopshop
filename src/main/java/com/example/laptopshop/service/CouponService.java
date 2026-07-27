@@ -3,6 +3,9 @@ package com.example.laptopshop.service;
 import java.time.LocalDate;
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
 import com.example.laptopshop.domain.Coupon;
@@ -13,17 +16,14 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.CouponMapper;
 import com.example.laptopshop.repository.CouponRepository;
-
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
 public class CouponService {
 
-    private final CouponRepository couponRepository;
-    private final CouponMapper couponMapper;
+    CouponRepository couponRepository;
+    CouponMapper couponMapper;
 
-    public CouponService(CouponRepository couponRepository, CouponMapper couponMapper) {
-        this.couponRepository = couponRepository;
-        this.couponMapper = couponMapper;
-    }
 
     public List<CouponResponse> getAllCoupons() {
         List<Coupon> couList = this.couponRepository.findAll();

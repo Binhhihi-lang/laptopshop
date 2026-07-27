@@ -2,6 +2,15 @@ package com.example.laptopshop.exception;
 
 import org.springframework.http.HttpStatus;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+
+@Getter
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+
 public enum ErrorCode {
     // === SYSTEM ERRORS (9000 - 9999) ===
     INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST),
@@ -19,7 +28,6 @@ public enum ErrorCode {
     USER_EMAIL_ALREADY_EXISTS(1008, "Email người dùng đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL(1009, "Email người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
     USER_PASSWORD_EMPTY(1010, "Mật khẩu người dùng không được để trống", HttpStatus.BAD_REQUEST),
-    ROLE_NOT_FOUND(1011, "Không tìm thấy quyền người dùng", HttpStatus.NOT_FOUND),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
@@ -50,27 +58,18 @@ public enum ErrorCode {
     // === ORDER & CART MODULE (5000 - 5999 )
     CART_ITEM_NOT_FOUND(5001, "Không tìm thấy sản phẩm trong giỏ hàng", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND(5002, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),
-    INVALID_ORDER_STATUS(5003, "Trạng thái đơn hàng không hợp lệ để cập nhật", HttpStatus.BAD_REQUEST);
+    INVALID_ORDER_STATUS(5003, "Trạng thái đơn hàng không hợp lệ để cập nhật", HttpStatus.BAD_REQUEST),
 
-    private final int code;
-    private final String message;
-    private final HttpStatus httpStatus;
+    // ROLE & PERMISSION (6000 - 6999)
+    ROLE_NAME_EMPTY(6000, "Tên role không được để trống", HttpStatus.BAD_REQUEST),
+    ROLE_NAME_EXISTED(6001, "Tên role đã tồn tại", HttpStatus.CONFLICT),
+    ROLE_PERMISSIONS_EMPTY(6002, "Danh sách quyền không được để trống", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_FOUND(6003, "Không tìm thấy quyền người dùng", HttpStatus.NOT_FOUND),
+    PERMISSION_NOT_FOUND(6004, "Không tìm thấy quyền", HttpStatus.NOT_FOUND),
+    PERMISSION_NAME_EMPTY(6005, "Tên quyền không được để trống", HttpStatus.BAD_REQUEST),
+    PERMISSION_NAME_EXISTED(6006, "Tên quyền đã tồn tại", HttpStatus.CONFLICT);
 
-    ErrorCode(int code, String message, HttpStatus httpStatus) {
-        this.code = code;
-        this.message = message;
-        this.httpStatus = httpStatus;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
-    }
+    int code;
+    String message;
+    HttpStatus httpStatus;
 }

@@ -4,6 +4,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,23 +23,17 @@ import com.example.laptopshop.mapper.UserMapper;
 import com.example.laptopshop.repository.RoleRepository;
 import com.example.laptopshop.repository.UserRepository;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final RoleRepository roleRepository;
-    private final UploadService uploadService;
-    private final UserMapper userMapper;
-
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, RoleRepository roleRepository,
-            UploadService uploadService, UserMapper userMapper) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.roleRepository = roleRepository;
-        this.uploadService = uploadService;
-        this.userMapper = userMapper;
-    }
+     UserRepository userRepository;
+     PasswordEncoder passwordEncoder;
+     RoleRepository roleRepository;
+     UploadService uploadService;
+     UserMapper userMapper;
 
     public User getUserById(String id) {
         return this.userRepository.findById(id)
@@ -116,7 +113,6 @@ public class UserService {
     public UserResponse handleCreateUser(UserCreationRequest request) {
         // 1. Validate dữ liệu thô từ DTO
         validateEmail(request.getEmail(), null);
-        Set<Role> roles = getRolesByNames(request.getRoleNames());
 
         // 2. Map các field thuần (fullName, phone, address) từ DTO sang Entity qua
         // MapStruct. password/avatar/roles/email KHÔNG được map ở đây (đã ignore
@@ -135,6 +131,8 @@ public class UserService {
             newUser.setAvatar(avatarName);
         }
 
+        // set Role
+        Set<Role> roles = getRolesByNames(request.getRoleNames());
         newUser.setRoles(roles);
 
         User saved = this.userRepository.save(newUser);

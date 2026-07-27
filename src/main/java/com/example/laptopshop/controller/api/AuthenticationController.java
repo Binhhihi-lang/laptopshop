@@ -2,6 +2,9 @@ package com.example.laptopshop.controller.api;
 
 import java.text.ParseException;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,19 +21,17 @@ import com.nimbusds.jose.JOSEException;
 
 import jakarta.validation.Valid;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin/auth")
 public class AuthenticationController {
 
-    private final AuthenticationService authenticationService;
-
-    public AuthenticationController(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
-    }
+   AuthenticationService authenticationService;
 
     // Đăng nhập bằng email + password, trả về JWT nếu đúng
     @PostMapping("/login")
-    @PreAuthorize("hasRole('ADMIN')")
+
     public ApiResponse<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request) {
         AuthenticationResponse result = this.authenticationService.authenticate(request);
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();

@@ -2,6 +2,9 @@ package com.example.laptopshop.service;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,19 +19,15 @@ import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.CategoryMapper;
 import com.example.laptopshop.repository.CategoryRepository;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
 public class CategoryService {
 
-    private final CategoryRepository categoryRepository;
-    private final UploadService uploadService;
-    private final CategoryMapper categoryMapper;
+    CategoryRepository categoryRepository;
+    UploadService uploadService;
+    CategoryMapper categoryMapper;
 
-    public CategoryService(CategoryRepository categoryRepository, UploadService uploadService,
-            CategoryMapper categoryMapper) {
-        this.categoryRepository = categoryRepository;
-        this.uploadService = uploadService;
-        this.categoryMapper = categoryMapper;
-    }
 
     // findById(id) tìm trong DB và trả về Optional<Category>.
     public Category getCategoryById(String id) {

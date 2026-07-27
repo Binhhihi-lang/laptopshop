@@ -33,11 +33,10 @@ public interface ProductMapper {
     @Mapping(target = "sold", ignore = true)
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "image", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Product toEntity(ProductCreationRequest request);
 
-    // @MappingTarget: đổ dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn.
-    // "active" KHÔNG bị ignore vì gán thẳng (request.isActive() -> entity.setActive())
-    // không có xử lý đặc biệt nào, để MapStruct tự map là an toàn.
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "name", ignore = true)
@@ -45,6 +44,8 @@ public interface ProductMapper {
     @Mapping(target = "sold", ignore = true)
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "image", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(ProductUpdateRequest request, @MappingTarget Product entity);
 
     // Entity -> Response: category rút gọn thành categoryId/categoryName (tránh

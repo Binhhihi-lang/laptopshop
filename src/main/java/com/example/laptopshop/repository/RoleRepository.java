@@ -10,4 +10,8 @@ public interface RoleRepository extends JpaRepository<Role, String> {
 
     // tìm kiếm role theo tên để hiện thị ds role đổ vào combobox khi tạo/sửa user
     Optional<Role> findByName(String name);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, String id);
 }

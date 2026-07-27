@@ -8,9 +8,13 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "coupons")
+@Getter
+@Setter
 public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -36,67 +40,4 @@ public class Coupon {
 
     private boolean active = true; // true: còn dùng được, false: đã khóa
 
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public Integer getDiscountPercent() {
-        return discountPercent;
-    }
-
-    public void setDiscountPercent(Integer discountPercent) {
-        this.discountPercent = discountPercent;
-    }
-
-    public Long getDiscountAmount() {
-        return discountAmount;
-    }
-
-    public void setDiscountAmount(Long discountAmount) {
-        this.discountAmount = discountAmount;
-    }
-
-    public LocalDateTime getExpiryDate() {
-        return expiryDate;
-    }
-
-    public void setExpiryDate(LocalDateTime expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-
-    public Integer getUsageLimit() {
-        return usageLimit;
-    }
-
-    public void setUsageLimit(Integer usageLimit) {
-        this.usageLimit = usageLimit;
-    }
-
-    public Integer getUsedCount() {
-        return usedCount;
-    }
-
-    public void setUsedCount(Integer usedCount) {
-        this.usedCount = usedCount;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
 }

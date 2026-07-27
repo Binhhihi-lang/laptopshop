@@ -2,6 +2,9 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.domain.Category;
@@ -14,18 +17,15 @@ import com.example.laptopshop.service.CategoryService;
 import com.example.laptopshop.service.UploadService;
 
 import jakarta.validation.Valid;
-
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin/categories")
 public class CategoryRestController {
 
-    private final CategoryService categoryService;
-    private final UploadService uploadService;
+    CategoryService categoryService;
+    UploadService uploadService;
 
-    public CategoryRestController(CategoryService categoryService, UploadService uploadService) {
-        this.categoryService = categoryService;
-        this.uploadService = uploadService;
-    }
 
     // 1. Lấy danh sách danh mục (KHÔNG kèm danh sách sản phẩm, dùng cho
     // sidebar/dropdown/bảng danh sách)

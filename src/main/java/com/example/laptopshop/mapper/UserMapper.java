@@ -28,6 +28,7 @@ public interface UserMapper {
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "email", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "orders", ignore = true)
     User toEntity(UserCreationRequest request);
 
     // @MappingTarget: map dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn
@@ -37,6 +38,7 @@ public interface UserMapper {
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "email", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "orders", ignore = true)
     void updateEntity(UserUpdateRequest request, @MappingTarget User entity);
 
     // Entity -> Response: KHÔNG có field password (an toàn). "roles" (Set<Role>)
@@ -48,7 +50,8 @@ public interface UserMapper {
     List<UserResponse> toResponseList(List<User> users);
 
     // Helper: MapStruct tự nhận ra method này khớp kiểu Role -> String và dùng
-    // nó để convert từng phần tử trong Set<Role> -> List<String> ở trên.
+    // nó để convert từng phần tử trong Set<Role> -> List<String> ở UserResponse trả
+    // về giao diện
     default String roleToName(Role role) {
         return role.getName();
     }

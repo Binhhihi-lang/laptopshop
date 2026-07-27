@@ -2,6 +2,9 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,17 +18,15 @@ import com.example.laptopshop.service.UploadService;
 
 import jakarta.validation.Valid;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin/products")
 public class ProductRestController {
 
-    private final ProductService productService;
-    private final UploadService uploadService;
+    ProductService productService;
+    UploadService uploadService;
 
-    public ProductRestController(ProductService productService, UploadService uploadService) {
-        this.productService = productService;
-        this.uploadService = uploadService;
-    }
 
     // 1. Lấy danh sách sản phẩm
     @GetMapping
@@ -59,7 +60,7 @@ public class ProductRestController {
     // 4. Cập nhật sản phẩm
     @PutMapping("/{id}")
     public ApiResponse<ProductResponse> updateProduct(@PathVariable String id,
-            @Valid @ModelAttribute ProductUpdateRequest request) {
+                                                      @Valid @ModelAttribute ProductUpdateRequest request) {
         ApiResponse<ProductResponse> response = new ApiResponse<>();
         response.setResult(this.productService.handleUpdateProduct(id, request));
         return response;

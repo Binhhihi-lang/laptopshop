@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.NotEmpty;
+import lombok.Getter;
 
+@Getter
 public class UserUpdateRequest {
     private String email; // Dùng để validate trùng lặp nếu họ muốn đổi email
     private String fullName;
@@ -16,57 +18,5 @@ public class UserUpdateRequest {
     private List<String> roleNames;
 
     private MultipartFile inputFile; // Nhận ảnh mới nếu họ muốn đổi avatar
-
-    public UserUpdateRequest() {
-    }
-
-    // Getter và Setter thuần
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public MultipartFile getInputFile() {
-        return inputFile;
-    }
-
-    public void setInputFile(MultipartFile inputFile) {
-        this.inputFile = inputFile;
-    }
-
-    public List<String> getRoleNames() {
-        return roleNames;
-    }
-
-    public void setRoleNames(List<String> roleNames) {
-        this.roleNames = roleNames;
-    }
 
 }

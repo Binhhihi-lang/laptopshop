@@ -2,6 +2,9 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,16 +21,13 @@ import com.example.laptopshop.dto.response.Coupon.CouponResponse;
 import com.example.laptopshop.service.CouponService;
 
 import jakarta.validation.Valid;
-
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin")
 public class CouponRestController {
 
-    private final CouponService couponService;
-
-    public CouponRestController(CouponService couponService) {
-        this.couponService = couponService;
-    }
+    CouponService couponService;
 
     @GetMapping("/coupons")
     public ApiResponse<List<CouponResponse>> getAllCoupons() {

@@ -2,6 +2,9 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
@@ -12,15 +15,13 @@ import com.example.laptopshop.service.UserService;
 
 import jakarta.validation.Valid;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin/users")
 public class UserRestController {
 
-    private final UserService userService;
-
-    public UserRestController(UserService userService) {
-        this.userService = userService;
-    }
+    UserService userService;
 
     // 1. Lấy danh sách toàn bộ người dùng (đã xóa mềm sẽ tự động không xuất hiện
     // nhờ @Where khai báo ở User.java)

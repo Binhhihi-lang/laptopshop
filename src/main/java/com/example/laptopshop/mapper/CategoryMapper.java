@@ -26,12 +26,15 @@ public interface CategoryMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "image", ignore = true)
+    @Mapping(target = "active", ignore = true)
+    @Mapping(target = "products", ignore = true)
     Category toEntity(CategoryCreationRequest request);
 
     // @MappingTarget: đổ dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "image", ignore = true)
+    @Mapping(target = "products", ignore = true)
     void updateEntity(CategoryUpdateRequest request, @MappingTarget Category entity);
 
     // Dùng cho trang danh sách / dropdown: KHÔNG có field "products" -> MapStruct

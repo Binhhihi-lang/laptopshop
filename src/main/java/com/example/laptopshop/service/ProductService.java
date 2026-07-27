@@ -2,6 +2,9 @@ package com.example.laptopshop.service;
 
 import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,19 +18,14 @@ import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.ProductMapper;
 import com.example.laptopshop.repository.ProductRepository;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
 public class ProductService {
 
-    private final ProductRepository productRepository;
-    private final UploadService uploadService;
-    private final ProductMapper productMapper;
-
-    public ProductService(ProductRepository productRepository,
-            UploadService uploadService, ProductMapper productMapper) {
-        this.productRepository = productRepository;
-        this.uploadService = uploadService;
-        this.productMapper = productMapper;
-    }
+     ProductRepository productRepository;
+     UploadService uploadService;
+     ProductMapper productMapper;
 
     public Product getProductById(String id) {
         return this.productRepository.findById(id)

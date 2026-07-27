@@ -2,21 +2,24 @@ package com.example.laptopshop.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
 
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+
 @Service
 public class UploadService {
 
-    private final Cloudinary cloudinary;
+    Cloudinary cloudinary;
 
     // Inject bean Cloudinary vào thông qua Constructor
-    public UploadService(Cloudinary cloudinary) {
-        this.cloudinary = cloudinary;
-    }
 
     /**
      * Hàm upload ảnh lên Cloudinary và trả về URL

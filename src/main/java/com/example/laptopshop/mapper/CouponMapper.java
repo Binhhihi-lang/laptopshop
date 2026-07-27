@@ -23,6 +23,7 @@ public interface CouponMapper {
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "usageLimit", ignore = true)
     @Mapping(target = "usedCount", ignore = true)
+    @Mapping(target = "active", ignore = true)
     Coupon toEntity(CouponCreationRequest request);
 
     // @MappingTarget: đổ dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn.
