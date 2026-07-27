@@ -4,6 +4,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,6 +30,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthenticationService {
@@ -53,6 +55,7 @@ public class AuthenticationService {
 
     // Đăng nhập: kiểm tra email + password (so khớp bằng BCrypt), đúng thì phát
     // hành JWT
+    @Transactional(readOnly = true)
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         // UserService.getUserByEmail trả về User đơn (null nếu không tìm thấy),
         // khác bản trước đây trả List<User>.
@@ -117,16 +120,25 @@ public class AuthenticationService {
     }
 
     // Claim "scope" chứa các tên Role cách nhau bởi khoảng trắng (vd "ADMIN
-    // STAFF") -> JwtGrantedAuthoritiesConverter bên SecurityConfiguration TỰ
+    // USER") -> JwtGrantedAuthoritiesConverter bên SecurityConfiguration TỰ
     // ĐỘNG split chuỗi theo khoảng trắng thành nhiều quyền "ROLE_ADMIN",
-    // "ROLE_STAFF"... đây là hành vi mặc định của Spring Security, không cần
-    // cấu hình gì thêm ở SecurityConfiguration.
     private String buildScope(User user) {
-        if (user.getRoles() == null || user.getRoles().isEmpty()) {
-            return "";
+        StringJoiner stringJoiner = new StringJoiner(" ");
+
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            user.getRoles().forEach(role -> {
+                // 1. Thêm Role với tiền tố ROLE_
+                stringJoiner.add("ROLE_" + role.getName());
+
+                // 2. Thêm tất cả Permission thuộc Role này (KHÔNG có tiền tố ROLE_)
+                if (role.getPermissions() != null && !role.getPermissions().isEmpty()) {
+                    role.getPermissions().forEach(permission -> {
+                        stringJoiner.add(permission.getName());
+                    });
+                }
+            });
         }
-        return user.getRoles().stream()
-                .map(Role::getName)
-                .collect(Collectors.joining(" "));
+
+        return stringJoiner.toString();
     }
 }

@@ -2,6 +2,7 @@ package com.example.laptopshop.exception;
 
 import com.example.laptopshop.dto.response.ApiResponse;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
@@ -10,7 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -61,13 +62,14 @@ public class GlobalExceptionHandler {
     }
 
     // Bắt các lỗi ngầm định, lỗi hệ thống chưa phân loại (NullPointer, SQL,
-    // Tomcat...)
+    // Tomcat...) mã lỗi : 500
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(Exception exception) {
         ApiResponse<Void> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
 
+        log.error("Uncaught Exception: ", exception);
         return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getHttpStatus()).body(apiResponse);
     }
 

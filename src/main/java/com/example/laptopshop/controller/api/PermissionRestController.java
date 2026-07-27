@@ -2,6 +2,7 @@ package com.example.laptopshop.controller.api;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.dto.request.Permission.PermissionCreationRequest;
@@ -25,6 +26,8 @@ public class PermissionRestController {
     PermissionService permissionService;
 
     @GetMapping
+    // hoặc là phân theo role  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CREATE_PRODUCT_DATA')")
     public ApiResponse<List<PermissionResponse>> getAllPermissions() {
         ApiResponse<List<PermissionResponse>> response = new ApiResponse<>();
         response.setResult(this.permissionService.getAllPermissionResponses());
@@ -42,7 +45,8 @@ public class PermissionRestController {
     // nhưng mình để @ModelAttribute cho đồng bộ cách gọi API FormData toàn hệ
     // thống như quyết định đã áp dụng cho Coupon — tùy bạn chọn.
     @PostMapping
-    public ApiResponse<PermissionResponse> createPermission(@Valid @ModelAttribute PermissionCreationRequest request) {
+
+    public ApiResponse<PermissionResponse> createPermission(@Valid @RequestBody PermissionCreationRequest request) {
         ApiResponse<PermissionResponse> response = new ApiResponse<>();
         response.setResult(this.permissionService.handleCreatePermission(request));
         return response;
@@ -51,7 +55,7 @@ public class PermissionRestController {
     @PutMapping("/{id}")
     public ApiResponse<PermissionResponse> updatePermission(
             @PathVariable String id,
-            @Valid @ModelAttribute PermissionUpdateRequest request) {
+            @Valid @RequestBody PermissionUpdateRequest request) {
         ApiResponse<PermissionResponse> response = new ApiResponse<>();
         response.setResult(this.permissionService.handleUpdatePermission(id, request));
         return response;

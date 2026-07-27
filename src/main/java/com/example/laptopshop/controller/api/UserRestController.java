@@ -43,6 +43,7 @@ public class UserRestController {
     // 3. Tạo mới người dùng (Nhận dữ liệu dạng form-data để hỗ trợ upload ảnh đại
     // diện; roleNames là danh sách vì 1 user giờ có thể có nhiều Role)
     @PostMapping
+
     public ApiResponse<UserResponse> createUser(@Valid @ModelAttribute UserCreationRequest request) {
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setResult(this.userService.handleCreateUser(request));

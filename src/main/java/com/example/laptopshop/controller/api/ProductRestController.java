@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,6 +49,7 @@ public class ProductRestController {
     // phẩm, giống cách làm với User -> Controller không còn hứng trực tiếp bằng
     // Entity Product nữa, toàn bộ map dữ liệu/validate/xử lý ảnh nằm ở Service)
     @PostMapping
+
     public ApiResponse<ProductResponse> createProduct(
             @Valid @RequestPart("productInfo") ProductCreationRequest request,
             @RequestPart(value = "inputFile", required = false) MultipartFile inputFile) {

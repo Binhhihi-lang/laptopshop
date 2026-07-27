@@ -31,7 +31,6 @@ public class AuthenticationController {
 
     // Đăng nhập bằng email + password, trả về JWT nếu đúng
     @PostMapping("/login")
-
     public ApiResponse<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request) {
         AuthenticationResponse result = this.authenticationService.authenticate(request);
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();

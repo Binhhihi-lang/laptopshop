@@ -42,7 +42,6 @@ public class UserService {
 
     // Dùng cho AuthenticationService lúc đăng nhập -> so khớp password, KHÔNG
     // qua @Where filter là chưa xóa mềm vì đã tự động áp dụng ở tầng Entity,
-    // user đã xóa mềm sẽ không đăng nhập được (coi như không tồn tại), đúng ý.
     public User getUserByEmail(String email) {
         return this.userRepository.findByEmail(email);
     }

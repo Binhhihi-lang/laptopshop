@@ -39,7 +39,7 @@ public class RoleRestController {
     }
 
     @PostMapping
-    public ApiResponse<RoleResponse> createRole(@Valid @ModelAttribute RoleCreationRequest request) {
+    public ApiResponse<RoleResponse> createRole(@Valid @RequestBody RoleCreationRequest request) {
         ApiResponse<RoleResponse> response = new ApiResponse<>();
         response.setResult(this.roleService.handleCreateRole(request));
         return response;
@@ -48,7 +48,7 @@ public class RoleRestController {
     @PutMapping("/{id}")
     public ApiResponse<RoleResponse> updateRole(
             @PathVariable String id,
-            @Valid @ModelAttribute RoleUpdateRequest request) {
+            @Valid @RequestBody RoleUpdateRequest request) {
         ApiResponse<RoleResponse> response = new ApiResponse<>();
         response.setResult(this.roleService.handleUpdateRole(id, request));
         return response;

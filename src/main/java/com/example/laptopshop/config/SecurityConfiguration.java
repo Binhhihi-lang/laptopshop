@@ -1,7 +1,6 @@
 package com.example.laptopshop.config;
 
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +16,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+
 
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -71,8 +71,7 @@ public class SecurityConfiguration {
                         .jwt(jwtConfigurer -> jwtConfigurer
                                 .decoder(jwtDecoder())
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                        // bắt lỗi 401
-                        // Token thiếu/sai/hết hạn -> trả JSON đúng format ApiResponse
+                        // bắt lỗi 401, Token thiếu/sai/hết hạn
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));
 
         return httpSecurity.build();
@@ -95,9 +94,9 @@ public class SecurityConfiguration {
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_"); // lấy chữ 'ADMIN' trong claim 'scope', rồi thêm chữ
-                                                                 // 'ROLE_' vào đằng trước"
-        // Chỉ định ĐÚNG NƠI lấy quyền: Tìm cái key tên là "scope" trong Payload
+
+        grantedAuthoritiesConverter.setAuthorityPrefix("");
+        // Tìm key "scope" trong Payload của JWT
         grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
 
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

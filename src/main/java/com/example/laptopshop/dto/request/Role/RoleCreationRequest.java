@@ -9,13 +9,11 @@ import lombok.Getter;
 @Getter
 
 public class RoleCreationRequest {
-    @NotBlank(message = "ROLE_NAME_EMPTY")
+    @NotBlank(message = "ROLE_NAME_EMPTY") // chỉ dùng cho string
     private String name;
 
     private String description;
 
-    // Form-data gửi nhiều field cùng tên "permissionNames" (checkbox nhiều lựa
-    // chọn), Spring tự bind thành List<String> — y hệt roleNames bên User.
-    @NotEmpty(message = "ROLE_PERMISSIONS_EMPTY")
+    @NotEmpty(message = "ROLE_PERMISSIONS_EMPTY") // chỉ dùng cho String, Collection (List, Set), Map, Array
     private List<String> permissionNames;
 }

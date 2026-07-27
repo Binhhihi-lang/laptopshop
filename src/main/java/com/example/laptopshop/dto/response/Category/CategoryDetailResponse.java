@@ -4,8 +4,10 @@ import java.util.List;
 
 import com.example.laptopshop.dto.response.Product.ProductResponse;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class CategoryDetailResponse {
 
     private String id;

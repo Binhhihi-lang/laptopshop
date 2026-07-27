@@ -2,8 +2,10 @@ package com.example.laptopshop.dto.response.Coupon;
 
 import java.time.LocalDateTime;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class CouponResponse {
 
     private String id;
