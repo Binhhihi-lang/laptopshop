@@ -1,0 +1,7 @@
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis_jwt_blacklist
+    ports:
+      - "6379:6379" # Đổi port bên trái (máy thật) thành 6380, giữ nguyên port 6379 bên phải (trong container)
+    restart: unless-stopped
