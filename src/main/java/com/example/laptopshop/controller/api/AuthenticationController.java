@@ -1,7 +1,6 @@
 package com.example.laptopshop.controller.api;
 
-import java.text.ParseException;
-
+import com.example.laptopshop.dto.request.Auth.LogoutRequest;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -17,7 +16,6 @@ import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.AuthenticationResponse;
 import com.example.laptopshop.dto.response.IntrospectResponse;
 import com.example.laptopshop.service.AuthenticationService;
-import com.nimbusds.jose.JOSEException;
 
 import jakarta.validation.Valid;
 
@@ -40,12 +38,18 @@ public class AuthenticationController {
 
     // Kiểm tra 1 token còn hợp lệ không (chữ ký đúng + chưa hết hạn)
     @PostMapping("/introspect")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request)
-            throws JOSEException, ParseException {
+    public ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request) {
         IntrospectResponse result = this.authenticationService.introspect(request);
         ApiResponse<IntrospectResponse> response = new ApiResponse<>();
         response.setResult(result);
+        return response;
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@Valid @RequestBody LogoutRequest request) {
+        this.authenticationService.logout(request);
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Logout thành công");
         return response;
     }
 }

@@ -151,35 +151,6 @@
       document.getElementById('statOrders').textContent = '--';
     })();
 
-    // LOGIC XỬ LÝ ĐĂNG XUẤT (LOGOUT)
-    document.addEventListener('click', async function (e) {
-      // Tìm thẻ <a> hoặc <button> có hành vi logout (qua href, class hoặc id)
-      const logoutBtn = e.target.closest('#logoutBtn, .logout-btn, [href*="logout"]');
-
-      if (logoutBtn) {
-        e.preventDefault(); // Chặn hành vi chuyển trang mặc định của thẻ HTML
-
-        if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-          try {
-            // Gọi hàm logout từ file admin-api.js của bạn
-            // Lưu ý: Hãy đổi thành AuthAPI.logout() hoặc logout() tùy theo cách bạn khai báo trong file đó nhé!
-            if (typeof AuthAPI !== 'undefined' && typeof AuthAPI.logout === 'function') {
-              await AuthAPI.logout();
-            } else if (typeof logout === 'function') {
-              await logout();
-            }
-          } catch (err) {
-            console.warn('Lỗi gọi API logout ở server (hoặc token hết hạn):', err.message);
-          } finally {
-            // Bất kể API logout của server trả về thành công hay lỗi (ví dụ token hết hạn)
-            // Ta vẫn phải xóa token ở client và đá về trang login
-            localStorage.removeItem('accessToken');
-            window.location.href = '/admin/dashboard/login.html';
-          }
-        }
-      }
-    });
-
   </script>
 </body>
 

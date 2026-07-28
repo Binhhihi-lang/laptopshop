@@ -6,13 +6,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.StringJoiner;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+
+import com.example.laptopshop.domain.InvalidatedToken;
+import com.example.laptopshop.dto.request.Auth.LogoutRequest;
+import com.example.laptopshop.repository.InvalidatedTokenRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.laptopshop.domain.Role;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Auth.AuthenticationRequest;
 import com.example.laptopshop.dto.request.Auth.IntrospectRequest;
@@ -37,6 +39,8 @@ public class AuthenticationService {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
+
 
     // Khóa bí mật để ký/verify JWT (thuật toán đối xứng HS512) -> đọc từ
     // application.properties, KHÔNG hardcode trong code, KHÔNG commit key thật lên
@@ -48,9 +52,10 @@ public class AuthenticationService {
     @Value("${jwt.valid-duration}")
     private long validDuration;
 
-    public AuthenticationService(UserService userService, PasswordEncoder passwordEncoder) {
+    public AuthenticationService(UserService userService, PasswordEncoder passwordEncoder, InvalidatedTokenRepository invalidatedTokenRepository) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.invalidatedTokenRepository = invalidatedTokenRepository;
     }
 
     // Đăng nhập: kiểm tra email + password (so khớp bằng BCrypt), đúng thì phát
@@ -77,29 +82,65 @@ public class AuthenticationService {
         return response;
     }
 
-    // Introspect: kiểm tra 1 token có đúng chữ ký (do chính SIGNER_KEY này ký) và
-    // chưa hết hạn không
-    public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
-        String token = request.getToken();
-
+    // Verify chữ ký + hạn dùng + KHÔNG nằm trong blacklist Redis -> dùng chung
+    private SignedJWT verifyToken(String token) throws JOSEException, ParseException {
         JWSVerifier verifier = new MACVerifier(signerKey.getBytes());
         SignedJWT signedJWT = SignedJWT.parse(token);
 
         Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
         boolean verified = signedJWT.verify(verifier);
 
+        if (!(verified && expiryTime.after(new Date()))) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+        if (this.invalidatedTokenRepository.existsById(jwtId)) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED); // token đã bị logout trước đó
+        }
+
+        return signedJWT;
+    }
+
+    // Introspect: kiểm tra 1 token có đúng chữ ký
+    // introspect() sửa lại: dùng verifyToken() thay vì tự verify tay như cũ
+    public IntrospectResponse introspect(IntrospectRequest request) {
+        boolean valid = true;
+        try {
+            verifyToken(request.getToken());
+        } catch (AppException | JOSEException | ParseException e) {
+            valid = false;
+        }
         IntrospectResponse response = new IntrospectResponse();
-        response.setValid(verified && expiryTime.after(new Date()));
+        response.setValid(valid);
         return response;
     }
 
+    // Logout: chỉ lưu jwtId
+    // vào Redis kèm TTL = thời gian còn lại tới lúc hết hạn
+    public void logout(LogoutRequest request) {
+        try {
+            SignedJWT signedJWT = verifyToken(request.getToken());
+
+            String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+            Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            long ttl = (expiryTime.getTime() - System.currentTimeMillis()) / 1000;
+            if (ttl > 0) {
+                this.invalidatedTokenRepository.save(new InvalidatedToken(jwtId, ttl));
+            }
+        } catch (AppException | JOSEException | ParseException e) {
+            // Token không hợp lệ / đã hết hạn / đã logout từ trước -> coi như
+            // logout thành công luôn, không cần ném lỗi lại cho client
+        }
+    }
     // Tạo JWT: Header (thuật toán HS512) + Payload (thông tin user) rồi ký bằng
     // SIGNER_KEY
     private String generateToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getEmail())
+                .subject(user.getFullName())
                 .issuer("laptopshop.com")
                 .issueTime(new Date())
                 .expirationTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))

@@ -1,6 +1,10 @@
 package com.example.laptopshop.config;
 
 import javax.crypto.spec.SecretKeySpec;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,20 +21,14 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-
+@AllArgsConstructor
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SecurityConfiguration {
 
-    // Khóa bí mật ký/verify JWT, phải trùng với key AuthenticationService dùng để
-    // ký token
-    @Value("${jwt.signerKey}")
-    private String signerKey;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-
-    public SecurityConfiguration(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-    }
+    JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    CustomJwtDecoder customJwtDecoder;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -49,7 +47,7 @@ public class SecurityConfiguration {
 
                 .authorizeHttpRequests(auth -> auth
                         // 1. Cho phép tải toàn bộ tài nguyên tĩnh phục vụ giao diện
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
 
                         // Các tài nguyên giao diện của admin
                         .requestMatchers("/admin/**").permitAll()
@@ -65,27 +63,15 @@ public class SecurityConfiguration {
                         // Tất cả các request khác đều bắt buộc phải đăng nhập (Có token hợp lệ)
                         .anyRequest().authenticated())
                 // 3. Bật OAuth2 Resource Server để Spring tự verify JWT trên mỗi request có
-                // header Authorization: Bearer <token>, dùng jwtDecoder() +
+                // header Authorization: Bearer <token>, dùng customJwtDecoder() giải mã +
                 // jwtAuthenticationConverter()
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtConfigurer -> jwtConfigurer
-                                .decoder(jwtDecoder())
+                        .jwt(jwt -> jwt.decoder(customJwtDecoder)
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         // bắt lỗi 401, Token thiếu/sai/hết hạn
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));
 
         return httpSecurity.build();
-    }
-
-    // 4. Bean giải mã & verify chữ ký JWT (đối xứng, thuật toán HS512, cùng key
-    // với lúc AuthenticationService ký token)
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        // lấy khóa bí mật
-        SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HS512");
-        return NimbusJwtDecoder.withSecretKey(secretKeySpec)
-                .macAlgorithm(MacAlgorithm.HS512)
-                .build();
     }
 
     // 5. Map claim "scope" trong token (vd giá trị "ADMIN") thành quyền Spring

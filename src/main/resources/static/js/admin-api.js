@@ -16,7 +16,7 @@ async function apiRequest(path, options = {}) {
     // 2. Token thiếu/sai/hết hạn -> Tự động đăng xuất
     if (response.status === 401) {
         localStorage.removeItem('accessToken');
-        window.location.href = '/admin/login.html';
+        window.location.href = '/admin/dashboard/login.html';
         return null;
     }
 
@@ -51,16 +51,27 @@ const AuthAPI = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   }),
+    logout: (token) => apiRequest('/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+    }),
 };
- 
-// Đăng xuất: xóa token khỏi trình duyệt và quay về trang login.
-// Lưu ý: đây chỉ là "quên token" phía client. Server chưa có cơ chế thu hồi
-// (blacklist) token cũ -> nếu ai đó vẫn giữ token thì token đó còn hạn vẫn dùng
-// được cho tới khi hết hạn. Muốn thu hồi thật sự cần thêm Redis (đã ghi chú
-// trong tài liệu JWT bạn gửi, để làm ở giai đoạn sau).
-function logout() {
-  localStorage.removeItem('accessToken');
-  window.location.href = '/admin/dashboard/login.html';
+// Đăng xuất: gọi API để server thu hồi token qua Redis blacklist TRƯỚC, rồi
+// mới xóa token khỏi trình duyệt và quay về trang login.
+// Bọc try/catch: nếu API logout lỗi (mất mạng, token vừa hết hạn đúng lúc
+// bấm nút...) thì phía client vẫn luôn logout được bình thường, không bị kẹt.
+async function logout() {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+        try {
+            await AuthAPI.logout(token);
+        } catch (err) {
+            console.error('Không thể thu hồi token trên server:', err);
+        }
+    }
+    localStorage.removeItem('accessToken');
+    window.location.href = '/admin/dashboard/login.html';
 }
 
 const UserAPI = {
