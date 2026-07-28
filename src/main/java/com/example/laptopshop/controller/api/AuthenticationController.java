@@ -1,6 +1,7 @@
 package com.example.laptopshop.controller.api;
 
 import com.example.laptopshop.dto.request.Auth.LogoutRequest;
+import com.example.laptopshop.dto.request.Auth.RefreshTokenRequest;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -50,6 +51,14 @@ public class AuthenticationController {
         this.authenticationService.logout(request);
         ApiResponse<Void> response = new ApiResponse<>();
         response.setMessage("Logout thành công");
+        return response;
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthenticationResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthenticationResponse result = this.authenticationService.refreshToken(request);
+        ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
+        response.setResult(result);
         return response;
     }
 }

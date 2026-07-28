@@ -17,6 +17,7 @@ public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống không xác định!", HttpStatus.INTERNAL_SERVER_ERROR),
     DB_VIOLATION(9001, "Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc cơ sở dữ liệu!", HttpStatus.BAD_REQUEST),
 
+
     // === USER MODULE (1000 - 1999) ===
     USER_NOT_FOUND(1001, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     USER_EXISTS(1002, "Người dùng (Email) đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
@@ -48,8 +49,7 @@ public enum ErrorCode {
     COUPON_ALREADY_EXISTS(4002, "Mã giảm giá này đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     COUPON_EXPIRED(4003, "Mã giảm giá đã hết hạn sử dụng", HttpStatus.BAD_REQUEST),
     COUPON_OUT_OF_STOCK(4004, "Mã giảm giá đã hết lượt sử dụng", HttpStatus.BAD_REQUEST),
-    INVALID_COUPON_CONFIG(4005, "Cấu hình giảm giá không hợp lệ (Chỉ chọn Phần trăm hoặc Số tiền)",
-            HttpStatus.BAD_REQUEST),
+    INVALID_COUPON_CONFIG(4005, "Cấu hình giảm giá không hợp lệ (Chỉ chọn Phần trăm hoặc Số tiền)", HttpStatus.BAD_REQUEST),
     COUPON_CODE_REQUIRED(4008, "Mã giảm giá không được để trống", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_PERCENT(4006, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_AMOUNT(4007, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
@@ -66,7 +66,13 @@ public enum ErrorCode {
     ROLE_NOT_FOUND(6003, "Không tìm thấy quyền người dùng", HttpStatus.NOT_FOUND),
     PERMISSION_NOT_FOUND(6004, "Không tìm thấy quyền", HttpStatus.NOT_FOUND),
     PERMISSION_NAME_EMPTY(6005, "Tên quyền không được để trống", HttpStatus.BAD_REQUEST),
-    PERMISSION_NAME_EXISTED(6006, "Tên quyền đã tồn tại", HttpStatus.CONFLICT);
+    PERMISSION_NAME_EXISTED(6006, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
+
+    // Auth
+    REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),
+    TOKEN_EMPTY(7001, "Token không được để trống.", HttpStatus.BAD_REQUEST),
+    REFRESH_TOKEN_NOT_FOUND(7002, "Refresh token không hợp lệ ", HttpStatus.BAD_REQUEST);
+
 
     int code;
     String message;
