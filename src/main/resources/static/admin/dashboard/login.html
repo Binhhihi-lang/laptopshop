@@ -40,6 +40,7 @@
   <script src="/js/scripts.js"></script>
   <script src="/js/admin-api.js"></script>
   <script>
+
     // Nếu đã có token sẵn rồi thì vào thẳng dashboard, khỏi bắt đăng nhập lại
     if (localStorage.getItem('accessToken')) {
       window.location.href = '/admin/dashboard/show.html';
@@ -57,8 +58,10 @@
       const password = document.getElementById('password').value;
 
       try {
+        // l
         const result = await AuthAPI.login(email, password);
         localStorage.setItem('accessToken', result.token);
+        localStorage.setItem('refreshToken', result.refreshToken);
         window.location.href = '/admin/dashboard/show.html';
       } catch (err) {
         showToast(err.message, 'danger');

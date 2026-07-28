@@ -13,7 +13,7 @@ import lombok.experimental.FieldDefaults;
 
 public enum ErrorCode {
     // === SYSTEM ERRORS (9000 - 9999) ===
-    INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST),
+    INVALID_KEY(9002, "Mã lỗi (Key) cấu hình không hợp lệ", HttpStatus.BAD_REQUEST), // lỗi không có errorCode hoặc viết nhầm tên
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống không xác định!", HttpStatus.INTERNAL_SERVER_ERROR),
     DB_VIOLATION(9001, "Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc cơ sở dữ liệu!", HttpStatus.BAD_REQUEST),
 
@@ -67,6 +67,7 @@ public enum ErrorCode {
     PERMISSION_NOT_FOUND(6004, "Không tìm thấy quyền", HttpStatus.NOT_FOUND),
     PERMISSION_NAME_EMPTY(6005, "Tên quyền không được để trống", HttpStatus.BAD_REQUEST),
     PERMISSION_NAME_EXISTED(6006, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
+    USER_ROLES_EMPTY(6007, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
 
     // Auth
     REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),

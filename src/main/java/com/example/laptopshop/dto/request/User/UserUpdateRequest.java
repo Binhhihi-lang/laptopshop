@@ -3,12 +3,14 @@ package com.example.laptopshop.dto.request.User;
 import java.util.List;
 
 import com.example.laptopshop.validator.PasswordConstraint;
+import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
 
 @Getter
+@Setter
 public class UserUpdateRequest {
     private String email; // Dùng để validate trùng lặp nếu họ muốn đổi email
     private String fullName;

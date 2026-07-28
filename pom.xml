@@ -115,6 +115,11 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
 						<!-- 2. Binding để Lombok và MapStruct hiểu nhau -->
 						<path>
 							<groupId>org.projectlombok</groupId>

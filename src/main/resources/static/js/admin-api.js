@@ -51,10 +51,10 @@ const AuthAPI = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   }),
-    logout: (token) => apiRequest('/auth/logout', {
+    logout: (token, refreshToken) => apiRequest('/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token, refreshToken })
     }),
 };
 // Đăng xuất: gọi API để server thu hồi token qua Redis blacklist TRƯỚC, rồi
@@ -63,14 +63,16 @@ const AuthAPI = {
 // bấm nút...) thì phía client vẫn luôn logout được bình thường, không bị kẹt.
 async function logout() {
     const token = localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refreshToken');
     if (token) {
         try {
-            await AuthAPI.logout(token);
+            await AuthAPI.logout(token, refreshToken);
         } catch (err) {
             console.error('Không thể thu hồi token trên server:', err);
         }
     }
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     window.location.href = '/admin/dashboard/login.html';
 }
 

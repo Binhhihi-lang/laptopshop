@@ -194,7 +194,7 @@ public class AuthenticationService {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getEmail())
+                .subject(user.getFullName())
                 .issuer("laptopshop.com")
                 .issueTime(issueTime)
                 .expirationTime(expirationTime)
