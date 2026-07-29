@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,6 +25,7 @@ public class SecurityConfiguration {
 
     JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     CustomJwtDecoder customJwtDecoder;
+    CorsConfig config;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -34,6 +36,8 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         httpSecurity
+                // 1. Mở CORS để nhận request từ Frontend http://localhost:3000
+//                .cors(cors -> cors.configurationSource(config.corsConfigurationSource()))
                 // mặc định bật cấu hình csrf : là bảo vệ endpoint attack CROT
                 .csrf(AbstractHttpConfigurer::disable) // Tắt CSRF vì làm API (Stateless)
                 // Không dùng session của server nữa, mọi request tự chứng minh danh tính bằng
@@ -41,11 +45,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Cho phép tải toàn bộ tài nguyên tĩnh phục vụ giao diện
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
-
                         // Các tài nguyên giao diện của admin
-                        .requestMatchers("/admin/**").permitAll()
                         .requestMatchers("/api/v1/admin/auth/**").permitAll()
 
                         // Toàn bộ khu vực quản trị chỉ ADMIN mới được vào.
@@ -68,7 +68,6 @@ public class SecurityConfiguration {
 
         return httpSecurity.build();
     }
-
     // 5. Map claim "scope" trong token (vd giá trị "ADMIN") thành quyền Spring
     // Customize lại SCOPE_ADMIN
     // Security "ROLE_ADMIN" -> để .hasRole("ADMIN") ở trên hoạt động đúng
@@ -84,5 +83,7 @@ public class SecurityConfiguration {
         converter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
         return converter;
     }
+
+
 
 }
