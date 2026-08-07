@@ -47,6 +47,11 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         // Các tài nguyên giao diện của admin
                         .requestMatchers("/api/v1/admin/auth/**").permitAll()
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
 
                         // Toàn bộ khu vực quản trị chỉ ADMIN mới được vào.
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
