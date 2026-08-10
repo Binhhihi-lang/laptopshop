@@ -15,5 +15,8 @@ public class UserResponse {
     private String address;
     private String avatar;
     private List<String> roleNames;
+    private boolean active = true;
+    private String createdAt;
+    private String lastLoginAt;
 
 }

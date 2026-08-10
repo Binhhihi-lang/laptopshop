@@ -21,5 +21,5 @@ public class UserUpdateRequest {
     private List<String> roleNames;
 
     private MultipartFile inputFile; // Nhận ảnh mới nếu họ muốn đổi avatar
-
+    private boolean active = true;
 }

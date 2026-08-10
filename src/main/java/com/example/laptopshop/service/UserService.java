@@ -1,5 +1,6 @@
 package com.example.laptopshop.service;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -163,5 +164,13 @@ public class UserService {
         // 5. Lưu Entity đã cập nhật dữ liệu mới xuống DB
         User saved = this.userRepository.save(existingUser);
         return this.userMapper.toResponse(saved);
+    }
+
+    // Cập nhật lastLoginAt khi user đăng nhập thành công
+    @Transactional
+    public void updateLastLoginAt(String userId, LocalDateTime lastLoginAt) {
+        User user = getUserById(userId);
+        user.setLastLoginAt(lastLoginAt);
+        this.userRepository.save(user);
     }
 }

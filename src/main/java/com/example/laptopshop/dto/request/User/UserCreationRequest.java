@@ -31,5 +31,6 @@ public class UserCreationRequest {
     private List<String> roleNames;
 
     private MultipartFile inputFile; // Hứng file ảnh avatar trực tiếp trong DTO
+    private boolean active = true;
 
 }

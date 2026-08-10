@@ -5,19 +5,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
@@ -49,10 +41,9 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             // 2. Tên cột trong bảng trung gian trỏ về Khóa chính của Entity HIỆN TẠI (User)
 
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
     // 3. Tên cột trong bảng trung gian trỏ về Khóa chính của Entity ĐỐI PHƯƠNG
     // (Role)
-    )
     private Set<Role> roles = new HashSet<>();
 
     private LocalDateTime deletedAt; // null = chưa xóa, có giá trị = đã xóa mềm
@@ -60,6 +51,13 @@ public class User {
     @OneToMany(mappedBy = "user")
     @JsonIgnore
     List<Order> orders;
+
+    private boolean active = true;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    private LocalDateTime lastLoginAt;
 
     @Override
     public String toString() {
