@@ -2,6 +2,7 @@ package com.example.laptopshop.service;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -73,7 +74,7 @@ public class AuthenticationService {
 
     // ================== AUTHENTICATE ==================
 
-    @Transactional(readOnly = true) // giữ session mở để buildRoleScope/buildPermissionScope đọc lazy user.getRoles() không lỗi
+    @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         User user = this.userService.getUserByEmail(request.getEmail().trim().toLowerCase());
         if (user == null) {
@@ -86,6 +87,15 @@ public class AuthenticationService {
             log.warn("Dang nhap that bai: sai mat khau. userId={}", user.getId());
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
+
+        // Kiểm tra tài khoản có bị khóa (active = false) không
+        if (!user.isActive()) {
+            log.warn("Dang nhap that bai: tai khoan da bi khoa. userId={}", user.getId());
+            throw new AppException(ErrorCode.USER_INACTIVE);
+        }
+
+        // Cập nhật lastLoginAt sau khi xác thực thành công
+        this.userService.updateLastLoginAt(user.getId(), LocalDateTime.now());
 
         try {
             return issueTokenPair(user);

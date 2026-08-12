@@ -28,6 +28,7 @@ public enum ErrorCode {
     USER_EMAIL_EMPTY(1007, "Email người dùng không được để trống", HttpStatus.BAD_REQUEST),
     USER_EMAIL_ALREADY_EXISTS(1008, "Email người dùng đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL(1009, "Email người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
+    USER_INACTIVE(1010, "Tài khoản đã bị khóa, vui lòng liên hệ quản trị viên", HttpStatus.UNAUTHORIZED),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
