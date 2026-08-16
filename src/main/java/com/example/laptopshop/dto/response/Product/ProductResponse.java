@@ -3,6 +3,8 @@ package com.example.laptopshop.dto.response.Product;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 public class ProductResponse {
@@ -30,4 +32,6 @@ public class ProductResponse {
     private String categoryId;
     private String categoryName;
 
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

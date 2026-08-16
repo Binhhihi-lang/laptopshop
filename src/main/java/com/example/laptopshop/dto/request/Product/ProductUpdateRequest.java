@@ -2,7 +2,6 @@ package com.example.laptopshop.dto.request.Product;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.Category;
 
@@ -23,7 +22,6 @@ public class ProductUpdateRequest {
     private String shortDesc;
     private String detailDesc;
     private Integer quantity;
-    private Integer sold; // Cho phép admin sửa lại số lượt bán nếu cần đối soát thủ công
     private String factory;
     private String target;
     private String cpu;
@@ -35,8 +33,8 @@ public class ProductUpdateRequest {
     private Double weight;
     private Integer warrantyMonths;
     private boolean active;
-    private Category category;
 
-    private MultipartFile inputFile; // Nhận ảnh mới nếu admin muốn đổi ảnh sản phẩm
+    @NotBlank(message = "PRODUCT_CATEGORY_REQUIRED")
+    private String categoryId;
 
 }

@@ -2,6 +2,7 @@ package com.example.laptopshop.service;
 
 import java.util.List;
 
+import com.example.laptopshop.domain.Category;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -22,7 +23,7 @@ import com.example.laptopshop.repository.ProductRepository;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
 public class ProductService {
-
+     CategoryService categoryService;
      ProductRepository productRepository;
      UploadService uploadService;
      ProductMapper productMapper;
@@ -32,9 +33,41 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
+    // Xóa MỀM: gọi y hệt như xóa thật trước đây, nhưng nhờ @SQLDelete khai báo
+    // ở Product.java, Hibernate tự động đổi câu lệnh thành UPDATE deleted_at =
+    // NOW() thay vì DELETE thật
     public void deleteProductById(String id) {
         Product product = getProductById(id); // kiểm tra tồn tại, không thì throw lỗi
         this.productRepository.delete(product);
+    }
+
+    // Xóa hàng loạt sản phẩm theo danh sách id: xóa ảnh của từng sản phẩm trước
+    // khi xóa bản ghi (giống deleteProduct đơn), wrap trong 1 transaction để các
+    // bước xóa ảnh + xóa record nhất quán với nhau. Tương tự deleteProductById,
+    // deleteAll() cũng bị @SQLDelete đổi thành xóa MỀM (UPDATE deleted_at).
+    @Transactional
+    public void deleteProductsByIds(List<String> ids) {
+        List<Product> products = this.productRepository.findAllById(ids);
+        if (products.size() != ids.size()) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+        for (Product product : products) {
+            if (product.getImage() != null) {
+                this.uploadService.handleDeleteFile(product.getImage());
+            }
+        }
+        this.productRepository.deleteAll(products);
+    }
+
+    // Kích hoạt/khóa hàng loạt sản phẩm theo danh sách id
+    @Transactional
+    public void updateProductsActive(List<String> ids, boolean active) {
+        List<Product> products = this.productRepository.findAllById(ids);
+        if (products.size() != ids.size()) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+        products.forEach(product -> product.setActive(active));
+        this.productRepository.saveAll(products);
     }
 
     // ---- Các method trả Response DTO: LUÔN @Transactional để Hibernate Session
@@ -73,7 +106,9 @@ public class ProductService {
         newProduct.setCode(request.getCode().trim().toUpperCase());
         newProduct.setName(request.getName().trim());
         newProduct.setQuantity(request.getQuantity() == null ? 0 : request.getQuantity());
-        newProduct.setCategory(request.getCategory());
+
+        Category category = categoryService.getCategoryById(request.getCategoryId());
+        newProduct.setCategory(category);
 
         // Sản phẩm mới tạo luôn bắt đầu từ 0 lượt bán, không cho client tự set qua form
         // create
@@ -90,7 +125,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse handleUpdateProduct(String id, ProductUpdateRequest request) {
+    public ProductResponse handleUpdateProduct(String id, ProductUpdateRequest request, MultipartFile file) {
         // 1. Tìm Product cũ trong DB, không thấy thì ném lỗi
         Product currentProduct = getProductById(id);
 
@@ -106,12 +141,11 @@ public class ProductService {
         currentProduct.setCode(request.getCode().trim().toUpperCase());
         currentProduct.setName(request.getName().trim());
         currentProduct.setQuantity(request.getQuantity() == null ? 0 : request.getQuantity());
-        currentProduct.setSold(request.getSold() == null ? currentProduct.getSold() : request.getSold());
-        currentProduct.setCategory(request.getCategory());
+        Category category = this.categoryService.getCategoryById(request.getCategoryId());
+        currentProduct.setCategory(category);
 
         // 4. Xử lý đổi ảnh mới nếu admin gửi lên file mới, xóa ảnh cũ trước khi lưu ảnh
         // mới
-        MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             if (currentProduct.getImage() != null) {
                 this.uploadService.handleDeleteFile(currentProduct.getImage());

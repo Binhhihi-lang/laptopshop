@@ -38,8 +38,7 @@ public class ProductCreationRequest {
     private Integer warrantyMonths;
     private boolean active = true; // true: đang bán, false: ẩn/ngừng bán
 
-    private Category category;
+    private String categoryId;
 
-    private MultipartFile inputFile; // Hứng file ảnh sản phẩm trực tiếp trong DTO này luôn,
 
 }
