@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.laptopshop.dto.request.User.UserBulkDeleteRequest;
+import com.example.laptopshop.dto.request.User.UserBulkStatusRequest;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
 import com.example.laptopshop.dto.request.User.UserUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
@@ -69,6 +71,32 @@ public class UserRestController {
     public ApiResponse<Void> deleteUser(@PathVariable String id) {
         this.userService.deleteUserById(id);
         ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Người dùng đã được xóa thành công");
+        return response;
+    }
+
+    // 6. Xóa hàng loạt người dùng theo danh sách id (body JSON { ids: [...] }).
+    // Việc xóa avatar từng user + xóa record nằm trong 1 transaction ở
+    // UserService.deleteUsersByIds() để đảm bảo nhất quán.
+    @PostMapping("/bulk-delete")
+    public ApiResponse<Void> deleteUsers(
+            @Valid @RequestBody UserBulkDeleteRequest request) {
+        this.userService.deleteUsersByIds(request.getIds());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Các người dùng đã được xóa thành công");
+        return response;
+    }
+
+    // 7. Kích hoạt/khóa hàng loạt người dùng (body JSON { ids: [...], active:
+    // true/false })
+    @PatchMapping("/bulk-status")
+    public ApiResponse<Void> updateUsersActive(
+            @Valid @RequestBody UserBulkStatusRequest request) {
+        this.userService.updateUsersActive(request.getIds(), request.isActive());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage(request.isActive()
+                ? "Các người dùng đã được kích hoạt thành công"
+                : "Các người dùng đã được khóa thành công");
         return response;
     }
 }

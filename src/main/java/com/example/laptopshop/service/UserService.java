@@ -58,6 +58,36 @@ public class UserService {
         this.userRepository.delete(user);
     }
 
+    // Xóa hàng loạt người dùng theo danh sách id: xóa avatar của từng user
+    // trước khi xóa bản ghi (giống deleteUser đơn), wrap trong 1 transaction để
+    // các bước xóa ảnh + xóa record nhất quán với nhau. Tương tự
+    // deleteUserById, deleteAll() cũng bị @SQLDelete đổi thành xóa MỀM
+    // (UPDATE deleted_at).
+    @Transactional
+    public void deleteUsersByIds(List<String> ids) {
+        List<User> users = this.userRepository.findAllById(ids);
+        if (users.size() != ids.size()) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+        for (User user : users) {
+            if (user.getAvatar() != null) {
+                this.uploadService.handleDeleteFile(user.getAvatar());
+            }
+        }
+        this.userRepository.deleteAll(users);
+    }
+
+    // Kích hoạt/khóa hàng loạt người dùng theo danh sách id
+    @Transactional
+    public void updateUsersActive(List<String> ids, boolean active) {
+        List<User> users = this.userRepository.findAllById(ids);
+        if (users.size() != ids.size()) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+        users.forEach(user -> user.setActive(active));
+        this.userRepository.saveAll(users);
+    }
+
     public Role getRoleByName(String name) {
         return this.roleRepository.findByName(name)
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
