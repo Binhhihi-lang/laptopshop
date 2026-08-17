@@ -144,14 +144,18 @@ public class ProductService {
         Category category = this.categoryService.getCategoryById(request.getCategoryId());
         currentProduct.setCategory(category);
 
-        // 4. Xử lý đổi ảnh mới nếu admin gửi lên file mới, xóa ảnh cũ trước khi lưu ảnh
-        // mới
-        if (file != null && !file.isEmpty()) {
+        // 4. Xử lý ảnh: ưu tiên file mới; nếu không có file mới và có cờ xóa thì xóa ảnh cũ;
+        // còn lại giữ nguyên ảnh hiện tại
+        boolean hasNewFile = file != null && !file.isEmpty();
+        if (hasNewFile) {
             if (currentProduct.getImage() != null) {
                 this.uploadService.handleDeleteFile(currentProduct.getImage());
             }
             String newImage = this.uploadService.handleSaveUploadFile(file, "product");
             currentProduct.setImage(newImage);
+        } else if (request.isRemoveImage() && currentProduct.getImage() != null) { // có cờ xóa và có ảnh cũ
+            this.uploadService.handleDeleteFile(currentProduct.getImage());
+            currentProduct.setImage(null);
         }
 
         Product saved = this.productRepository.save(currentProduct);

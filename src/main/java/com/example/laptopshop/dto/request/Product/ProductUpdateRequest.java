@@ -34,6 +34,12 @@ public class ProductUpdateRequest {
     private Integer warrantyMonths;
     private boolean active;
 
+    private boolean removeImage = false; // true = xóa ảnh hiện tại nếu không gửi file mới
+
+//    public void setRemoveImage(boolean removeImage) {
+//        this.removeImage = removeImage;
+//    }
+
     @NotBlank(message = "PRODUCT_CATEGORY_REQUIRED")
     private String categoryId;
 
