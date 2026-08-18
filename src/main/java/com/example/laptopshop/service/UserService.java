@@ -78,6 +78,7 @@ public class UserService {
     }
 
     // Kích hoạt/khóa hàng loạt người dùng theo danh sách id
+    // @Transactional đủ id thì mới kích hoạt xóa không thì báo lỗi
     @Transactional
     public void updateUsersActive(List<String> ids, boolean active) {
         List<User> users = this.userRepository.findAllById(ids);

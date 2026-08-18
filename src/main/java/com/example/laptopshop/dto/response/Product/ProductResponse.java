@@ -31,6 +31,7 @@ public class ProductResponse {
     private Integer warrantyMonths;
     private String categoryId;
     private String categoryName;
+    private Boolean categoryActive; // trạng thái active của Category (null nếu category bị xóa mềm)
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -77,12 +77,6 @@ public class ProductRestController {
     // productService.getProductById() (method nội bộ, không phải *Response)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteProduct(@PathVariable String id) {
-        Product product = this.productService.getProductById(id);
-
-        if (product.getImage() != null) {
-            this.uploadService.handleDeleteFile(product.getImage());
-        }
-
         this.productService.deleteProductById(id);
         ApiResponse<Void> response = new ApiResponse<>();
         response.setMessage("Sản phẩm đã được xóa thành công");

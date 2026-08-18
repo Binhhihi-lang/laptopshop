@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import com.example.laptopshop.domain.Category;
 import com.example.laptopshop.dto.request.Category.CategoryCreationRequest;
 import com.example.laptopshop.dto.request.Category.CategoryUpdateRequest;
+import com.example.laptopshop.dto.request.Category.CategoryBulkDeleteRequest;
+import com.example.laptopshop.dto.request.Category.CategoryBulkStatusRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.Category.CategoryDetailResponse;
 import com.example.laptopshop.dto.response.Category.CategoryResponse;
@@ -24,8 +26,6 @@ import jakarta.validation.Valid;
 public class CategoryRestController {
 
     CategoryService categoryService;
-    UploadService uploadService;
-
 
     // 1. Lấy danh sách danh mục (KHÔNG kèm danh sách sản phẩm, dùng cho
     // sidebar/dropdown/bảng danh sách)
@@ -71,15 +71,33 @@ public class CategoryRestController {
     // categoryService.getCategoryById() (method nội bộ, không phải *Response)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteCategory(@PathVariable String id) {
-        Category category = this.categoryService.getCategoryById(id);
-
-        if (category.getImage() != null) {
-            this.uploadService.handleDeleteFile(category.getImage());
-        }
-
         this.categoryService.deleteCategoryById(id);
         ApiResponse<Void> response = new ApiResponse<>();
-        response.setResult(null);
+        response.setMessage("Danh mục sản phẩm đã được xóa thành công");
+        return response;
+    }
+
+    // 6. Xóa hàng loạt danh mục theo danh sách id (body JSON { ids: [...] }).
+    // Việc xóa ảnh từng category + xóa record nằm trong 1 transaction ở
+    // CategoryService.deleteCategoriesByIds(). Nhờ @SQLDelete ở Category.java,
+    // thao tác này là xóa MỀM (UPDATE deleted_at).
+    @PostMapping("/bulk-delete")
+    public ApiResponse<Void> deleteCategories(@Valid @RequestBody CategoryBulkDeleteRequest request) {
+        this.categoryService.deleteCategoriesByIds(request.getIds());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Các danh mục đã được xóa thành công");
+        return response;
+    }
+
+    // 7. Kích hoạt/khóa hàng loạt danh mục (body JSON { ids: [...], active:
+    // true/false })
+    @PatchMapping("/bulk-status")
+    public ApiResponse<Void> updateCategoriesActive(@Valid @RequestBody CategoryBulkStatusRequest request) {
+        this.categoryService.updateCategoriesActive(request.getIds(), request.isActive());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage(request.isActive()
+                ? "Các danh mục đã được kích hoạt thành công"
+                : "Các danh mục đã được khóa thành công");
         return response;
     }
 }

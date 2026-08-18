@@ -38,6 +38,10 @@ public class ProductService {
     // NOW() thay vì DELETE thật
     public void deleteProductById(String id) {
         Product product = getProductById(id); // kiểm tra tồn tại, không thì throw lỗi
+
+        if (product.getImage() != null) {
+            this.uploadService.handleDeleteFile(product.getImage());
+        }
         this.productRepository.delete(product);
     }
 

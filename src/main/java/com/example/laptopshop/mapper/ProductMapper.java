@@ -47,10 +47,14 @@ public interface ProductMapper {
     @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(ProductUpdateRequest request, @MappingTarget Product entity);
 
-    // Entity -> Response: category rút gọn thành categoryId/categoryName (tránh
-    // trả nguyên object Category lồng bên trong, tránh lazy-loading exception)
-    @Mapping(target = "categoryId", source = "category.id")
-    @Mapping(target = "categoryName", source = "category.name")
+    // Entity -> Response: category rút gọn thành categoryId/categoryName.
+    // Dùng expression null-safe vì Category có thể bị xóa mềm (soft-delete,
+    // xem Category.java @SQLRestriction) -> product.getCategory() = null,
+    // nếu truy cập .id/.name trực tiếp sẽ NPE(NullPointerException). Khi null thì trả về null
+    // (FE hiện "—" cho sản phẩm ko có  category).
+    @Mapping(target = "categoryId", expression = "java(product.getCategory() != null ? product.getCategory().getId() : null)")
+    @Mapping(target = "categoryName", expression = "java(product.getCategory() != null ? product.getCategory().getName() : null)")
+    @Mapping(target = "categoryActive", expression = "java(product.getCategory() != null ? product.getCategory().isActive() : null)")
     ProductResponse toResponse(Product product);
 
     List<ProductResponse> toResponseList(List<Product> products);
