@@ -52,6 +52,7 @@ public enum ErrorCode {
     COUPON_OUT_OF_STOCK(4004, "Mã giảm giá đã hết lượt sử dụng", HttpStatus.BAD_REQUEST),
     INVALID_COUPON_CONFIG(4005, "Cấu hình giảm giá không hợp lệ (Chỉ chọn Phần trăm hoặc Số tiền)", HttpStatus.BAD_REQUEST),
     COUPON_CODE_REQUIRED(4008, "Mã giảm giá không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_COUPON_DATA(4009, "Dữ liệu mã giảm giá không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_PERCENT(4006, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_AMOUNT(4007, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
 

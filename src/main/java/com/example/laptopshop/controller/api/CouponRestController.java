@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.laptopshop.dto.request.Coupon.CouponCreationRequest;
 import com.example.laptopshop.dto.request.Coupon.CouponUpdateRequest;
+import com.example.laptopshop.dto.request.Coupon.CouponBulkDeleteRequest;
+import com.example.laptopshop.dto.request.Coupon.CouponBulkStatusRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.Coupon.CouponResponse;
 import com.example.laptopshop.service.CouponService;
@@ -45,23 +49,19 @@ public class CouponRestController {
         return response;
     }
 
-    // Coupon không có ảnh nên vẫn nhận JSON thuần qua @RequestBody, chỉ đổi từ
-    // hứng trực tiếp Entity Coupon sang DTO CouponCreationRequest.
-    // test postman = raw json
+    // Coupon có ảnh nên nhận dữ liệu dạng form-data qua @ModelAttribute (giống
+    // Category/Product) để hỗ trợ upload ảnh. Toàn bộ map/validate/xử lý ảnh nằm ở Service.
     @PostMapping("/coupons")
-    public ApiResponse<CouponResponse> createCoupon(@Valid @RequestBody CouponCreationRequest request) {
+    public ApiResponse<CouponResponse> createCoupon(@Valid @ModelAttribute CouponCreationRequest request) {
         CouponResponse created = this.couponService.createCoupon(request);
         ApiResponse<CouponResponse> response = new ApiResponse<>();
         response.setResult(created);
         return response;
     }
 
-    // Sửa lại vị trí @Valid: đặt trên @PathVariable long id không có tác dụng gì
-    // (kiểu long không có gì để validate), @Valid phải nằm ở @RequestBody mới
-    // kích hoạt @NotBlank/@NotNull bên trong CouponUpdateRequest.
     @PutMapping("/coupons/{id}")
     public ApiResponse<CouponResponse> updateCoupon(@PathVariable String id,
-            @Valid @RequestBody CouponUpdateRequest request) {
+            @Valid @ModelAttribute CouponUpdateRequest request) {
         CouponResponse updated = this.couponService.updateCoupon(id, request);
         ApiResponse<CouponResponse> response = new ApiResponse<>();
         response.setResult(updated);
@@ -71,6 +71,25 @@ public class CouponRestController {
     @DeleteMapping("/coupons/{id}")
     public ApiResponse<Void> deleteCoupon(@PathVariable String id) {
         this.couponService.deleteCoupon(id);
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setResult(null);
+        return response;
+    }
+
+    // Xóa hàng loạt coupon theo danh sách id (body JSON { ids: [...] }).
+    // Xóa ảnh + xóa mềm nằm trong 1 transaction ở CouponService.deleteCouponsByIds().
+    @PostMapping("/coupons/bulk-delete")
+    public ApiResponse<Void> deleteCoupons(@Valid @RequestBody CouponBulkDeleteRequest request) {
+        this.couponService.deleteCouponsByIds(request.getIds());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setResult(null);
+        return response;
+    }
+
+    // Kích hoạt/khóa hàng loạt coupon (body JSON { ids: [...], active: true/false })
+    @PatchMapping("/coupons/bulk-status")
+    public ApiResponse<Void> updateCouponsActive(@Valid @RequestBody CouponBulkStatusRequest request) {
+        this.couponService.updateCouponsActive(request.getIds(), request.isActive());
         ApiResponse<Void> response = new ApiResponse<>();
         response.setResult(null);
         return response;

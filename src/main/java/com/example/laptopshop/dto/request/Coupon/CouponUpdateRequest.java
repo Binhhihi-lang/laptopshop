@@ -4,8 +4,12 @@ import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
+import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
+@Setter
 public class CouponUpdateRequest {
 
     @NotBlank(message = "COUPON_CODE_REQUIRED")
@@ -13,8 +17,11 @@ public class CouponUpdateRequest {
 
     private Integer discountPercent;
     private Long discountAmount;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime expiryDate;
     private Integer usageLimit;
-    private boolean active;
+    private boolean active = true;
+    private MultipartFile inputFile;
+    private boolean removeImage = false; // true = xóa ảnh hiện tại nếu không gửi file mới
 
 }

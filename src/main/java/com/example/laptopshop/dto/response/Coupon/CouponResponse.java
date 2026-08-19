@@ -16,5 +16,8 @@ public class CouponResponse {
     private Integer usageLimit;
     private Integer usedCount;
     private boolean active;
+    private String image;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
 }

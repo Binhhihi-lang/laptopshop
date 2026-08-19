@@ -7,6 +7,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.Coupon;
 import com.example.laptopshop.dto.request.Coupon.CouponCreationRequest;
@@ -16,6 +18,7 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.CouponMapper;
 import com.example.laptopshop.repository.CouponRepository;
+import com.example.laptopshop.service.UploadService;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
@@ -23,8 +26,10 @@ public class CouponService {
 
     CouponRepository couponRepository;
     CouponMapper couponMapper;
+    UploadService uploadService;
 
 
+    @Transactional(readOnly = true)
     public List<CouponResponse> getAllCoupons() {
         List<Coupon> couList = this.couponRepository.findAll();
         return this.couponMapper.toResponseList(couList);
@@ -35,21 +40,22 @@ public class CouponService {
                 .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     public CouponResponse getCouponResponseById(String id) {
         Coupon coupon = getCouponById(id);
         return this.couponMapper.toResponse(coupon);
     }
 
-    // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity rồi lưu DB.
-    // Controller không còn hứng trực tiếp bằng Entity Coupon nữa, giống cách làm
-    // với User/Product/Category.
+    // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh,
+    // lưu DB rồi map sang Response. Controller gửi dạng form-data (@ModelAttribute).
+    @Transactional
     public CouponResponse createCoupon(CouponCreationRequest request) {
         validateCode(request.getCode(), null);
         validateDiscountValue(request.getDiscountPercent(), request.getDiscountAmount());
 
         // Map các field thuần (discountPercent, discountAmount, expiryDate) từ DTO
-        // sang Entity qua MapStruct. code/usageLimit/usedCount KHÔNG được map ở
-        // đây (đã ignore trong CouponMapper) vì cần xử lý riêng bên dưới.
+        // sang Entity qua MapStruct. code/usageLimit/usedCount/image KHÔNG được map
+        // ở đây (đã ignore trong CouponMapper) vì cần xử lý riêng bên dưới.
         Coupon coupon = this.couponMapper.toEntity(request);
         coupon.setCode(request.getCode().trim().toUpperCase());
         coupon.setUsageLimit(
@@ -57,11 +63,20 @@ public class CouponService {
 
         // Coupon mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         coupon.setUsedCount(0);
+
+        // Xử lý upload ảnh mã giảm giá nếu có
+        MultipartFile file = request.getInputFile();
+        if (file != null && !file.isEmpty()) {
+            String image = this.uploadService.handleSaveUploadFile(file, "coupon");
+            coupon.setImage(image);
+        }
+
         Coupon couponSaved = this.couponRepository.save(coupon);
         return this.couponMapper.toResponse(couponSaved);
     }
 
     // Cập nhật thông tin coupon theo id
+    @Transactional
     public CouponResponse updateCoupon(String id, CouponUpdateRequest request) {
         Coupon coupon = getCouponById(id);
 
@@ -76,16 +91,62 @@ public class CouponService {
         coupon.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
 
+        // Xử lý ảnh: ưu tiên file mới; nếu không có file mới và có cờ xóa thì xóa
+        // ảnh cũ; còn lại giữ nguyên ảnh hiện tại
+        MultipartFile file = request.getInputFile();
+        boolean hasNewFile = file != null && !file.isEmpty();
+        if (hasNewFile) {
+            if (coupon.getImage() != null) {
+                this.uploadService.handleDeleteFile(coupon.getImage());
+            }
+            String newImage = this.uploadService.handleSaveUploadFile(file, "coupon");
+            coupon.setImage(newImage);
+        } else if (request.isRemoveImage() && coupon.getImage() != null) {
+            this.uploadService.handleDeleteFile(coupon.getImage());
+            coupon.setImage(null);
+        }
+
         // usedCount KHÔNG cho cập nhật thủ công qua form update, chỉ hệ thống tự tăng
         // khi coupon được áp dụng vào đơn hàng
         Coupon couponUpdated = this.couponRepository.save(coupon);
         return this.couponMapper.toResponse(couponUpdated);
     }
 
-    // Xóa coupon theo id
+    // Xóa mềm coupon theo id (nhờ @SQLDelete ở Coupon.java). Xóa ảnh Cloudinary trước.
     public void deleteCoupon(String id) {
         Coupon coupon = getCouponById(id);
+        if (coupon.getImage() != null) {
+            this.uploadService.handleDeleteFile(coupon.getImage());
+        }
         this.couponRepository.delete(coupon);
+    }
+
+    // Xóa hàng loạt coupon theo danh sách id: xóa ảnh vật lý từng coupon trước khi
+    // xóa record (giống deleteCoupon đơn), wrap trong 1 transaction để nhất quán.
+    // Nhờ @SQLDelete, deleteAll() tự động đổi thành xóa MỀM (UPDATE deleted_at).
+    @Transactional
+    public void deleteCouponsByIds(List<String> ids) {
+        List<Coupon> coupons = this.couponRepository.findAllById(ids);
+        if (coupons.size() != ids.size()) {
+            throw new AppException(ErrorCode.COUPON_NOT_FOUND);
+        }
+        for (Coupon coupon : coupons) {
+            if (coupon.getImage() != null) {
+                this.uploadService.handleDeleteFile(coupon.getImage());
+            }
+        }
+        this.couponRepository.deleteAll(coupons);
+    }
+
+    // Kích hoạt/khóa hàng loạt coupon theo danh sách id
+    @Transactional
+    public void updateCouponsActive(List<String> ids, boolean active) {
+        List<Coupon> coupons = this.couponRepository.findAllById(ids);
+        if (coupons.size() != ids.size()) {
+            throw new AppException(ErrorCode.COUPON_NOT_FOUND);
+        }
+        coupons.forEach(coupon -> coupon.setActive(active));
+        this.couponRepository.saveAll(coupons);
     }
 
     /**

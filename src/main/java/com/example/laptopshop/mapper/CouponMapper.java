@@ -24,6 +24,7 @@ public interface CouponMapper {
     @Mapping(target = "usageLimit", ignore = true)
     @Mapping(target = "usedCount", ignore = true)
     @Mapping(target = "active", ignore = true)
+    @Mapping(target = "image", ignore = true) // ảnh xử lý riêng qua inputFile trong Service
     Coupon toEntity(CouponCreationRequest request);
 
     // @MappingTarget: đổ dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn.
@@ -34,6 +35,7 @@ public interface CouponMapper {
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "usageLimit", ignore = true)
     @Mapping(target = "usedCount", ignore = true)
+    @Mapping(target = "image", ignore = true) // ảnh xử lý riêng qua inputFile trong Service
     void updateEntity(CouponUpdateRequest request, @MappingTarget Coupon entity);
 
     CouponResponse toResponse(Coupon coupon);
