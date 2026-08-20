@@ -16,6 +16,7 @@ public class UserResponse {
     private String avatar;
     private List<String> roleNames;
     private boolean active = true;
+    private Boolean roleLocked; // true nếu user có role nào bị khóa (active=false); null nếu không có role
     private String createdAt;
     private String lastLoginAt;
 

@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.domain.Category;
@@ -30,6 +31,7 @@ public class CategoryRestController {
     // 1. Lấy danh sách danh mục (KHÔNG kèm danh sách sản phẩm, dùng cho
     // sidebar/dropdown/bảng danh sách)
     @GetMapping
+    @PreAuthorize("hasAuthority('READ_CATEGORY')")
     public ApiResponse<List<CategoryResponse>> getAllCategories() {
         ApiResponse<List<CategoryResponse>> response = new ApiResponse<>();
         response.setResult(this.categoryService.getAllCategoryResponses());
@@ -40,6 +42,7 @@ public class CategoryRestController {
     // này. Service.getCategoryDetail() đã tự lo việc @Transactional + mapping
     // an toàn, Controller chỉ việc gọi và bọc vào ApiResponse.
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('READ_CATEGORY')")
     public ApiResponse<CategoryDetailResponse> getCategoryById(@PathVariable String id) {
         ApiResponse<CategoryDetailResponse> response = new ApiResponse<>();
         response.setResult(this.categoryService.getCategoryDetail(id));
@@ -51,6 +54,7 @@ public class CategoryRestController {
     // tiếp bằng Entity Category nữa, toàn bộ map dữ liệu/validate/xử lý ảnh nằm
     // ở Service)
     @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_CATEGORY')")
     public ApiResponse<CategoryResponse> createCategory(@Valid @ModelAttribute CategoryCreationRequest request) {
         ApiResponse<CategoryResponse> response = new ApiResponse<>();
         response.setResult(this.categoryService.handleCreateCategory(request));
@@ -59,6 +63,7 @@ public class CategoryRestController {
 
     // Cập nhật danh mục
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('UPDATE_CATEGORY')")
     public ApiResponse<CategoryResponse> updateCategory(@PathVariable String id,
             @Valid @ModelAttribute CategoryUpdateRequest request) {
         ApiResponse<CategoryResponse> response = new ApiResponse<>();
@@ -70,6 +75,7 @@ public class CategoryRestController {
     // trước khi xóa User). Cần Entity thô để đọc tên file ảnh -> dùng
     // categoryService.getCategoryById() (method nội bộ, không phải *Response)
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DELETE_CATEGORY')")
     public ApiResponse<Void> deleteCategory(@PathVariable String id) {
         this.categoryService.deleteCategoryById(id);
         ApiResponse<Void> response = new ApiResponse<>();
@@ -82,6 +88,7 @@ public class CategoryRestController {
     // CategoryService.deleteCategoriesByIds(). Nhờ @SQLDelete ở Category.java,
     // thao tác này là xóa MỀM (UPDATE deleted_at).
     @PostMapping("/bulk-delete")
+    @PreAuthorize("hasAuthority('DELETE_CATEGORY')")
     public ApiResponse<Void> deleteCategories(@Valid @RequestBody CategoryBulkDeleteRequest request) {
         this.categoryService.deleteCategoriesByIds(request.getIds());
         ApiResponse<Void> response = new ApiResponse<>();
@@ -92,6 +99,7 @@ public class CategoryRestController {
     // 7. Kích hoạt/khóa hàng loạt danh mục (body JSON { ids: [...], active:
     // true/false })
     @PatchMapping("/bulk-status")
+    @PreAuthorize("hasAuthority('UPDATE_CATEGORY')")
     public ApiResponse<Void> updateCategoriesActive(@Valid @RequestBody CategoryBulkStatusRequest request) {
         this.categoryService.updateCategoriesActive(request.getIds(), request.isActive());
         ApiResponse<Void> response = new ApiResponse<>();

@@ -296,8 +296,7 @@ public class AuthenticationService {
 
 
     // Claim "scope" chứa các tên Role cách nhau bởi khoảng trắng (vd "ADMIN
-    // USER") -> JwtGrantedAuthoritiesConverter bên SecurityConfiguration TỰ
-    // ĐỘNG split chuỗi theo khoảng trắng thành nhiều quyền "ROLE_ADMIN",
+    // USER")
     private String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
 

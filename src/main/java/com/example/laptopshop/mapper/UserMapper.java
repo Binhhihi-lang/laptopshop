@@ -52,6 +52,7 @@ public interface UserMapper {
     // tự động convert sang "roleNames" (List<String>) nhờ MapStruct phát hiện
     // helper method roleToName(Role) bên dưới và áp dụng cho từng phần tử.
     @Mapping(target = "roleNames", source = "roles")
+    @Mapping(target = "roleLocked", expression = "java(isRoleLocked(user))")
     UserResponse toResponse(User user);
 
     List<UserResponse> toResponseList(List<User> users);
@@ -61,5 +62,15 @@ public interface UserMapper {
     // về giao diện
     default String roleToName(Role role) {
         return role.getName();
+    }
+
+    // true nếu user có role nào bị khóa (active=false); null nếu user không có
+    // role nào. Chạy trong @Transactional(readOnly=true) của Service nên
+    // user.getRoles() (lazy) được load an toàn.
+    default Boolean isRoleLocked(User user) {
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return null;
+        }
+        return user.getRoles().stream().anyMatch(role -> !role.isActive());
     }
 }

@@ -33,6 +33,7 @@ public class ProductRestController {
 
     // 1. Lấy danh sách sản phẩm
     @GetMapping
+    @PreAuthorize("hasAuthority('READ_PRODUCT')")
     public ApiResponse<List<ProductResponse>> getAllProducts() {
         ApiResponse<List<ProductResponse>> response = new ApiResponse<>();
         response.setResult(this.productService.getAllProductResponses());
@@ -41,6 +42,7 @@ public class ProductRestController {
 
     // 2. Lấy chi tiết sản phẩm theo ID
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('READ_PRODUCT')")
     public ApiResponse<ProductResponse> getProductById(@PathVariable String id) {
         ApiResponse<ProductResponse> response = new ApiResponse<>();
         response.setResult(this.productService.getProductResponseById(id));
@@ -51,7 +53,7 @@ public class ProductRestController {
     // phẩm, giống cách làm với User -> Controller không còn hứng trực tiếp bằng
     // Entity Product nữa, toàn bộ map dữ liệu/validate/xử lý ảnh nằm ở Service)
     @PostMapping
-
+    @PreAuthorize("hasAuthority('CREATE_PRODUCT')")
     public ApiResponse<ProductResponse> createProduct(
             @Valid @RequestPart("productInfo") ProductCreationRequest request,
             @RequestPart(value = "inputFile", required = false) MultipartFile inputFile) {
@@ -63,6 +65,7 @@ public class ProductRestController {
 
     // 4. Cập nhật sản phẩm (cùng multipart với create: productInfo + inputFile)
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('UPDATE_PRODUCT')")
     public ApiResponse<ProductResponse> updateProduct(
             @PathVariable String id,
             @Valid @RequestPart("productInfo") ProductUpdateRequest request,
@@ -76,6 +79,7 @@ public class ProductRestController {
     // trước khi xóa User). Cần Entity thô để đọc tên file ảnh -> dùng
     // productService.getProductById() (method nội bộ, không phải *Response)
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DELETE_PRODUCT')")
     public ApiResponse<Void> deleteProduct(@PathVariable String id) {
         this.productService.deleteProductById(id);
         ApiResponse<Void> response = new ApiResponse<>();
@@ -87,6 +91,7 @@ public class ProductRestController {
     // Việc xóa ảnh từng sản phẩm + xóa record nằm trong 1 transaction ở
     // ProductService.deleteProductsByIds() để đảm bảo nhất quán.
     @PostMapping("/bulk-delete")
+    @PreAuthorize("hasAuthority('DELETE_PRODUCT')")
     public ApiResponse<Void> deleteProducts(
             @Valid @RequestBody ProductBulkDeleteRequest request) {
         this.productService.deleteProductsByIds(request.getIds());
@@ -98,6 +103,7 @@ public class ProductRestController {
     // 7. Kích hoạt/khóa hàng loạt sản phẩm (body JSON { ids: [...], active:
     // true/false })
     @PatchMapping("/bulk-status")
+    @PreAuthorize("hasAuthority('UPDATE_PRODUCT')")
     public ApiResponse<Void> updateProductsActive(
             @Valid @RequestBody ProductBulkStatusRequest request) {
         this.productService.updateProductsActive(request.getIds(), request.isActive());

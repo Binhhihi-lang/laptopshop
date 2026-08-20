@@ -1,9 +1,11 @@
 package com.example.laptopshop.service;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.laptopshop.domain.CachedAuthorities;
 import com.example.laptopshop.domain.Role;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
@@ -21,6 +24,7 @@ import com.example.laptopshop.dto.response.User.UserResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.UserMapper;
+import com.example.laptopshop.repository.CachedAuthoritiesRepository;
 import com.example.laptopshop.repository.RoleRepository;
 import com.example.laptopshop.repository.UserRepository;
 
@@ -35,6 +39,11 @@ public class UserService {
      RoleRepository roleRepository;
      UploadService uploadService;
      UserMapper userMapper;
+     CachedAuthoritiesRepository cachedAuthoritiesRepository;
+
+     // TTL cache quyền (giây). Đủ ngắn để tự làm mới nếu quên evict, đủ dài để
+     // gần như mọi request được phục vụ từ Redis (0 query DB).
+     private static final long AUTHORITIES_CACHE_TTL = 300;
 
     public User getUserById(String id) {
         return this.userRepository.findById(id)
@@ -92,6 +101,71 @@ public class UserService {
     public Role getRoleByName(String name) {
         return this.roleRepository.findByName(name)
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+    }
+
+    // Build lại danh sách quyền (authorities) từ CHỈ các Role đang ACTIVE của
+    // user. Dùng cho CustomJwtAuthenticationConverter để thu hồi quyền ngay khi
+    // một Role bị khóa (active=false) hoặc xóa mềm, trên request tiếp theo.
+    // @Transactional(readOnly=true) để load được quan hệ @ManyToMany lazy
+    // (roles -> permissions) trong cùng 1 session. User không tồn tại (kể cả đã
+    // xóa mềm do @SQLRestriction) -> trả List rỗng (bị từ chối toàn bộ).
+    //
+    // Phương án B (cache Redis): đọc cache trước, chỉ query DB khi cache miss,
+    // rồi lưu lại với TTL ngắn. Các thao tác Redis nằm ngoài JPA nên không bị
+    // ảnh hưởng bởi readOnly của transaction.
+    @Transactional(readOnly = true)
+    public List<org.springframework.security.core.GrantedAuthority> getActiveAuthorities(String userId) {
+        // 1. Thử lấy từ cache Redis trước (0 query DB nếu hit)
+        CachedAuthorities cached = this.cachedAuthoritiesRepository.findById(userId).orElse(null);
+        if (cached != null) {
+            return cached.getAuthorities().stream()
+                    .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+        }
+
+        // 2. Cache miss -> tính từ DB (logic cũ)
+        User user = this.userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return java.util.List.of();
+        }
+        java.util.List<String> authorityNames = new java.util.ArrayList<>();
+        for (Role role : user.getRoles()) {
+            if (!role.isActive()) {
+                continue; // Role bị khóa -> thu hồi toàn bộ quyền của role này
+            }
+            authorityNames.add("ROLE_" + role.getName());
+            for (com.example.laptopshop.domain.Permission permission : role.getPermissions()) {
+                authorityNames.add(permission.getName());
+            }
+        }
+
+        // 3. Lưu cache 5 phút (TTL tự động làm mới phòng quên evict)
+        this.cachedAuthoritiesRepository.save(CachedAuthorities.builder()
+                .userId(userId)
+                .authorities(authorityNames)
+                .ttl(AUTHORITIES_CACHE_TTL)
+                .build());
+
+        return authorityNames.stream()
+                .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+    }
+
+    // Xóa cache quyền của 1 user (dùng khi user bị đổi role). Lần truy cập sau
+    // sẽ load lại DB và cache giá trị mới.
+    public void evictUserAuthorities(String userId) {
+        this.cachedAuthoritiesRepository.deleteById(userId);
+    }
+
+    // Xóa cache quyền của TẤT CẢ user thuộc các role bị đổi/khóa/xóa -> thu hồi
+    // ngay trên request tiếp theo (Q2). Gọi trong @Transactional để load được
+    // quan hệ lazy role.getUsers().
+    public void evictUsersOfRoles(Collection<Role> roles) {
+        for (Role role : roles) {
+            for (User user : role.getUsers()) {
+                this.cachedAuthoritiesRepository.deleteById(user.getId());
+            }
+        }
     }
 
     // nhiều Role cùng lúc theo danh sách tên, dùng cho create/update User
@@ -167,6 +241,7 @@ public class UserService {
         newUser.setRoles(roles);
 
         User saved = this.userRepository.save(newUser);
+        this.evictUserAuthorities(saved.getId()); // role mới -> cache sẽ tính lại
         return this.userMapper.toResponse(saved);
     }
 
@@ -194,6 +269,7 @@ public class UserService {
 
         // 5. Lưu Entity đã cập nhật dữ liệu mới xuống DB
         User saved = this.userRepository.save(existingUser);
+        this.evictUserAuthorities(saved.getId()); // role có thể đổi -> cache tính lại
         return this.userMapper.toResponse(saved);
     }
 

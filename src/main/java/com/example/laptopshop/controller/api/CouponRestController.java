@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -34,6 +35,7 @@ public class CouponRestController {
     CouponService couponService;
 
     @GetMapping("/coupons")
+    @PreAuthorize("hasAuthority('READ_COUPON')")
     public ApiResponse<List<CouponResponse>> getAllCoupons() {
         List<CouponResponse> coupons = this.couponService.getAllCoupons();
         ApiResponse<List<CouponResponse>> response = new ApiResponse<>();
@@ -42,6 +44,7 @@ public class CouponRestController {
     }
 
     @GetMapping("/coupons/{id}")
+    @PreAuthorize("hasAuthority('READ_COUPON')")
     public ApiResponse<CouponResponse> getCouponById(@PathVariable String id) {
         CouponResponse coupon = this.couponService.getCouponResponseById(id);
         ApiResponse<CouponResponse> response = new ApiResponse<>();
@@ -52,6 +55,7 @@ public class CouponRestController {
     // Coupon có ảnh nên nhận dữ liệu dạng form-data qua @ModelAttribute (giống
     // Category/Product) để hỗ trợ upload ảnh. Toàn bộ map/validate/xử lý ảnh nằm ở Service.
     @PostMapping("/coupons")
+    @PreAuthorize("hasAuthority('CREATE_COUPON')")
     public ApiResponse<CouponResponse> createCoupon(@Valid @ModelAttribute CouponCreationRequest request) {
         CouponResponse created = this.couponService.createCoupon(request);
         ApiResponse<CouponResponse> response = new ApiResponse<>();
@@ -60,6 +64,7 @@ public class CouponRestController {
     }
 
     @PutMapping("/coupons/{id}")
+    @PreAuthorize("hasAuthority('UPDATE_COUPON')")
     public ApiResponse<CouponResponse> updateCoupon(@PathVariable String id,
             @Valid @ModelAttribute CouponUpdateRequest request) {
         CouponResponse updated = this.couponService.updateCoupon(id, request);
@@ -69,6 +74,7 @@ public class CouponRestController {
     }
 
     @DeleteMapping("/coupons/{id}")
+    @PreAuthorize("hasAuthority('DELETE_COUPON')")
     public ApiResponse<Void> deleteCoupon(@PathVariable String id) {
         this.couponService.deleteCoupon(id);
         ApiResponse<Void> response = new ApiResponse<>();
@@ -79,6 +85,7 @@ public class CouponRestController {
     // Xóa hàng loạt coupon theo danh sách id (body JSON { ids: [...] }).
     // Xóa ảnh + xóa mềm nằm trong 1 transaction ở CouponService.deleteCouponsByIds().
     @PostMapping("/coupons/bulk-delete")
+    @PreAuthorize("hasAuthority('DELETE_COUPON')")
     public ApiResponse<Void> deleteCoupons(@Valid @RequestBody CouponBulkDeleteRequest request) {
         this.couponService.deleteCouponsByIds(request.getIds());
         ApiResponse<Void> response = new ApiResponse<>();
@@ -88,6 +95,7 @@ public class CouponRestController {
 
     // Kích hoạt/khóa hàng loạt coupon (body JSON { ids: [...], active: true/false })
     @PatchMapping("/coupons/bulk-status")
+    @PreAuthorize("hasAuthority('UPDATE_COUPON')")
     public ApiResponse<Void> updateCouponsActive(@Valid @RequestBody CouponBulkStatusRequest request) {
         this.couponService.updateCouponsActive(request.getIds(), request.isActive());
         ApiResponse<Void> response = new ApiResponse<>();
