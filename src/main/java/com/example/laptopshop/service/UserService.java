@@ -1,15 +1,14 @@
 package com.example.laptopshop.service;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import com.example.laptopshop.domain.Permission;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +18,7 @@ import com.example.laptopshop.domain.CachedAuthorities;
 import com.example.laptopshop.domain.Role;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
+import com.example.laptopshop.dto.request.User.UserProfileUpdateRequest;
 import com.example.laptopshop.dto.request.User.UserUpdateRequest;
 import com.example.laptopshop.dto.response.User.UserResponse;
 import com.example.laptopshop.exception.AppException;
@@ -119,22 +119,22 @@ public class UserService {
         CachedAuthorities cached = this.cachedAuthoritiesRepository.findById(userId).orElse(null);
         if (cached != null) {
             return cached.getAuthorities().stream()
-                    .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                    .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
         }
 
         // 2. Cache miss -> tính từ DB (logic cũ)
         User user = this.userRepository.findById(userId).orElse(null);
         if (user == null) {
-            return java.util.List.of();
+            return List.of();
         }
-        java.util.List<String> authorityNames = new java.util.ArrayList<>();
+        List<String> authorityNames = new ArrayList<>();
         for (Role role : user.getRoles()) {
             if (!role.isActive()) {
                 continue; // Role bị khóa -> thu hồi toàn bộ quyền của role này
             }
             authorityNames.add("ROLE_" + role.getName());
-            for (com.example.laptopshop.domain.Permission permission : role.getPermissions()) {
+            for (Permission permission : role.getPermissions()) {
                 authorityNames.add(permission.getName());
             }
         }
@@ -147,7 +147,7 @@ public class UserService {
                 .build());
 
         return authorityNames.stream()
-                .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
     }
 
@@ -270,6 +270,41 @@ public class UserService {
         // 5. Lưu Entity đã cập nhật dữ liệu mới xuống DB
         User saved = this.userRepository.save(existingUser);
         this.evictUserAuthorities(saved.getId()); // role có thể đổi -> cache tính lại
+        return this.userMapper.toResponse(saved);
+    }
+
+    // Lấy hồ sơ cá nhân của user đang đăng nhập (không cần READ_USER).
+    // Dùng cho endpoint /me — bất kỳ tài khoản hợp lệ nào cũng xem được chính mình.
+    @Transactional(readOnly = true)
+    public UserResponse getMyProfile(String userId) {
+        return getUserResponseById(userId);
+    }
+
+    // Cập nhật HỒ SƠ CÁ NHÂN của chính user đang đăng nhập (endpoint /me).
+    // CHỈ cho phép đổi fullName / phone / address / avatar. KHÔNG đụng đến
+    // email, roleNames, active, password — đảm bảo STAFF/user thường không tự
+    // nâng quyền hay đổi email của mình. Không evict cache quyền vì quyền không đổi.
+    @Transactional
+    public UserResponse handleUpdateMyProfile(String userId, UserProfileUpdateRequest request) {
+        User existingUser = getUserById(userId);
+
+        if (request.getFullName() != null) {
+            existingUser.setFullName(request.getFullName().trim());
+        }
+        if (request.getPhone() != null) {
+            existingUser.setPhone(request.getPhone().trim());
+        }
+        if (request.getAddress() != null) {
+            existingUser.setAddress(request.getAddress().trim());
+        }
+
+        MultipartFile file = request.getInputFile();
+        if (file != null && !file.isEmpty()) {
+            String newAvatar = this.uploadService.handleSaveUploadFile(file, "avatar");
+            existingUser.setAvatar(newAvatar);
+        }
+
+        User saved = this.userRepository.save(existingUser);
         return this.userMapper.toResponse(saved);
     }
 

@@ -17,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByEmailIgnoreCaseAndIdNot(String email, String id);
 
     boolean existsByEmail(String email);
+
+    // Đếm số user đang active (dùng cho KPI "Người dùng hoạt động" trên Dashboard)
+    long countByActiveTrue();
 }

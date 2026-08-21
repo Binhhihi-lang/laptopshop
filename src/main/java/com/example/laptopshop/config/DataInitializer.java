@@ -14,10 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.laptopshop.domain.Permission;
 import com.example.laptopshop.domain.Role;
-import com.example.laptopshop.domain.User;
 import com.example.laptopshop.repository.PermissionRepository;
 import com.example.laptopshop.repository.RoleRepository;
-import com.example.laptopshop.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -40,7 +38,6 @@ public class DataInitializer {
 
     private final PermissionRepository permissionRepository;
     private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
 
     // Taxonomy quyền: Module + action. ADMIN = ALL; STAFF = CREATE/READ/UPDATE
     // cho PRODUCT/CATEGORY/COUPON + CREATE/READ/UPDATE_ORDER + READ_DASHBOARD
@@ -130,6 +127,10 @@ public class DataInitializer {
         staffPerms.add("READ_ORDER");
         staffPerms.add("UPDATE_ORDER");
         staffPerms.add("READ_DASHBOARD");
+
+//        staffPerms.add("CREATE_USER");
+//        staffPerms.add("READ_USER");
+//        staffPerms.add("UPDATE_USER");
         staffRole.setActive(true);
         staffRole.getPermissions().clear();
         staffRole.getPermissions().addAll(toPermSet.apply(staffPerms));

@@ -17,4 +17,8 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     // "Số sản phẩm" ở trang danh sách category. Trả về [categoryId, count].
     @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.category IS NOT NULL GROUP BY p.category.id")
     List<Object[]> countProductsByCategory();
+
+    // Lấy tối đa 5 sản phẩm sắp hết hàng (quantity < qty), sắp xếp tăng dần theo
+    // số lượng. Tự động áp dụng @SQLRestriction (soft-delete: deleted_at IS NULL).
+    List<Product> findFirst5ByQuantityLessThanOrderByQuantityAsc(int qty);
 }

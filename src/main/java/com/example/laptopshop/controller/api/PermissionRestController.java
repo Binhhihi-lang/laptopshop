@@ -26,8 +26,7 @@ public class PermissionRestController {
     PermissionService permissionService;
 
     @GetMapping
-    // hoặc là phân theo role  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @PreAuthorize("hasAuthority('CREATE_PRODUCT_DATA')")
+    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<List<PermissionResponse>> getAllPermissions() {
         ApiResponse<List<PermissionResponse>> response = new ApiResponse<>();
         response.setResult(this.permissionService.getAllPermissionResponses());
@@ -35,6 +34,7 @@ public class PermissionRestController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<PermissionResponse> getPermissionById(@PathVariable String id) {
         ApiResponse<PermissionResponse> response = new ApiResponse<>();
         response.setResult(this.permissionService.getPermissionResponseById(id));
@@ -45,7 +45,7 @@ public class PermissionRestController {
     // nhưng mình để @ModelAttribute cho đồng bộ cách gọi API FormData toàn hệ
     // thống như quyết định đã áp dụng cho Coupon — tùy bạn chọn.
     @PostMapping
-
+    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<PermissionResponse> createPermission(@Valid @RequestBody PermissionCreationRequest request) {
         ApiResponse<PermissionResponse> response = new ApiResponse<>();
         response.setResult(this.permissionService.handleCreatePermission(request));
@@ -53,6 +53,7 @@ public class PermissionRestController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<PermissionResponse> updatePermission(
             @PathVariable String id,
             @Valid @RequestBody PermissionUpdateRequest request) {
@@ -62,6 +63,7 @@ public class PermissionRestController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<Void> deletePermission(@PathVariable String id) {
         this.permissionService.deletePermissionById(id);
         return new ApiResponse<>();

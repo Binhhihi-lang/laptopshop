@@ -6,14 +6,19 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.laptopshop.dto.request.User.UserBulkDeleteRequest;
 import com.example.laptopshop.dto.request.User.UserBulkStatusRequest;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
+import com.example.laptopshop.dto.request.User.UserProfileUpdateRequest;
 import com.example.laptopshop.dto.request.User.UserUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.User.UserResponse;
+import com.example.laptopshop.exception.AppException;
+import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.service.UserService;
 
 import jakarta.validation.Valid;
@@ -105,5 +110,40 @@ public class UserRestController {
                 ? "Các người dùng đã được kích hoạt thành công"
                 : "Các người dùng đã được khóa thành công");
         return response;
+    }
+
+    // 8. Lấy hồ sơ cá nhân của chính người dùng đang đăng nhập.
+    // Chỉ cần đã xác thực (isAuthenticated) — KHÔNG yêu cầu READ_USER, để STAFF
+    // hay bất kỳ tài khoản nào cũng xem được thông tin của chính mình.
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<UserResponse> getMyProfile() {
+        ApiResponse<UserResponse> response = new ApiResponse<>();
+        response.setResult(this.userService.getMyProfile(getCurrentUserId()));
+        return response;
+    }
+
+    // 9. Cập nhật hồ sơ cá nhân của chính người dùng đang đăng nhập.
+    // Chỉ nhận fullName/phone/address/avatar (xem UserProfileUpdateRequest),
+    // đảm bảo không thể tự đổi email / vai trò / quyền.
+    @PutMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<UserResponse> updateMyProfile(
+            @ModelAttribute UserProfileUpdateRequest request) {
+        ApiResponse<UserResponse> response = new ApiResponse<>();
+        response.setResult(this.userService.handleUpdateMyProfile(getCurrentUserId(), request));
+        response.setMessage("Cập nhật hồ sơ cá nhân thành công");
+        return response;
+    }
+
+    // Lấy userId của người dùng hiện tại từ claim "userId" của JWT trong
+    // SecurityContext. Converter CustomJwtAuthenticationConverter đã đưa claim
+    // này vào token, nên luôn có khi request đã qua oauth2ResourceServer.
+    private String getCurrentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+            return jwtAuth.getToken().getClaimAsString("userId");
+        }
+        throw new AppException(ErrorCode.UNAUTHENTICATED);
     }
 }
