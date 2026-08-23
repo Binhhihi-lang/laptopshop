@@ -31,7 +31,7 @@ public class CachedAuthorities implements Serializable {
     @Id
     String userId; // = userId của User
 
-    List<String> authorities; // ["ROLE_ADMIN", "PRODUCT_VIEW", ...]
+    List<String> authorities; // role và permission: ["ROLE_ADMIN", "UPDATE USER", ...]
 
     @TimeToLive // đơn vị giây, Redis tự xóa key khi hết hạn
     Long ttl;

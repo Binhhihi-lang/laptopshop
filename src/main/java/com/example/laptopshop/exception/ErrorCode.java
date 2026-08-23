@@ -72,6 +72,8 @@ public enum ErrorCode {
     USER_ROLES_EMPTY(6007, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
     ROLE_BULK_EMPTY(6008, "Danh sách vai trò không được để trống", HttpStatus.BAD_REQUEST),
     ROLE_CANNOT_DEACTIVATE(6009, "Không thể khóa hoặc vô hiệu hóa vai trò ADMIN", HttpStatus.FORBIDDEN),
+//    PERMISSION_BULK_EMPTY(6010, "Danh sách quyền không được để trống", HttpStatus.BAD_REQUEST),
+    PERMISSION_CANNOT_DEACTIVATE(6011, "Không thể khóa quyền hệ thống (quyền có tiền tố MANAGE_)", HttpStatus.FORBIDDEN),
 
     // Auth
     REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),

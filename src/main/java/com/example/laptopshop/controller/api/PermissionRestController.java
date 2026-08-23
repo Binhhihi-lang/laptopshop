@@ -5,8 +5,7 @@ import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.laptopshop.dto.request.Permission.PermissionCreationRequest;
-import com.example.laptopshop.dto.request.Permission.PermissionUpdateRequest;
+import com.example.laptopshop.dto.request.Permission.PermissionBulkStatusRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.Permission.PermissionResponse;
 import com.example.laptopshop.service.PermissionService;
@@ -20,11 +19,11 @@ import lombok.experimental.FieldDefaults;
 @RequestMapping("/api/v1/admin/permissions")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-
 public class PermissionRestController {
 
     PermissionService permissionService;
 
+    // Chỉ đọc danh sách permission (phục vụ màn hình gán quyền Role + quản lý khóa).
     @GetMapping
     @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
     public ApiResponse<List<PermissionResponse>> getAllPermissions() {
@@ -33,39 +32,18 @@ public class PermissionRestController {
         return response;
     }
 
-    @GetMapping("/{id}")
+    // Khóa/Kích hoạt hàng loạt permission (body JSON { ids: [...], active: true/false }).
+    // Giữ lại vì đây là cách thu hồi/cấp lại quyền runtime an toàn: KHÔNG xóa tên
+    // permission (tránh "quyền chết"), chỉ bật/tắt cờ active. Quyền hệ thống
+    // (tiền tố MANAGE_) được bảo vệ không cho khóa — xem PermissionService.
+    @PatchMapping("/bulk-status")
     @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
-    public ApiResponse<PermissionResponse> getPermissionById(@PathVariable String id) {
-        ApiResponse<PermissionResponse> response = new ApiResponse<>();
-        response.setResult(this.permissionService.getPermissionResponseById(id));
+    public ApiResponse<Void> updatePermissionsActive(@Valid @RequestBody PermissionBulkStatusRequest request) {
+        this.permissionService.updatePermissionsActive(request.getIds(), request.isActive());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage(request.isActive()
+                ? "Các quyền đã được kích hoạt thành công"
+                : "Các quyền đã được khóa thành công");
         return response;
-    }
-
-    // Không có upload file nên có thể dùng @RequestBody (JSON) bình thường,
-    // nhưng mình để @ModelAttribute cho đồng bộ cách gọi API FormData toàn hệ
-    // thống như quyết định đã áp dụng cho Coupon — tùy bạn chọn.
-    @PostMapping
-    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
-    public ApiResponse<PermissionResponse> createPermission(@Valid @RequestBody PermissionCreationRequest request) {
-        ApiResponse<PermissionResponse> response = new ApiResponse<>();
-        response.setResult(this.permissionService.handleCreatePermission(request));
-        return response;
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
-    public ApiResponse<PermissionResponse> updatePermission(
-            @PathVariable String id,
-            @Valid @RequestBody PermissionUpdateRequest request) {
-        ApiResponse<PermissionResponse> response = new ApiResponse<>();
-        response.setResult(this.permissionService.handleUpdatePermission(id, request));
-        return response;
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_ROLES_PERMISSIONS')")
-    public ApiResponse<Void> deletePermission(@PathVariable String id) {
-        this.permissionService.deletePermissionById(id);
-        return new ApiResponse<>();
     }
 }

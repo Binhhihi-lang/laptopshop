@@ -9,4 +9,5 @@ public class PermissionResponse {
     private String id;
     private String name;
     private String description;
+    private boolean active; // true: đang dùng, false: bị khóa (thu hồi quyền)
 }

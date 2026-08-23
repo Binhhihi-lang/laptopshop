@@ -135,6 +135,9 @@ public class UserService {
             }
             authorityNames.add("ROLE_" + role.getName());
             for (Permission permission : role.getPermissions()) {
+                if (!permission.isActive()) {
+                    continue; // Permission bị khóa -> thu hồi quyền thực tế (Q2)
+                }
                 authorityNames.add(permission.getName());
             }
         }
