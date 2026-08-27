@@ -4,6 +4,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.StringJoiner;
@@ -163,6 +164,14 @@ public class AuthenticationService {
 
             User user = this.userService.getUserById(userId);
 
+            // PA2: chặn cấp lại token cho tài khoản đã bị KHÓA sau khi login.
+            // Không có check này, phiên sống mãi nhờ refresh đến khi refresh
+            // token hết hạn tuyệt đối (10 ngày) mới bị đá ra.
+            if (!user.isActive()) {
+                log.warn("Refresh token tu choi: tai khoan da bi khoa. userId={}", userId);
+                throw new AppException(ErrorCode.USER_INACTIVE);
+            }
+
             String newAccessToken = generateToken(user, false);
             String newRefreshToken = generateRefreshTokenWithExpiry(user, absoluteExpiry);
             saveRefreshToken(user.getId(), newRefreshToken);
@@ -183,6 +192,15 @@ public class AuthenticationService {
         var tokens = this.refreshTokenRepository.findByUserId(userId);
         this.refreshTokenRepository.deleteAll(tokens);
         log.info("Da thu hoi {} refresh token cua userId={}", tokens.size(), userId);
+    }
+
+    // Thu hồi TOÀN BỘ refresh token của nhiều user (dùng khi khóa Role):
+    // chặn việc tái đăng nhập không cần mật khẩu bằng refresh token đã lưu, kể cả
+    // khi role sau đó được kích hoạt trở lại.
+    public void revokeRefreshTokensOfUsers(Collection<User> users) {
+        for (User user : users) {
+            this.revokeAllRefreshTokens(user.getId());
+        }
     }
 
     // ================== TẠO TOKEN ==================

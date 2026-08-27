@@ -28,6 +28,9 @@ public interface CategoryMapper {
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "active", ignore = true)
     @Mapping(target = "products", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Category toEntity(CategoryCreationRequest request);
 
     // @MappingTarget: đổ dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn
@@ -35,10 +38,14 @@ public interface CategoryMapper {
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "products", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(CategoryUpdateRequest request, @MappingTarget Category entity);
 
     // Dùng cho trang danh sách / dropdown: KHÔNG có field "products" -> MapStruct
     // KHÔNG gọi category.getProducts() -> Hibernate KHÔNG chạy thêm câu SQL nào
+    @Mapping(target = "productCount", ignore = true)
     CategoryResponse toResponse(Category category);
 
     List<CategoryResponse> toResponseList(List<Category> categories);

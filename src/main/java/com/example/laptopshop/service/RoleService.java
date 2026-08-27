@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.laptopshop.domain.Permission;
 import com.example.laptopshop.domain.Role;
+import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Role.RoleCreationRequest;
 import com.example.laptopshop.dto.request.Role.RoleUpdateRequest;
 import com.example.laptopshop.dto.response.Role.RoleResponse;
@@ -30,6 +31,7 @@ public class RoleService {
      PermissionService permissionService;
      RoleMapper roleMapper;
      UserService userService;
+     AuthenticationService authenticationService;
 
 
     public void validateRoleName(String name, String currentId) {
@@ -131,5 +133,12 @@ public class RoleService {
         this.roleRepository.saveAll(roles);
         // Khóa/kích hoạt role -> thu hồi ngay quyền của mọi user thuộc các role này (Q2)
         this.userService.evictUsersOfRoles(roles);
+        // (A-nhẹ) Chỉ khi KHÓA (active=false): thu hồi refresh token của mọi user thuộc
+        // role -> chặn tái đăng nhập không cần mật khẩu bằng refresh token cũ, kể cả khi
+        // role được kích hoạt trở lại sau đó.
+        if (!active) {
+            this.authenticationService.revokeRefreshTokensOfUsers(
+                    roles.stream().flatMap(role -> role.getUsers().stream()).toList());
+        }
     }
 }

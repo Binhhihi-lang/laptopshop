@@ -23,13 +23,17 @@ import com.example.laptopshop.service.UserService;
 
 import jakarta.validation.Valid;
 
-@RequiredArgsConstructor
+
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RestController
 @RequestMapping("/api/v1/admin/users")
 public class UserRestController {
 
     UserService userService;
+
+    public UserRestController(UserService userService) {
+        this.userService = userService;
+    }
 
     // 1. Lấy danh sách toàn bộ người dùng (đã xóa mềm sẽ tự động không xuất hiện
     // nhờ @Where khai báo ở User.java)
@@ -104,7 +108,8 @@ public class UserRestController {
     @PreAuthorize("hasAuthority('UPDATE_USER')")
     public ApiResponse<Void> updateUsersActive(
             @Valid @RequestBody UserBulkStatusRequest request) {
-        this.userService.updateUsersActive(request.getIds(), request.isActive());
+        this.userService.updateUsersActive(request.getIds(), request.isActive(),
+                getCurrentUserId());
         ApiResponse<Void> response = new ApiResponse<>();
         response.setMessage(request.isActive()
                 ? "Các người dùng đã được kích hoạt thành công"

@@ -35,6 +35,7 @@ public interface ProductMapper {
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
     Product toEntity(ProductCreationRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -45,6 +46,8 @@ public interface ProductMapper {
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "sold", ignore = true)
     void updateEntity(ProductUpdateRequest request, @MappingTarget Product entity);
 
     // Entity -> Response: category rút gọn thành categoryId/categoryName.

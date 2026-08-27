@@ -8,6 +8,7 @@ import com.example.laptopshop.domain.Permission;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.UserMapper;
 import com.example.laptopshop.repository.CachedAuthoritiesRepository;
+import com.example.laptopshop.repository.RefreshTokenRepository;
 import com.example.laptopshop.repository.RoleRepository;
 import com.example.laptopshop.repository.UserRepository;
 
@@ -40,6 +42,7 @@ public class UserService {
      UploadService uploadService;
      UserMapper userMapper;
      CachedAuthoritiesRepository cachedAuthoritiesRepository;
+     RefreshTokenRepository refreshTokenRepository;
 
      // TTL cache quyền (giây). Đủ ngắn để tự làm mới nếu quên evict, đủ dài để
      // gần như mọi request được phục vụ từ Redis (0 query DB).
@@ -61,10 +64,12 @@ public class UserService {
     // NOW() thay vì DELETE thật
     public void deleteUserById(String id) {
         User user = getUserById(id); // kiểm tra tồn tại, nếu không
+        this.userRepository.delete(user);
+        evictUserAuthorities(user.getId());
         if (user.getAvatar() != null) {
             this.uploadService.handleDeleteFile(user.getAvatar());
         }
-        this.userRepository.delete(user);
+
     }
 
     // Xóa hàng loạt người dùng theo danh sách id: xóa avatar của từng user
@@ -78,24 +83,66 @@ public class UserService {
         if (users.size() != ids.size()) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
+        // xóa avatar trước rồi xóa trong Cloundinary vì @Transacstional chỉ hoạt động với db không thao tác với API ngoài
+        this.userRepository.deleteAll(users);
+        users.forEach(user -> evictUserAuthorities(user.getId()));
+
         for (User user : users) {
             if (user.getAvatar() != null) {
                 this.uploadService.handleDeleteFile(user.getAvatar());
             }
         }
-        this.userRepository.deleteAll(users);
+
     }
 
     // Kích hoạt/khóa hàng loạt người dùng theo danh sách id
-    // @Transactional đủ id thì mới kích hoạt xóa không thì báo lỗi
+    // @Transactional đủ id thì mới kích hoạt xóa không thì báo lỗi.
+    // currentUserId: id của admin đang thao tác (từ claim "userId" của JWT)
+    // -> chặn tự khóa chính mình.
     @Transactional
-    public void updateUsersActive(List<String> ids, boolean active) {
+    public void updateUsersActive(List<String> ids, boolean active, String currentUserId) {
         List<User> users = this.userRepository.findAllById(ids);
         if (users.size() != ids.size()) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
+
+        // Chỉ cấm hướng KHÓA (active=false): kích hoạt lại chính mình là vô hại
+        if (!active && currentUserId != null && ids.contains(currentUserId)) {
+            throw new AppException(ErrorCode.USER_CANNOT_DEACTIVATE_SELF);
+        }
+
+        // Không cho khóa user thuộc role ADMIN — đồng bộ với guard
+        // ROLE_CANNOT_DEACTIVATE của RoleService.updateRolesActive: luôn giữ
+        // ít nhất một đường quản trị trong hệ thống. Đọc role.getUsers() cần
+        // session mở -> nằm trong @Transactional ở trên là đủ.
+        if (!active) {
+            boolean containsAdmin = users.stream()
+                    .anyMatch(user -> user.getRoles().stream()
+                            .anyMatch(role -> "ADMIN".equalsIgnoreCase(role.getName())));
+            if (containsAdmin) {
+                throw new AppException(ErrorCode.USER_CANNOT_DEACTIVATE_ADMIN);
+            }
+        }
+
         users.forEach(user -> user.setActive(active));
         this.userRepository.saveAll(users);
+
+        // Xóa cache quyền của TẤT CẢ user bị tác động (cả 2 chiều):
+        // - Khóa: request kế sẽ tính lại từ DB và trả authorities rỗng (nhờ
+        //   check !isActive() trong getActiveAuthorities) -> 403/6012 -> FE logout.
+        // - Kích hoạt lại: phòng trường hợp cache đang giữ kết quả cũ/khác.
+        users.forEach(user -> evictUserAuthorities(user.getId()));
+
+        // Chỉ khi KHÓA: thu hồi refresh token của từng user (A-nhẹ như luồng
+        // khóa Role) -> client không thể "sống" thêm bằng cách gọi /auth/refresh.
+        // Gọi repository trực tiếp thay vì AuthenticationService để tránh
+        // circular dependency (AuthenticationService đang inject UserService).
+        if (!active) {
+            for (User user : users) {
+                var tokens = this.refreshTokenRepository.findByUserId(user.getId());
+                this.refreshTokenRepository.deleteAll(tokens);
+            }
+        }
     }
 
     public Role getRoleByName(String name) {
@@ -114,7 +161,7 @@ public class UserService {
     // rồi lưu lại với TTL ngắn. Các thao tác Redis nằm ngoài JPA nên không bị
     // ảnh hưởng bởi readOnly của transaction.
     @Transactional(readOnly = true)
-    public List<org.springframework.security.core.GrantedAuthority> getActiveAuthorities(String userId) {
+    public List<GrantedAuthority> getActiveAuthorities(String userId) {
         // 1. Thử lấy từ cache Redis trước (0 query DB nếu hit)
         CachedAuthorities cached = this.cachedAuthoritiesRepository.findById(userId).orElse(null);
         if (cached != null) {
@@ -125,7 +172,12 @@ public class UserService {
 
         // 2. Cache miss -> tính từ DB (logic cũ)
         User user = this.userRepository.findById(userId).orElse(null);
-        if (user == null) {
+        if (user == null || !user.isActive()) {
+            // User không tồn tại (đã xóa mềm) hoặc đang bị KHÓA (active=false)
+            // -> thu hồi TOÀN BỘ quyền: authorities rỗng -> filter chain trả
+            // 403 + code 6012 -> FE logout ngay trên request kế tiếp.
+            // KHÔNG ghi kết quả rỗng vào cache để khi admin kích hoạt lại,
+            // quyền được tính lại từ DB thay vì kẹt cache rỗng hết TTL 5 phút.
             return List.of();
         }
         List<String> authorityNames = new ArrayList<>();

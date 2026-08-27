@@ -5,8 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 // @SpringBootApplication(exclude = org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class)
-// include (bao gồm) >< exclude (loại trừ)
-@SpringBootApplication
+@SpringBootApplication // đánh dấu đây là class cấu hình
 @EnableJpaAuditing
 public class LaptopshopApplication {
 

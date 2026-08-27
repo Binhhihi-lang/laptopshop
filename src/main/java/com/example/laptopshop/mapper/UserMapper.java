@@ -36,6 +36,9 @@ public interface UserMapper {
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "email", ignore = true)
     @Mapping(target = "orders", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "lastLoginAt", ignore = true)
     User toEntity(UserCreationRequest request);
 
     // @MappingTarget: map dữ liệu mới từ DTO ĐÈ LÊN Entity cũ đã có sẵn
@@ -46,6 +49,8 @@ public interface UserMapper {
     @Mapping(target = "email", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "orders", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "lastLoginAt", ignore = true)
     void updateEntity(UserUpdateRequest request, @MappingTarget User entity);
 
     // Entity -> Response: KHÔNG có field password (an toàn). "roles" (Set<Role>)

@@ -29,6 +29,8 @@ public enum ErrorCode {
     USER_EMAIL_ALREADY_EXISTS(1008, "Email người dùng đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL(1009, "Email người dùng không hợp lệ", HttpStatus.BAD_REQUEST),
     USER_INACTIVE(1010, "Tài khoản đã bị khóa, vui lòng liên hệ quản trị viên", HttpStatus.UNAUTHORIZED),
+    USER_CANNOT_DEACTIVATE_SELF(1011, "Bạn không thể tự khóa tài khoản của chính mình", HttpStatus.FORBIDDEN),
+    USER_CANNOT_DEACTIVATE_ADMIN(1012, "Không thể khóa người dùng có vai trò ADMIN", HttpStatus.FORBIDDEN),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
@@ -74,6 +76,7 @@ public enum ErrorCode {
     ROLE_CANNOT_DEACTIVATE(6009, "Không thể khóa hoặc vô hiệu hóa vai trò ADMIN", HttpStatus.FORBIDDEN),
 //    PERMISSION_BULK_EMPTY(6010, "Danh sách quyền không được để trống", HttpStatus.BAD_REQUEST),
     PERMISSION_CANNOT_DEACTIVATE(6011, "Không thể khóa quyền hệ thống (quyền có tiền tố MANAGE_)", HttpStatus.FORBIDDEN),
+    ACCESS_REVOKED(6012, "Quyền truy cập của bạn đã bị thu hồi, vui lòng đăng nhập lại", HttpStatus.FORBIDDEN),
 
     // Auth
     REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),

@@ -26,6 +26,7 @@ public class SecurityConfiguration {
     CustomJwtDecoder customJwtDecoder;
     CorsConfig config;
     UserService userService;
+    CustomAccessDeniedHandler customAccessDeniedHandler;
 
     // 2. Cấu hình phân quyền API
     @Bean
@@ -68,7 +69,12 @@ public class SecurityConfiguration {
                                 jwt.decoder(customJwtDecoder) // giải mã token check redis
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         // bắt lỗi 401, Token thiếu/sai/hết hạn
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint));
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                // Xử lý 403 xảy ra TRONG filter chain (URL matcher hasAnyRole) — nơi
+                // @RestControllerAdvice không bắt được. Token hợp lệ mà authorities rỗng
+                // (khóa role /khóa, xóa mềm user) -> CustomAccessDeniedHandler trả code 6012
+                // để FE logout ngay; còn lại trả 1006 như @PreAuthorize.
+                .exceptionHandling(exception -> exception.accessDeniedHandler(customAccessDeniedHandler));
 
         return httpSecurity.build();
     }

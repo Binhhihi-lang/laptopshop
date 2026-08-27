@@ -19,13 +19,18 @@ public interface RoleMapper {
     @Mapping(target = "name", ignore = true) // set tay sau trim()
     @Mapping(target = "permissions", ignore = true) // cần lookup Permission thật từ DB, xử lý ở Service
     @Mapping(target = "users", ignore = true)
-
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Role toEntity(RoleCreationRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "permissions", ignore = true)
     @Mapping(target = "users", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(RoleUpdateRequest request, @MappingTarget Role entity);
 
     // permissions (Set<Permission>) -> permissionNames (List<String>) nhờ helper
