@@ -6,6 +6,9 @@ import com.example.laptopshop.domain.Category;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -89,6 +92,55 @@ public class ProductService {
     public ProductResponse getProductResponseById(String id) {
         Product product = getProductById(id);
         return this.productMapper.toResponse(product);
+    }
+
+    // ---- Client storefront (public) ----
+
+    // Tìm kiếm sản phẩm cho storefront: chỉ lấy product active VÀ thuộc
+    // category active. Tất cả filter là optional. Trả Page<Product> rồi map
+    // sang Page<ProductResponse> qua mapper.
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> searchStorefront(String categoryId, String factory,
+            Long minPrice, Long maxPrice, String keyword, Pageable pageable) {
+        // Chuẩn hoá: keyword rỗng -> null để bỏ qua filter (giúp index hit)
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        String normalizedFactory = (factory == null || factory.isBlank()) ? null : factory.trim();
+        String normalizedCategory = (categoryId == null || categoryId.isBlank()) ? null : categoryId;
+
+        Page<Product> products = this.productRepository.searchStorefront(
+                normalizedCategory, normalizedFactory, minPrice, maxPrice, normalizedKeyword, pageable);
+        return products.map(this.productMapper::toResponse);
+    }
+
+    // Lấy sản phẩm liên quan (cùng category, loại trừ chính sản phẩm đang xem).
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getRelatedProducts(String categoryId, String excludeProductId, int limit) {
+        if (categoryId == null || categoryId.isBlank()) {
+            return List.of();
+        }
+        List<Product> related = this.productRepository.findRelatedByCategory(
+                categoryId, excludeProductId, PageRequest.of(0, limit));
+        return this.productMapper.toResponseList(related);
+    }
+
+    // Lấy sản phẩm theo CODE (SKU) cho trang chi tiết storefront.
+    // Khác với getProductResponseById dùng ID — storefront dùng code để URL
+    // thân thiện SEO (vd: /products/IP15PM-256).
+    // Đồng thời: chỉ trả về product active VÀ category active.
+    @Transactional(readOnly = true)
+    public ProductResponse getProductResponseByCode(String code) {
+        Product product = this.productRepository.findById(code)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+        if (!product.isActive() || product.getCategory() == null || !product.getCategory().isActive()) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+        return this.productMapper.toResponse(product);
+    }
+
+    // Lấy danh sách hãng duy nhất của các sản phẩm active.
+    @Transactional(readOnly = true)
+    public List<String> getActiveFactoryNames() {
+        return this.productRepository.findDistinctActiveFactories();
     }
 
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh và

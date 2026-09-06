@@ -81,7 +81,11 @@ public enum ErrorCode {
     // Auth
     REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),
     TOKEN_EMPTY(7001, "Token không được để trống.", HttpStatus.BAD_REQUEST),
-    REFRESH_TOKEN_NOT_FOUND(7002, "Refresh token không hợp lệ ", HttpStatus.BAD_REQUEST);
+    REFRESH_TOKEN_NOT_FOUND(7002, "Refresh token không hợp lệ ", HttpStatus.BAD_REQUEST),
+
+    // Password reset (client storefront)
+    PASSWORD_RESET_TOKEN_INVALID(7003, "Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    PASSWORD_RESET_TOKEN_USED(7004, "Token đặt lại mật khẩu đã được sử dụng", HttpStatus.BAD_REQUEST);
 
 
     int code;

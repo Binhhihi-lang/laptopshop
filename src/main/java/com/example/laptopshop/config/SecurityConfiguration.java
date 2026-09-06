@@ -8,10 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.example.laptopshop.service.UserService;
@@ -32,12 +30,11 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         httpSecurity
-                // 1. Mở CORS để nhận request từ Frontend http://localhost:3000
-//                .cors(cors -> cors.configurationSource(config.corsConfigurationSource()))
+//                 1. Mở CORS để nhận request từ Frontend http://localhost:3000
+                .cors(cors -> cors.configurationSource(config.corsConfigurationSource()))
                 // mặc định bật cấu hình csrf : là bảo vệ endpoint attack CROT
                 .csrf(AbstractHttpConfigurer::disable) // Tắt CSRF vì làm API (Stateless)
                 // Không dùng session của server nữa, mọi request tự chứng minh danh tính bằng
-                // JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
@@ -57,7 +54,7 @@ public class SecurityConfiguration {
 
                         // Của khách hàng
                         .requestMatchers("/").permitAll()
-                        .requestMatchers("/client/**").permitAll()
+                        .requestMatchers("/api/v1/client/**").permitAll()
 
                         // Tất cả các request khác đều bắt buộc phải đăng nhập (Có token hợp lệ)
                         .anyRequest().authenticated())

@@ -109,6 +109,17 @@ public class CategoryService {
         return this.categoryMapper.toDetailResponse(category);
     }
 
+    // ---- Client storefront (public) ----
+
+    // Lấy danh sách Category đang active, sắp xếp theo displayOrder.
+    // Dùng cho nhánh client (trang chủ, dropdown menu, sidebar).
+    // KHÔNG trả productCount — không cần thiết cho storefront.
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getActiveCategoryResponses() {
+        List<Category> categories = this.categoryRepository.findByActiveTrueOrderByDisplayOrderAsc();
+        return this.categoryMapper.toResponseList(categories);
+    }
+
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh,
     // lưu DB rồi map luôn sang Response TRONG CÙNG transaction trước khi trả về
     // Controller. Controller không còn hứng trực tiếp bằng Entity Category nữa,

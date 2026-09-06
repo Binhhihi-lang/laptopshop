@@ -85,6 +85,7 @@ public class UserService {
         }
         // xóa avatar trước rồi xóa trong Cloundinary vì @Transacstional chỉ hoạt động với db không thao tác với API ngoài
         this.userRepository.deleteAll(users);
+        // xóa quyền người dùng đó khỏi redis
         users.forEach(user -> evictUserAuthorities(user.getId()));
 
         for (User user : users) {
@@ -369,5 +370,32 @@ public class UserService {
         User user = getUserById(userId);
         user.setLastLoginAt(lastLoginAt);
         this.userRepository.save(user);
+    }
+
+    // Đổi mật khẩu cho user đang đăng nhập (storefront + admin đều dùng được).
+    // Bước 1: check mật khẩu cũ đúng (tránh chiếm đoạt tài khoản).
+    // Bước 2: đổi sang mật khẩu mới (đã hash).
+    // Bước 3: thu hồi TOÀN BỘ refresh token của user -> các thiết bị khác buộc
+    //         phải đăng nhập lại bằng mật khẩu mới (bảo mật).
+    // Không evict cache quyền vì quyền không đổi — chỉ đổi mật khẩu.
+    @Transactional
+    public void changePassword(String userId, String oldPassword, String newPassword) {
+        if (oldPassword == null || oldPassword.isBlank()) {
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
+        }
+        User user = getUserById(userId);
+        if (!this.passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        user.setPassword(this.passwordEncoder.encode(newPassword));
+        this.userRepository.save(user);
+
+        // Thu hồi refresh token trực tiếp qua repository để tránh circular
+        // dependency với AuthenticationService (đang inject UserService).
+        var tokens = this.refreshTokenRepository.findByUserId(userId);
+        this.refreshTokenRepository.deleteAll(tokens);
     }
 }
