@@ -30,11 +30,10 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         httpSecurity
-//                 1. Mở CORS để nhận request từ Frontend http://localhost:3000
                 .cors(cors -> cors.configurationSource(config.corsConfigurationSource()))
-                // mặc định bật cấu hình csrf : là bảo vệ endpoint attack CROT
-                .csrf(AbstractHttpConfigurer::disable) // Tắt CSRF vì làm API (Stateless)
-                // Không dùng session của server nữa, mọi request tự chứng minh danh tính bằng
+                // vì mặc định bật cấu hình csrf
+                .csrf(AbstractHttpConfigurer::disable) // Tắt CSRF vì dùng JWT nên mọi request đều được xác thực
+                // Không dùng session của server để lưu trạng thái đăng nhập ,
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
@@ -47,8 +46,7 @@ public class SecurityConfiguration {
                         ).permitAll()
 
                         // Toàn bộ khu vực quản trị: ADMIN và STAFF được vào
-                        // (phòng thủ thô - defense-in-depth). Kiểm soát chi tiết
-                        // chuyển sang @PreAuthorize từng endpoint (Phase D).
+                        // Kiểm soát chi tiết chuyển sang @PreAuthorize từng endpoint .
                         // CUSTOMER bị chặn hoàn toàn ở tầng path này.
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "STAFF")
 

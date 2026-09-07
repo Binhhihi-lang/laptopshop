@@ -71,7 +71,7 @@ public enum ErrorCode {
     PERMISSION_NOT_FOUND(6004, "Không tìm thấy quyền", HttpStatus.NOT_FOUND),
     PERMISSION_NAME_EMPTY(6005, "Tên quyền không được để trống", HttpStatus.BAD_REQUEST),
     PERMISSION_NAME_EXISTED(6006, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
-    USER_ROLES_EMPTY(6007, "Tên quyền đã tồn tại", HttpStatus.CONFLICT),
+    USER_ROLES_EMPTY(6007, "Danh sách vai trò không được để trống", HttpStatus.CONFLICT),
     ROLE_BULK_EMPTY(6008, "Danh sách vai trò không được để trống", HttpStatus.BAD_REQUEST),
     ROLE_CANNOT_DEACTIVATE(6009, "Không thể khóa hoặc vô hiệu hóa vai trò ADMIN", HttpStatus.FORBIDDEN),
 //    PERMISSION_BULK_EMPTY(6010, "Danh sách quyền không được để trống", HttpStatus.BAD_REQUEST),

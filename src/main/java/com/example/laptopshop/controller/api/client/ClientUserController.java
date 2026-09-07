@@ -4,11 +4,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.dto.request.User.UserProfileUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
@@ -54,23 +53,14 @@ public class ClientUserController {
         return response;
     }
 
-    /**
-     * Cập nhật hồ sơ — multipart vì có thể upload avatar.
-     * Tận dụng {@link UserProfileUpdateRequest} có sẵn (chỉ chứa
-     * fullName/phone/address/avatar).
-     */
     @PutMapping(value = "/me", consumes = "multipart/form-data")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<UserResponse> updateMyProfile(
-            @RequestPart("data") UserProfileUpdateRequest request,
-            @RequestPart(value = "inputFile", required = false) MultipartFile inputFile,
+            @ModelAttribute UserProfileUpdateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaimAsString("userId");
         if (userId == null || userId.isBlank()) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-        if (inputFile != null && !inputFile.isEmpty()) {
-            request.setInputFile(inputFile);
         }
         ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setResult(this.userService.handleUpdateMyProfile(userId, request));

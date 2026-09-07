@@ -17,6 +17,7 @@ import com.example.laptopshop.dto.request.Auth.RefreshTokenRequest;
 import com.example.laptopshop.dto.request.Client.ClientChangePasswordRequest;
 import com.example.laptopshop.dto.request.Client.ForgotPasswordRequest;
 import com.example.laptopshop.dto.request.Client.ResetPasswordRequest;
+import com.example.laptopshop.dto.request.Client.ClientRegisterRequest;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.AuthenticationResponse;
@@ -54,14 +55,22 @@ public class ClientAuthController {
     PasswordResetService passwordResetService;
 
     // 1. Đăng ký khách hàng: tạo User mới + gán role CUSTOMER (do DataInitializer
-    // seed sẵn). Tận dụng UserCreationRequest có sẵn (đã có email/password/fullName/phone
-    // + validation) — chỉ cần ép roleNames=["CUSTOMER"] trước khi gọi service.
+    // seed sẵn). Dùng DTO riêng {@link ClientRegisterRequest} (chỉ email/password/
+    // fullName/phone) — client không cần và không được phép gửi roleNames. Map sang
+    // {@link UserCreationRequest} nội bộ và ép roleNames=["CUSTOMER"] trước khi gọi
+    // service, vì UserCreationRequest dùng chung với admin có @NotEmpty trên
+    // roleNames (nếu thiếu sẽ fail validation ở @Valid).
     @PostMapping("/register")
-    public ApiResponse<UserResponse> register(@Valid @RequestBody UserCreationRequest request) {
-        request.setRoleNames(List.of("CUSTOMER"));
-        request.setActive(true);
+    public ApiResponse<UserResponse> register(@Valid @RequestBody ClientRegisterRequest request) {
+        UserCreationRequest internal = new UserCreationRequest();
+        internal.setEmail(request.getEmail());
+        internal.setPassword(request.getPassword());
+        internal.setFullName(request.getFullName());
+        internal.setPhone(request.getPhone());
+        internal.setRoleNames(List.of("CUSTOMER"));
+        internal.setActive(true);
         ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setResult(this.userService.handleCreateUser(request));
+        response.setResult(this.userService.handleCreateUser(internal));
         return response;
     }
 
