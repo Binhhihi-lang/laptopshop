@@ -324,9 +324,9 @@ public class UserService {
         }
 
         // 5. Lưu Entity đã cập nhật dữ liệu mới xuống DB
-        User saved = this.userRepository.save(existingUser);
-        this.evictUserAuthorities(saved.getId()); // role có thể đổi -> cache tính lại
-        return this.userMapper.toResponse(saved);
+        User saved2 = this.userRepository.save(existingUser);
+        this.evictUserAuthorities(saved2.getId()); // role có thể đổi -> cache tính lại
+        return this.userMapper.toResponse(saved2);
     }
 
     // Lấy hồ sơ cá nhân của user đang đăng nhập (không cần READ_USER).
