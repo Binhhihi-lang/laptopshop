@@ -1,5 +1,8 @@
 package com.example.laptopshop.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -41,6 +44,19 @@ import lombok.experimental.FieldDefaults;
 public class PasswordResetService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    // Hash Reset token để lưu và so sánh
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
 
     final UserRepository userRepository;
     final PasswordResetTokenRepository tokenRepository;
@@ -95,7 +111,7 @@ public class PasswordResetService {
 
         PasswordResetToken entity = new PasswordResetToken();
         entity.setUser(user);
-        entity.setToken(token);
+        entity.setTokenHash(sha256Hex(token));
         entity.setExpiry(LocalDateTime.now().plusMinutes(this.tokenValidityMinutes));
         entity.setUsed(false);
         this.tokenRepository.save(entity);
@@ -117,7 +133,8 @@ public class PasswordResetService {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
-        PasswordResetToken entity = this.tokenRepository.findByToken(token)
+        // check token của được sử dụng chưa hay đã hết hạn
+        PasswordResetToken entity = this.tokenRepository.findByTokenHash(sha256Hex(token))
                 .orElseThrow(() -> new AppException(ErrorCode.PASSWORD_RESET_TOKEN_INVALID));
 
         if (entity.isUsed()) {

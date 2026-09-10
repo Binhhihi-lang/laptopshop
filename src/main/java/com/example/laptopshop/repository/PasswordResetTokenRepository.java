@@ -13,7 +13,7 @@ import com.example.laptopshop.domain.PasswordResetToken;
 
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, String> {
 
-    Optional<PasswordResetToken> findByToken(String token);
+    Optional<PasswordResetToken> findByTokenHash(String tokenHash);
 
     // Dọn token đã hết hạn (chạy định kỳ bằng @Scheduled hoặc gọi tay khi cần).
     // Trả về số bản ghi bị xoá.
