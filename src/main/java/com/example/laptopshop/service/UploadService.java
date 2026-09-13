@@ -8,6 +8,9 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.laptopshop.exception.AppException;
+import com.example.laptopshop.exception.ErrorCode;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -49,8 +52,40 @@ public class UploadService {
     }
 
     /**
+     * Hàm upload ảnh lên Cloudinary từ một URL trên mạng (không qua file).
+     * Cloudinary sẽ tự tải ảnh từ link đó về kho của nó, không cần file đi qua
+     * trình duyệt. Dùng khi admin dán link ảnh thay vì chọn file từ máy.
+     *
+     * @param imageUrl   URL đầy đủ của ảnh (http/https)
+     * @param folderName Tên thư mục trên Cloudinary (vd: "product", "category")
+     * @return URL online của ảnh, hoặc null nếu chuỗi URL rỗng
+     */
+    public String handleSaveUploadUrl(String imageUrl, String folderName) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return null;
+        }
+
+        String normalized = imageUrl.trim();
+        // Chỉ chấp nhận URL http/https, tránh Cloudinary cố fetch các scheme lạ
+        if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+            throw new AppException(ErrorCode.INVALID_IMAGE_URL);
+        }
+
+        try {
+            Map uploadResult = this.cloudinary.uploader().upload(
+                    normalized,
+                    ObjectUtils.asMap("folder", folderName));
+            return uploadResult.get("secure_url").toString();
+        } catch (Exception e) {
+            // Cloudinary có thể ném IOException lẫn RuntimeException (URL chết,
+            // không phải ảnh, vượt timeout...) khi fetch ảnh từ URL thất bại
+            throw new AppException(ErrorCode.IMAGE_UPLOAD_FAILED);
+        }
+    }
+
+    /**
      * Hàm xóa ảnh trên Cloudinary khi bạn cập nhật hoặc xóa thực thể
-     * 
+     *
      * @param imageUrl URL đầy đủ của bức ảnh đang lưu trong DB
      */
 

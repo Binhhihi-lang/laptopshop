@@ -25,5 +25,6 @@ public class CouponCreationRequest {
     private Integer usageLimit;
     private boolean active = true;
     private MultipartFile inputFile;
+    private String imageUrl; // URL ảnh online (thay cho inputFile khi admin dán link)
 
 }

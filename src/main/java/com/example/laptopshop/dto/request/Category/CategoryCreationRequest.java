@@ -16,4 +16,5 @@ public class CategoryCreationRequest {
     private Integer displayOrder;
     private boolean active = true ;
     private MultipartFile inputFile; // Hứng file ảnh danh mục trực tiếp trong DTO
+    private String imageUrl; // URL ảnh online (thay cho inputFile khi admin dán link)
 }

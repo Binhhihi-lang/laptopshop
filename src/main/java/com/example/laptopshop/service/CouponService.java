@@ -64,11 +64,16 @@ public class CouponService {
         // Coupon mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         coupon.setUsedCount(0);
 
-        // Xử lý upload ảnh mã giảm giá nếu có
+        // Xử lý upload ảnh mã giảm giá nếu có (ưu tiên file mới, rồi tới URL online)
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             String image = this.uploadService.handleSaveUploadFile(file, "coupon");
             coupon.setImage(image);
+        } else {
+            String imageFromUrl = this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "coupon");
+            if (imageFromUrl != null) {
+                coupon.setImage(imageFromUrl);
+            }
         }
 
         Coupon couponSaved = this.couponRepository.save(coupon);
@@ -91,15 +96,17 @@ public class CouponService {
         coupon.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
 
-        // Xử lý ảnh: ưu tiên file mới; nếu không có file mới và có cờ xóa thì xóa
-        // ảnh cũ; còn lại giữ nguyên ảnh hiện tại
+        // Xử lý ảnh: ưu tiên file mới > URL online > cờ xóa; còn lại giữ nguyên ảnh hiện tại
         MultipartFile file = request.getInputFile();
         boolean hasNewFile = file != null && !file.isEmpty();
-        if (hasNewFile) {
+        boolean hasImageUrl = request.getImageUrl() != null && !request.getImageUrl().isBlank();
+        if (hasNewFile || hasImageUrl) {
             if (coupon.getImage() != null) {
                 this.uploadService.handleDeleteFile(coupon.getImage());
             }
-            String newImage = this.uploadService.handleSaveUploadFile(file, "coupon");
+            String newImage = hasNewFile
+                    ? this.uploadService.handleSaveUploadFile(file, "coupon")
+                    : this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "coupon");
             coupon.setImage(newImage);
         } else if (request.isRemoveImage() && coupon.getImage() != null) {
             this.uploadService.handleDeleteFile(coupon.getImage());

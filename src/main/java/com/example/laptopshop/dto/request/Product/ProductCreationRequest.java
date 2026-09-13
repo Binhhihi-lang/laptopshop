@@ -40,5 +40,7 @@ public class ProductCreationRequest {
 
     private String categoryId;
 
+    private String imageUrl; // URL ảnh online (thay cho file inputFile khi admin dán link)
+
 
 }

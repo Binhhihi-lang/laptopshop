@@ -21,5 +21,6 @@ public class CategoryUpdateRequest {
 
     private boolean removeImage = false; // true = xóa ảnh hiện tại nếu không gửi file mới
 
+    private String imageUrl; // URL ảnh online (thay cho inputFile khi admin dán link)
 
 }

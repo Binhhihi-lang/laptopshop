@@ -134,11 +134,16 @@ public class CategoryService {
         Category newCategory = this.categoryMapper.toEntity(request);
         newCategory.setName(normalizedName);
 
-        // 3. Xử lý upload ảnh danh mục nếu có
+        // 3. Xử lý upload ảnh danh mục nếu có (ưu tiên file mới, rồi tới URL online)
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {
             String image = this.uploadService.handleSaveUploadFile(file, "category");
             newCategory.setImage(image);
+        } else {
+            String imageFromUrl = this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "category");
+            if (imageFromUrl != null) {
+                newCategory.setImage(imageFromUrl);
+            }
         }
 
         Category saved = this.categoryRepository.save(newCategory);
@@ -157,15 +162,17 @@ public class CategoryService {
         this.categoryMapper.updateEntity(request, existingCategory);
         existingCategory.setName(request.getName().trim());
 
-        // 4. Xử lý ảnh: ưu tiên file mới; nếu không có file mới và có cờ xóa thì xóa ảnh cũ;
-        // còn lại giữ nguyên ảnh hiện tại
+        // 4. Xử lý ảnh: ưu tiên file mới > URL online > cờ xóa; còn lại giữ nguyên ảnh hiện tại
         MultipartFile file = request.getInputFile();
         boolean hasNewFile = file != null && !file.isEmpty();
-        if (hasNewFile) {
+        boolean hasImageUrl = request.getImageUrl() != null && !request.getImageUrl().isBlank();
+        if (hasNewFile || hasImageUrl) {
             if (existingCategory.getImage() != null) {
                 this.uploadService.handleDeleteFile(existingCategory.getImage());
             }
-            String newImage = this.uploadService.handleSaveUploadFile(file, "category");
+            String newImage = hasNewFile
+                    ? this.uploadService.handleSaveUploadFile(file, "category")
+                    : this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "category");
             existingCategory.setImage(newImage);
         } else if (request.isRemoveImage() && existingCategory.getImage() != null) {
             this.uploadService.handleDeleteFile(existingCategory.getImage());

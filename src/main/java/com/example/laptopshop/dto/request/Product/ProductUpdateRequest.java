@@ -43,4 +43,6 @@ public class ProductUpdateRequest {
     @NotBlank(message = "PRODUCT_CATEGORY_REQUIRED")
     private String categoryId;
 
+    private String imageUrl; // URL ảnh online (thay cho file inputFile khi admin dán link)
+
 }

@@ -170,10 +170,15 @@ public class ProductService {
         // create
         newProduct.setSold(0);
 
-        // 3. Xử lý upload ảnh sản phẩm nếu có
+        // 3. Xử lý upload ảnh sản phẩm nếu có (ưu tiên file mới, rồi tới URL online)
         if (file != null && !file.isEmpty()) {
             String image = this.uploadService.handleSaveUploadFile(file, "product");
             newProduct.setImage(image);
+        } else {
+            String imageFromUrl = this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "product");
+            if (imageFromUrl != null) {
+                newProduct.setImage(imageFromUrl);
+            }
         }
 
         Product saved = this.productRepository.save(newProduct);
@@ -200,14 +205,16 @@ public class ProductService {
         Category category = this.categoryService.getCategoryById(request.getCategoryId());
         currentProduct.setCategory(category);
 
-        // 4. Xử lý ảnh: ưu tiên file mới; nếu không có file mới và có cờ xóa thì xóa ảnh cũ;
-        // còn lại giữ nguyên ảnh hiện tại
+        // 4. Xử lý ảnh: ưu tiên file mới > URL online > cờ xóa; còn lại giữ nguyên ảnh hiện tại
         boolean hasNewFile = file != null && !file.isEmpty();
-        if (hasNewFile) {
+        boolean hasImageUrl = request.getImageUrl() != null && !request.getImageUrl().isBlank();
+        if (hasNewFile || hasImageUrl) {
             if (currentProduct.getImage() != null) {
                 this.uploadService.handleDeleteFile(currentProduct.getImage());
             }
-            String newImage = this.uploadService.handleSaveUploadFile(file, "product");
+            String newImage = hasNewFile
+                    ? this.uploadService.handleSaveUploadFile(file, "product")
+                    : this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "product");
             currentProduct.setImage(newImage);
         } else if (request.isRemoveImage() && currentProduct.getImage() != null) { // có cờ xóa và có ảnh cũ
             this.uploadService.handleDeleteFile(currentProduct.getImage());

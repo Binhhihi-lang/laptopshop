@@ -23,5 +23,6 @@ public class CouponUpdateRequest {
     private boolean active = true;
     private MultipartFile inputFile;
     private boolean removeImage = false; // true = xóa ảnh hiện tại nếu không gửi file mới
+    private String imageUrl; // URL ảnh online (thay cho inputFile khi admin dán link)
 
 }

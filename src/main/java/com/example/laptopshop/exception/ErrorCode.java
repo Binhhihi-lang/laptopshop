@@ -85,7 +85,11 @@ public enum ErrorCode {
 
     // Password reset (client storefront)
     PASSWORD_RESET_TOKEN_INVALID(7003, "Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
-    PASSWORD_RESET_TOKEN_USED(7004, "Token đặt lại mật khẩu đã được sử dụng", HttpStatus.BAD_REQUEST);
+    PASSWORD_RESET_TOKEN_USED(7004, "Token đặt lại mật khẩu đã được sử dụng", HttpStatus.BAD_REQUEST),
+
+    // === IMAGE UPLOAD (8000 - 8999) ===
+    INVALID_IMAGE_URL(8000, "Link ảnh không hợp lệ (chỉ chấp nhận http/https)", HttpStatus.BAD_REQUEST),
+    IMAGE_UPLOAD_FAILED(8001, "Không thể tải ảnh từ link, vui lòng kiểm tra lại URL", HttpStatus.BAD_REQUEST);
 
 
     int code;
