@@ -153,6 +153,7 @@ public class ProductService {
         validateCode(request.getCode(), null);
         validateName(request.getName());
         validatePrice(request.getPrice());
+        validateOriginalPrice(request.getOriginalPrice(), request.getPrice());
 
         // 2. Map các field thuần (price, shortDesc, detailDesc, factory, target,
         // cpu, ram, storage, gpu, screen, os, weight, warrantyMonths) từ DTO sang
@@ -194,6 +195,7 @@ public class ProductService {
         validateCode(request.getCode(), id);
         validateName(request.getName());
         validatePrice(request.getPrice());
+        validateOriginalPrice(request.getOriginalPrice(), request.getPrice());
 
         // 3. Đổ các field thuần (price, mô tả, thông số kỹ thuật, active) từ DTO đè
         // lên Entity cũ qua MapStruct (@MappingTarget), rồi set riêng
@@ -246,6 +248,15 @@ public class ProductService {
     private void validatePrice(Long price) {
         if (price == null || price <= 0) {
             throw new AppException(ErrorCode.PRODUCT_PRICE_INVALID);
+        }
+    }
+
+    // originalPrice (giá niêm yết gốc) là optional. Khi có giá trị thì phải >=
+    // price (giá bán), vì giá gốc luôn không thấp hơn giá đang bán. null = không
+    // giảm giá.
+    private void validateOriginalPrice(Long originalPrice, Long price) {
+        if (originalPrice != null && price != null && originalPrice < price) {
+            throw new AppException(ErrorCode.PRODUCT_ORIGINAL_PRICE_INVALID);
         }
     }
 

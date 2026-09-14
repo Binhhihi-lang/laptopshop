@@ -23,6 +23,8 @@ public class ProductCreationRequest {
     @NotNull(message = "PRODUCT_PRICE_INVALID")
     private Long price;
 
+    private Long originalPrice;
+
     private String shortDesc;
     private String detailDesc;
     private Integer quantity;

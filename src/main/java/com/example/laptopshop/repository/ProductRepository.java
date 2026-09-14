@@ -65,6 +65,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             """)
     List<Product> findRelatedByCategory(@Param("categoryId") String categoryId,
             @Param("excludeId") String excludeId,
+
             Pageable pageable);
 
     // Lấy danh sách hãng (factory) duy nhất của các sản phẩm đang active.

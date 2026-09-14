@@ -40,6 +40,11 @@ public class Product {
 
     private String name;
     private long price;
+
+    // Giá niêm yết gốc (trước khi giảm giá). null = sản phẩm không giảm giá.
+    // Khi originalPrice > price, storefront hiển thị giá cũ (gạch ngang) + % giảm.
+    // Dùng Long để cho phép null; giá bán thực tế luôn nằm ở `price`.
+    private Long originalPrice;
     private String image;
     private String detailDesc;
     private String shortDesc;

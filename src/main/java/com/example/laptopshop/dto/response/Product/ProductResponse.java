@@ -13,6 +13,7 @@ public class ProductResponse {
     private String code;
     private String name;
     private Long price;
+    private Long originalPrice;
     private String image;
     private String shortDesc;
     private String detailDesc;

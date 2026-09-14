@@ -46,6 +46,7 @@ public enum ErrorCode {
     PRODUCT_PRICE_INVALID(3005, "Giá sản phẩm phải lớn hơn 0", HttpStatus.BAD_REQUEST),
     PRODUCT_NAME_EMPTY(3006, "Tên sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
     PRODUCT_CATEGORY_REQUIRED(3007, "Danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
+    PRODUCT_ORIGINAL_PRICE_INVALID(3008, "Giá gốc phải lớn hơn hoặc bằng giá bán", HttpStatus.BAD_REQUEST),
 
     // === COUPON MODULE (4000 - 4999) ===
     COUPON_NOT_FOUND(4001, "Không tìm thấy mã giảm giá", HttpStatus.NOT_FOUND),
