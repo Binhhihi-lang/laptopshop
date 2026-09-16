@@ -10,4 +10,8 @@ public interface RefreshTokenRepository extends CrudRepository<RefreshToken, Str
     // Nhờ @Indexed ở userId -> dùng để thu hồi TOÀN BỘ refresh token của 1
     // user (đăng xuất mọi thiết bị khi đổi mật khẩu / nghi ngờ bị lộ tài khoản)
     List<RefreshToken> findByUserId(String userId);
+
+    // Nhờ @Indexed ở deviceId -> thu hồi mọi refresh token của 1 THIẾT BỊ.
+    // Dùng khi user bấm "đăng xuất thiết bị này" ở trang quản lý thiết bị.
+    List<RefreshToken> findByUserIdAndDeviceId(String userId, String deviceId);
 }

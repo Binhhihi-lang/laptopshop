@@ -25,6 +25,12 @@ public class RefreshToken implements Serializable {
     @Indexed // đánh index để query được theo userId -> phục vụ revoke-all-device
     private String userId;
 
+    // Thiết bị sở hữu refresh token này. Nhờ @Indexed -> thu hồi được MỌI
+    // refresh token của 1 thiết bị khi user bấm "đăng xuất thiết bị".
+    // Null với token cũ cấp trước khi có tính năng này (backward compatible).
+    @Indexed
+    private String deviceId;
+
     @TimeToLive
     private Long ttl;
 }

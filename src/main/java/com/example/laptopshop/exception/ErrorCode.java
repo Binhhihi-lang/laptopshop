@@ -31,6 +31,8 @@ public enum ErrorCode {
     USER_INACTIVE(1010, "Tài khoản đã bị khóa, vui lòng liên hệ quản trị viên", HttpStatus.UNAUTHORIZED),
     USER_CANNOT_DEACTIVATE_SELF(1011, "Bạn không thể tự khóa tài khoản của chính mình", HttpStatus.FORBIDDEN),
     USER_CANNOT_DEACTIVATE_ADMIN(1012, "Không thể khóa người dùng có vai trò ADMIN", HttpStatus.FORBIDDEN),
+    DEVICE_LIMIT_EXCEEDED(1013, "Bạn đã đăng nhập trên số thiết bị tối đa", HttpStatus.CONFLICT),
+    DEVICE_SESSION_NOT_FOUND(1014, "Không tìm thấy thiết bị này trong danh sách đăng nhập", HttpStatus.NOT_FOUND),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
@@ -63,6 +65,17 @@ public enum ErrorCode {
     CART_ITEM_NOT_FOUND(5001, "Không tìm thấy sản phẩm trong giỏ hàng", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND(5002, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),
     INVALID_ORDER_STATUS(5003, "Trạng thái đơn hàng không hợp lệ để cập nhật", HttpStatus.BAD_REQUEST),
+    CART_EMPTY(5004, "Giỏ hàng đang trống, không thể đặt hàng", HttpStatus.BAD_REQUEST),
+    INVALID_CART_QUANTITY(5005, "Số lượng sản phẩm phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+    INVALID_CART_DATA(5006, "Dữ liệu giỏ hàng không hợp lệ", HttpStatus.BAD_REQUEST),
+    CART_QUANTITY_EXCEEDS_STOCK(5007, "Số lượng vượt quá tồn kho hiện có", HttpStatus.BAD_REQUEST),
+    INVALID_RECEIVER_NAME(5008, "Họ tên người nhận không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_RECEIVER_PHONE(5009, "Số điện thoại người nhận không hợp lệ", HttpStatus.BAD_REQUEST),
+    INVALID_RECEIVER_ADDRESS(5010, "Địa chỉ nhận hàng không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_METHOD(5011, "Phương thức thanh toán không hợp lệ", HttpStatus.BAD_REQUEST),
+    INVALID_ORDER_TOTAL(5012, "Tổng tiền đơn hàng không hợp lệ", HttpStatus.BAD_REQUEST),
+    ORDER_CANNOT_CANCEL(5013, "Chỉ có thể hủy đơn đang chờ xử lý hoặc đã xác nhận", HttpStatus.BAD_REQUEST),
+    COUPON_NOT_USABLE(5014, "Mã giảm giá không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
 
     // ROLE & PERMISSION (6000 - 6999)
     ROLE_NAME_EMPTY(6000, "Tên role không được để trống", HttpStatus.BAD_REQUEST),
@@ -83,6 +96,7 @@ public enum ErrorCode {
     REFRESH_TOKEN_EXPIRED(7000, "Refresh token đã hết hạn.", HttpStatus.BAD_REQUEST),
     TOKEN_EMPTY(7001, "Token không được để trống.", HttpStatus.BAD_REQUEST),
     REFRESH_TOKEN_NOT_FOUND(7002, "Refresh token không hợp lệ ", HttpStatus.BAD_REQUEST),
+    REVOKE_TICKET_INVALID(7005, "Phiên xác thực đã hết hạn, vui lòng đăng nhập lại", HttpStatus.BAD_REQUEST),
 
     // Password reset (client storefront)
     PASSWORD_RESET_TOKEN_INVALID(7003, "Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),

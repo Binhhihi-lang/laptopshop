@@ -37,6 +37,12 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
+                        // Nhóm quản lý thiết bị phải khai báo TRƯỚC permitAll của
+                        // /admin/auth/** (Spring chọn matcher khớp ĐẦU TIÊN), nếu không
+                        // sẽ bị permitAll bao trùm -> hở dữ liệu thiết bị của user khác.
+                        .requestMatchers("/api/v1/admin/auth/devices",
+                                "/api/v1/admin/auth/devices/**").authenticated()
+
                         // Các tài nguyên giao diện của admin
                         .requestMatchers("/api/v1/admin/auth/**").permitAll()
                         .requestMatchers(
@@ -50,7 +56,17 @@ public class SecurityConfiguration {
                         // CUSTOMER bị chặn hoàn toàn ở tầng path này.
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "STAFF")
 
-                        // Của khách hàng
+                        // Của khách hàng.
+                        // PHẢI khai báo TRƯỚC dòng permitAll bên dưới, và thứ tự
+                        // trong nhóm cũng quan trọng (Spring chọn matcher khớp đầu tiên):
+                        //  - revoke-and-login: user CHƯA có token (login vừa bị chặn
+                        //    vì vượt giới hạn) -> xác thực bằng revoke ticket, service
+                        //    tự kiểm vé nên phải để công khai.
+                        //  - các endpoint /devices còn lại: đòi hỏi đã đăng nhập.
+                        .requestMatchers("/api/v1/client/auth/devices/revoke-and-login").permitAll()
+                        .requestMatchers("/api/v1/client/auth/devices",
+                                "/api/v1/client/auth/devices/**").authenticated()
+
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/api/v1/client/**").permitAll()
 

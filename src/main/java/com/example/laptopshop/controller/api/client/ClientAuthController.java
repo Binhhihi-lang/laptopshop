@@ -5,6 +5,9 @@ import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +17,7 @@ import com.example.laptopshop.dto.request.Auth.AuthenticationRequest;
 import com.example.laptopshop.dto.request.Auth.IntrospectRequest;
 import com.example.laptopshop.dto.request.Auth.LogoutRequest;
 import com.example.laptopshop.dto.request.Auth.RefreshTokenRequest;
+import com.example.laptopshop.dto.request.Auth.RevokeDeviceLoginRequest;
 import com.example.laptopshop.dto.request.Client.ClientChangePasswordRequest;
 import com.example.laptopshop.dto.request.Client.ForgotPasswordRequest;
 import com.example.laptopshop.dto.request.Client.ResetPasswordRequest;
@@ -21,6 +25,7 @@ import com.example.laptopshop.dto.request.Client.ClientRegisterRequest;
 import com.example.laptopshop.dto.request.User.UserCreationRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
 import com.example.laptopshop.dto.response.AuthenticationResponse;
+import com.example.laptopshop.dto.response.DeviceInfoResponse;
 import com.example.laptopshop.dto.response.IntrospectResponse;
 import com.example.laptopshop.dto.response.User.UserResponse;
 import com.example.laptopshop.exception.AppException;
@@ -28,7 +33,9 @@ import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.service.AuthenticationService;
 import com.example.laptopshop.service.PasswordResetService;
 import com.example.laptopshop.service.UserService;
+import com.example.laptopshop.utils.DeviceRequestUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -75,11 +82,16 @@ public class ClientAuthController {
     }
 
     // 2. Đăng nhập: dùng lại AuthenticationService.authenticate. AuthenticationRequest
-    // có email + password.
+    // có email + password. Kèm nhận diện thiết bị qua header X-Device-Id để áp
+    // giới hạn số thiết bị (CUSTOMER tối đa app.device.max-sessions, ADMIN/STAFF miễn).
     @PostMapping("/login")
-    public ApiResponse<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request) {
+    public ApiResponse<AuthenticationResponse> login(@Valid @RequestBody AuthenticationRequest request,
+            HttpServletRequest httpRequest) {
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
-        response.setResult(this.authenticationService.authenticate(request));
+        response.setResult(this.authenticationService.authenticate(request,
+                DeviceRequestUtils.getDeviceId(httpRequest),
+                DeviceRequestUtils.getUserAgent(httpRequest),
+                DeviceRequestUtils.getClientIp(httpRequest)));
         return response;
     }
 
@@ -141,5 +153,62 @@ public class ClientAuthController {
         ApiResponse<Void> response = new ApiResponse<>();
         response.setMessage("Đổi mật khẩu thành công, vui lòng đăng nhập lại.");
         return response;
+    }
+
+    // ================== QUẢN LÝ THIẾT BỊ ĐĂNG NHẬP ==================
+
+    // 9. Đăng xuất THIẾT BỊ ĐÃ CHỌN khi login bị chặn vì vượt giới hạn.
+    // Xác thực bằng revokeTicket (BE cấp kèm lỗi 1013) — không cần mật khẩu, vé
+    // dùng 1 lần. Đá máy user chọn rồi cấp token cho thiết bị đang xin đăng nhập.
+    @PostMapping("/devices/revoke-and-login")
+    public ApiResponse<AuthenticationResponse> revokeDeviceAndLogin(
+            @Valid @RequestBody RevokeDeviceLoginRequest request) {
+        ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
+        response.setResult(this.authenticationService.revokeDeviceAndLogin(
+                request.getRevokeTicket(), request.getTargetDeviceId()));
+        return response;
+    }
+
+    // 10. Liệt kê thiết bị đang đăng nhập (trang quản lý thiết bị).
+    @GetMapping("/devices")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<List<DeviceInfoResponse>> listDevices(@AuthenticationPrincipal Jwt jwt,
+            HttpServletRequest httpRequest) {
+        ApiResponse<List<DeviceInfoResponse>> response = new ApiResponse<>();
+        response.setResult(this.authenticationService.listDevices(
+                requireUserId(jwt), DeviceRequestUtils.getDeviceId(httpRequest)));
+        return response;
+    }
+
+    // 11. Đăng xuất 1 thiết bị cụ thể.
+    @DeleteMapping("/devices/{deviceId}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<Void> revokeDevice(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable String deviceId) {
+        this.authenticationService.revokeDevice(requireUserId(jwt), deviceId);
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Đã đăng xuất thiết bị");
+        return response;
+    }
+
+    // 12. Đăng xuất mọi thiết bị KHÁC (giữ thiết bị đang dùng) trong trang phiên đăng nhập
+    @PostMapping("/devices/revoke-others")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<Void> revokeOtherDevices(@AuthenticationPrincipal Jwt jwt,
+            HttpServletRequest httpRequest) {
+        this.authenticationService.revokeOtherDevices(
+                requireUserId(jwt), DeviceRequestUtils.getDeviceId(httpRequest));
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Đã đăng xuất các thiết bị khác");
+        return response;
+    }
+
+    /** Claim "userId" do AuthenticationService cấp; thiếu -> coi như chưa xác thực. */
+    private String requireUserId(Jwt jwt) {
+        String userId = jwt.getClaimAsString("userId");
+        if (userId == null || userId.isBlank()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        return userId;
     }
 }

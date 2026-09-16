@@ -18,6 +18,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
 
 import com.example.laptopshop.repository.InvalidatedTokenRepository;
+import com.example.laptopshop.service.DeviceSessionService;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 @Component
@@ -27,23 +29,40 @@ public class CustomJwtDecoder implements JwtDecoder {
     private String signerKey;
 
     private final InvalidatedTokenRepository invalidatedTokenRepository;
+    private final DeviceSessionService deviceSessionService;
     private NimbusJwtDecoder nimbusJwtDecoder; // khởi tạo lazy 1 lần
 
-    public CustomJwtDecoder(InvalidatedTokenRepository invalidatedTokenRepository) {
+    public CustomJwtDecoder(InvalidatedTokenRepository invalidatedTokenRepository,
+            DeviceSessionService deviceSessionService) {
         this.invalidatedTokenRepository = invalidatedTokenRepository;
+        this.deviceSessionService = deviceSessionService;
     }
 
     @Override
     public Jwt decode(String token) throws JwtException {
         // 1. Kiểm tra blacklist TRƯỚC khi verify chữ ký -> token đã logout thì
         // từ chối ngay, đỡ tốn verify
+        String jwtId;
+        String userId;
+        String deviceId;
         try {
-            String jwtId = SignedJWT.parse(token).getJWTClaimsSet().getJWTID();
+            JWTClaimsSet claims = SignedJWT.parse(token).getJWTClaimsSet();
+            jwtId = claims.getJWTID();
+            userId = claims.getStringClaim("userId");
+            deviceId = claims.getStringClaim("deviceId");
             if (this.invalidatedTokenRepository.existsById(jwtId)) {
                 throw new JwtException("Token đã bị logout");
             }
         } catch (ParseException e) {
             throw new JwtException("Token không hợp lệ");
+        }
+
+        // 1.5. Phiên thiết bị còn sống không? Nhờ bước này, "đăng xuất thiết bị"
+        // có hiệu lực NGAY ở request kế tiếp, không phải chờ access token hết hạn
+        // (6 giờ). Token cũ không có claim deviceId -> bỏ qua (fail-open)
+        if (userId != null && deviceId != null && !deviceId.isBlank()
+                && !this.deviceSessionService.isSessionAlive(userId, deviceId)) {
+            throw new JwtException("Phiên đăng nhập của thiết bị này đã kết thúc");
         }
 
         // 2. Verify chữ ký + hạn dùng NimbusJwtDecoder

@@ -19,6 +19,7 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.InvalidatedTokenRepository;
 import com.example.laptopshop.repository.RefreshTokenRepository;
+import com.example.laptopshop.repository.RevokeTicketRepository;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
@@ -39,6 +40,10 @@ class AuthenticationServiceTest {
     private InvalidatedTokenRepository invalidatedTokenRepository;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private DeviceSessionService deviceSessionService;
+    @Mock
+    private RevokeTicketRepository revokeTicketRepository;
 
     private AuthenticationService authenticationService;
 
@@ -51,7 +56,8 @@ class AuthenticationServiceTest {
     @BeforeEach
     void setUp() throws Exception {
         authenticationService = new AuthenticationService(
-                userService, null, invalidatedTokenRepository, refreshTokenRepository);
+                userService, null, invalidatedTokenRepository, refreshTokenRepository,
+                deviceSessionService, revokeTicketRepository);
         // @Value không chạy ngoài Spring -> set trực tiếp bằng reflection
         var signerKeyField = AuthenticationService.class.getDeclaredField("signerKey");
         signerKeyField.setAccessible(true);
@@ -62,6 +68,9 @@ class AuthenticationServiceTest {
         var refreshableField = AuthenticationService.class.getDeclaredField("refreshableDuration");
         refreshableField.setAccessible(true);
         refreshableField.setLong(authenticationService, 864000L);
+        var revokeTicketTtlField = AuthenticationService.class.getDeclaredField("revokeTicketTtlSeconds");
+        revokeTicketTtlField.setAccessible(true);
+        revokeTicketTtlField.setLong(authenticationService, 300L);
     }
 
     // Tạo 1 refresh token hợp lệ (ký thật) với hạn tuyệt đối trong tương lai,

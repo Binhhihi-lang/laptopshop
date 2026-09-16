@@ -1,6 +1,7 @@
 package com.example.laptopshop.exception;
 
 import com.example.laptopshop.dto.response.ApiResponse;
+import com.example.laptopshop.dto.response.DeviceLimitResponse;
 
 import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,23 @@ public class GlobalExceptionHandler {
         apiResponse.setMessage(errorCode.getMessage());
 
         // Trả về chuẩn HTTP Status (404, 400, 500...) tùy cấu hình trong Enum
+        return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
+    }
+
+    // 1b. Vượt giới hạn thiết bị: khác AppException ở chỗ phải trả kèm PAYLOAD
+    // (danh sách thiết bị + revoke ticket) để FE hiện dialog cho user chọn đá máy
+    // cũ. Khai báo TRƯỚC handler AppException ở trên là không cần thiết vì Spring
+    // chọn handler cụ thể nhất theo kiểu exception, nhưng để riêng cho rõ ràng.
+    @ExceptionHandler(value = DeviceLimitExceededException.class)
+    public ResponseEntity<ApiResponse<DeviceLimitResponse>> handleDeviceLimitExceeded(
+            DeviceLimitExceededException exception) {
+        ErrorCode errorCode = exception.getErrorCode();
+
+        ApiResponse<DeviceLimitResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(errorCode.getCode());
+        apiResponse.setMessage(errorCode.getMessage());
+        apiResponse.setResult(exception.getPayload());
+
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
     }
 
