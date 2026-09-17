@@ -36,6 +36,15 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
+    /**
+     * Lưu thay đổi tồn kho / lượt bán của sản phẩm. Dùng bởi luồng đặt hàng và
+     * hủy đơn — Service là nơi duy nhất chạm repository, nên OrderService không
+     * gọi thẳng ProductRepository.
+     */
+    public Product saveProduct(Product product) {
+        return this.productRepository.save(product);
+    }
+
     // Xóa MỀM: gọi y hệt như xóa thật trước đây, nhưng nhờ @SQLDelete khai báo
     // ở Product.java, Hibernate tự động đổi câu lệnh thành UPDATE deleted_at =
     // NOW() thay vì DELETE thật
@@ -125,11 +134,11 @@ public class ProductService {
 
     // Lấy sản phẩm theo CODE (SKU) cho trang chi tiết storefront.
     // Khác với getProductResponseById dùng ID — storefront dùng code để URL
-    // thân thiện SEO (vd: /products/IP15PM-256).
+    // thân thiện SEO (vd: /products/LP-G100).
     // Đồng thời: chỉ trả về product active VÀ category active.
     @Transactional(readOnly = true)
     public ProductResponse getProductResponseByCode(String code) {
-        Product product = this.productRepository.findById(code)
+        Product product = this.productRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         if (!product.isActive() || product.getCategory() == null || !product.getCategory().isActive()) {
             throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);

@@ -1,6 +1,7 @@
 package com.example.laptopshop.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,11 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     boolean existsByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCaseAndIdNot(String code, String id);
+
+    // Tìm product theo CODE (SKU, ví dụ "LP-G100") — dùng cho URL thân thiện SEO
+    // của storefront (/products/{code}). KHÁC findById (tra theo UUID khoá chính);
+    // trước đây storefront gọi nhầm findById(code) nên luôn 404.
+    Optional<Product> findByCodeIgnoreCase(String code);
 
     // Đếm số sản phẩm theo từng category (1 query group-by) để hiển thị cột
     // "Số sản phẩm" ở trang danh sách category. Trả về [categoryId, count].
