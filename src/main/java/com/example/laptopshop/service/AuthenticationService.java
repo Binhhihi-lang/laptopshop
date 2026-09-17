@@ -228,7 +228,7 @@ public class AuthenticationService {
     // ================== ĐĂNG XUẤT THIẾT BỊ ĐÃ CHỌN ==================
 
     /**
-     * Xác thực bằng revoke ticket (vé cấp kèm lỗi 1013), đá thiết bị mà user
+     * Xác thực bằng revoke ticket (vé cấp kèm lỗi 1013), đá các thiết bị user
      * CHỌN rồi cấp token cho thiết bị đang xin đăng nhập — 1 round-trip.
      *
      * <p>Vé bị xóa NGAY khi dùng (one-time-use) nên không thể replay. Vé gắn với
@@ -236,7 +236,8 @@ public class AuthenticationService {
      * khác.
      */
     @Transactional
-    public AuthenticationResponse revokeDeviceAndLogin(String ticket, String targetDeviceId) {
+    public AuthenticationResponse revokeDeviceAndLogin(String ticket, List<String> targetDeviceIds,
+            String userAgent, String ipAddress) {
         RevokeTicket revokeTicket = this.revokeTicketRepository.findById(ticket)
                 .orElseThrow(() -> new AppException(ErrorCode.REVOKE_TICKET_INVALID));
 
@@ -250,13 +251,21 @@ public class AuthenticationService {
         }
 
         // Không cho đá chính thiết bị đang xin đăng nhập -> vô nghĩa và dễ gây
-        // trạng thái không mong đợi.
+        // trạng thái không mong đợi. FE đã chặn, nhưng BE vẫn tự lọc lại.
         String newDeviceId = revokeTicket.getDeviceId();
-        if (targetDeviceId.equals(newDeviceId)) {
-            throw new AppException(ErrorCode.DEVICE_SESSION_NOT_FOUND);
+        for (String deviceId : targetDeviceIds) {
+            if (deviceId.equals(newDeviceId)) {
+                continue;
+            }
+            revokeDevice(userId, deviceId);
         }
 
-        revokeDevice(userId, targetDeviceId);
+        // Ghi phiên cho thiết bị MỚI. Vì token cấp ra có claim
+        // deviceId nhưng không có phiên sống -> CustomJwtDecoder từ chối ngay
+        // request kế tiếp (401) và refresh cũng bị chặn.
+        this.deviceSessionService.registerOrReplace(userId, newDeviceId,
+                DeviceNameParser.parse(userAgent), ipAddress, this.refreshableDuration);
+        this.deviceSessionService.clearRefreshTokensOfDevice(userId, newDeviceId);
 
         try {
             return issueTokenPair(user, newDeviceId);
@@ -280,6 +289,16 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.DEVICE_SESSION_NOT_FOUND);
         }
         this.deviceSessionService.revokeSession(userId, deviceId);
+    }
+
+    /** Đá NHIỀU thiết bị user chọn (user đã đăng nhập). Tự loại thiết bị hiện tại. */
+    public void revokeSelectedDevices(String userId, String currentDeviceId, List<String> deviceIds) {
+        for (String deviceId : deviceIds) {
+            if (deviceId.equals(currentDeviceId)) {
+                continue; // Không cho tự đá chính mình (sẽ treo phiên hiện tại).
+            }
+            revokeDevice(userId, deviceId);
+        }
     }
 
     /** Danh sách thiết bị đang đăng nhập của user (trang quản lý thiết bị). */

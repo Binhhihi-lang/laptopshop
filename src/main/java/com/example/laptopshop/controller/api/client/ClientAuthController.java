@@ -18,6 +18,7 @@ import com.example.laptopshop.dto.request.Auth.IntrospectRequest;
 import com.example.laptopshop.dto.request.Auth.LogoutRequest;
 import com.example.laptopshop.dto.request.Auth.RefreshTokenRequest;
 import com.example.laptopshop.dto.request.Auth.RevokeDeviceLoginRequest;
+import com.example.laptopshop.dto.request.Auth.RevokeSelectedDevicesRequest;
 import com.example.laptopshop.dto.request.Client.ClientChangePasswordRequest;
 import com.example.laptopshop.dto.request.Client.ForgotPasswordRequest;
 import com.example.laptopshop.dto.request.Client.ResetPasswordRequest;
@@ -162,10 +163,28 @@ public class ClientAuthController {
     // dùng 1 lần. Đá máy user chọn rồi cấp token cho thiết bị đang xin đăng nhập.
     @PostMapping("/devices/revoke-and-login")
     public ApiResponse<AuthenticationResponse> revokeDeviceAndLogin(
-            @Valid @RequestBody RevokeDeviceLoginRequest request) {
+            @Valid @RequestBody RevokeDeviceLoginRequest request,
+            HttpServletRequest httpRequest) {
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
         response.setResult(this.authenticationService.revokeDeviceAndLogin(
-                request.getRevokeTicket(), request.getTargetDeviceId()));
+                request.getRevokeTicket(), request.getTargetDeviceIds(),
+                DeviceRequestUtils.getUserAgent(httpRequest),
+                DeviceRequestUtils.getClientIp(httpRequest)));
+        return response;
+    }
+
+    // 9b. Đăng xuất nhiều thiết bị đã chọn (profile storefront).
+    @PostMapping("/devices/revoke-selected")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<Void> revokeSelectedDevices(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody RevokeSelectedDevicesRequest request,
+            HttpServletRequest httpRequest) {
+        this.authenticationService.revokeSelectedDevices(
+                requireUserId(jwt),
+                DeviceRequestUtils.getDeviceId(httpRequest),
+                request.getDeviceIds());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Đã đăng xuất các thiết bị đã chọn");
         return response;
     }
 

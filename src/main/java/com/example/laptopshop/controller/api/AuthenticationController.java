@@ -5,6 +5,7 @@ import java.util.List;
 import com.example.laptopshop.dto.request.Auth.LogoutRequest;
 import com.example.laptopshop.dto.request.Auth.RefreshTokenRequest;
 import com.example.laptopshop.dto.request.Auth.RevokeDeviceLoginRequest;
+import com.example.laptopshop.dto.request.Auth.RevokeSelectedDevicesRequest;
 import com.example.laptopshop.dto.response.DeviceInfoResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
@@ -123,10 +124,28 @@ public class AuthenticationController {
     // khi chính sách thay đổi).
     @PostMapping("/devices/revoke-and-login")
     public ApiResponse<AuthenticationResponse> revokeDeviceAndLogin(
-            @Valid @RequestBody RevokeDeviceLoginRequest request) {
+            @Valid @RequestBody RevokeDeviceLoginRequest request,
+            HttpServletRequest httpRequest) {
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
         response.setResult(this.authenticationService.revokeDeviceAndLogin(
-                request.getRevokeTicket(), request.getTargetDeviceId()));
+                request.getRevokeTicket(), request.getTargetDeviceIds(),
+                DeviceRequestUtils.getUserAgent(httpRequest),
+                DeviceRequestUtils.getClientIp(httpRequest)));
+        return response;
+    }
+
+    /** Đăng xuất nhiều thiết bị đã chọn (admin profile/quản lý phiên). */
+    @PostMapping("/devices/revoke-selected")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<Void> revokeSelectedDevices(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody RevokeSelectedDevicesRequest request,
+            HttpServletRequest httpRequest) {
+        this.authenticationService.revokeSelectedDevices(
+                requireUserId(jwt),
+                DeviceRequestUtils.getDeviceId(httpRequest),
+                request.getDeviceIds());
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setMessage("Đã đăng xuất các thiết bị đã chọn");
         return response;
     }
 
