@@ -112,6 +112,21 @@ public class AuthenticationService {
     @Transactional
     public AuthenticationResponse authenticate(AuthenticationRequest request, String deviceId,
             String userAgent, String ipAddress) {
+        // Cổng storefront: khách hàng đăng nhập bình thường.
+        return authenticate(request, deviceId, userAgent, ipAddress, false);
+    }
+
+    /**
+     * Bản dùng chung cho cả 2 cổng đăng nhập (admin + client).
+     *
+     * @param requirePrivileged {@code true} khi gọi từ cổng ADMIN
+     *                          ({@code /api/v1/admin/auth/login}): chỉ ADMIN/STAFF
+     *                          được cấp token; CUSTOMER bị từ chối NGAY TẠI ĐÂY
+     *                          thay vì nhận token rồi bị 403 ở từng API.
+     */
+    @Transactional
+    public AuthenticationResponse authenticate(AuthenticationRequest request, String deviceId,
+            String userAgent, String ipAddress, boolean requirePrivileged) {
         User user = this.userService.getUserByEmail(request.getEmail().trim().toLowerCase());
         if (user == null) {
             log.warn("Dang nhap that bai: khong tim thay user voi email={}", request.getEmail());
@@ -128,6 +143,13 @@ public class AuthenticationService {
         if (!user.isActive()) {
             log.warn("Dang nhap that bai: tai khoan da bi khoa. userId={}", user.getId());
             throw new AppException(ErrorCode.USER_INACTIVE);
+        }
+
+        // Cổng ADMIN: chỉ ADMIN/STAFF. Tài khoản CUSTOMER (hoặc user không có role
+        // quản trị) bị chặn ngay ở login — không cấp token để vào giao diện admin.
+        if (requirePrivileged && !isPrivileged(user)) {
+            log.warn("Dang nhap cong admin that bai: tai khoan khong phai ADMIN/STAFF. userId={}", user.getId());
+            throw new AppException(ErrorCode.ADMIN_LOGIN_FORBIDDEN);
         }
 
         // Chỉ kiểm tra giới hạn khi biết thiết bị VÀ user không phải quản trị.
@@ -238,6 +260,20 @@ public class AuthenticationService {
     @Transactional
     public AuthenticationResponse revokeDeviceAndLogin(String ticket, List<String> targetDeviceIds,
             String userAgent, String ipAddress) {
+        // Vé cấp kèm lỗi 1013 (vượt giới hạn thiết bị) — chỉ CUSTOMER mới gặp,
+        // nên luồng này không áp ràng buộc ADMIN/STAFF.
+        return revokeDeviceAndLogin(ticket, targetDeviceIds, userAgent, ipAddress, false);
+    }
+
+    /**
+     * @param requirePrivileged {@code true} khi gọi từ cổng ADMIN: vé do lần login
+     *                          admin cấp cũng không được dùng để đăng nhập tài khoản
+     *                          CUSTOMER — nếu không sẽ mở lại đúng lỗ hổng vừa bịt
+     *                          ở {@link #authenticate}.
+     */
+    @Transactional
+    public AuthenticationResponse revokeDeviceAndLogin(String ticket, List<String> targetDeviceIds,
+            String userAgent, String ipAddress, boolean requirePrivileged) {
         RevokeTicket revokeTicket = this.revokeTicketRepository.findById(ticket)
                 .orElseThrow(() -> new AppException(ErrorCode.REVOKE_TICKET_INVALID));
 
@@ -248,6 +284,10 @@ public class AuthenticationService {
         User user = this.userService.getUserById(userId);
         if (!user.isActive()) {
             throw new AppException(ErrorCode.USER_INACTIVE);
+        }
+        if (requirePrivileged && !isPrivileged(user)) {
+            log.warn("Dang nhap cong admin (revoke ticket) that bai: khong phai ADMIN/STAFF. userId={}", userId);
+            throw new AppException(ErrorCode.ADMIN_LOGIN_FORBIDDEN);
         }
 
         // Không cho đá chính thiết bị đang xin đăng nhập -> vô nghĩa và dễ gây

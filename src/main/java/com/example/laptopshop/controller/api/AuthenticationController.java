@@ -43,6 +43,8 @@ public class AuthenticationController {
    AuthenticationService authenticationService;
 
     // Đăng nhập bằng email + password, trả về JWT nếu đúng.
+    // CHỈ ADMIN/STAFF: CUSTOMER bị từ chối ngay tại đây (lỗi 1015) — không cấp
+    // token quản trị, kể cả khi gọi thẳng API bằng Postman.
     // ADMIN/STAFF KHÔNG bị giới hạn số thiết bị (xem AuthenticationService.authenticate),
     // nhưng vẫn ghi phiên để hiện ở trang quản lý thiết bị.
     @PostMapping("/login")
@@ -51,7 +53,8 @@ public class AuthenticationController {
         AuthenticationResponse result = this.authenticationService.authenticate(request,
                 DeviceRequestUtils.getDeviceId(httpRequest),
                 DeviceRequestUtils.getUserAgent(httpRequest),
-                DeviceRequestUtils.getClientIp(httpRequest));
+                DeviceRequestUtils.getClientIp(httpRequest),
+                true);
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
         response.setResult(result);
         return response;
@@ -130,7 +133,8 @@ public class AuthenticationController {
         response.setResult(this.authenticationService.revokeDeviceAndLogin(
                 request.getRevokeTicket(), request.getTargetDeviceIds(),
                 DeviceRequestUtils.getUserAgent(httpRequest),
-                DeviceRequestUtils.getClientIp(httpRequest)));
+                DeviceRequestUtils.getClientIp(httpRequest),
+                true));
         return response;
     }
 

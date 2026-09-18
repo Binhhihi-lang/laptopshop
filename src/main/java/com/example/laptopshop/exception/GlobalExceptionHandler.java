@@ -122,7 +122,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getHttpStatus()).body(apiResponse);
     }
 
-    // bắt lỗi 403 Authorization
+    // bắt lỗi 403 Authorization: không có quyền truy cập chức năng
     @ExceptionHandler(value = AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handlingAccessDeniedException(AccessDeniedException exception) {
         ErrorCode errorCode = ErrorCode.UNAUTHORIZED;

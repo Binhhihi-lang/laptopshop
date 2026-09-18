@@ -33,6 +33,7 @@ public enum ErrorCode {
     USER_CANNOT_DEACTIVATE_ADMIN(1012, "Không thể khóa người dùng có vai trò ADMIN", HttpStatus.FORBIDDEN),
     DEVICE_LIMIT_EXCEEDED(1013, "Bạn đã đăng nhập trên số thiết bị tối đa", HttpStatus.CONFLICT),
     DEVICE_SESSION_NOT_FOUND(1014, "Không tìm thấy thiết bị này trong danh sách đăng nhập", HttpStatus.NOT_FOUND),
+    ADMIN_LOGIN_FORBIDDEN(1015, "Tài khoản này không có quyền truy cập trang quản trị", HttpStatus.FORBIDDEN),
 
     // === CATEGORY MODULE (2000 - 2999) ===
     CATEGORY_NAME_REQUIRED(2000, "Tên danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
