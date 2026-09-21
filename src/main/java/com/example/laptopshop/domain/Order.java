@@ -45,7 +45,12 @@ public class Order {
     // giữ đúng địa chỉ đã dùng để giao.
     private String receiverFullName;
     private String receiverPhone;
-    private String receiverAddress; // đã ghép sẵn "địa chỉ cụ thể, quận/huyện, tỉnh/thành"
+    private String receiverAddress; // đã ghép sẵn "địa chỉ cụ thể, phường/xã, tỉnh/thành"
+    // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu code + name để hiển thị cấu trúc lại
+    private String receiverProvinceCode;
+    private String receiverProvinceName;
+    private String receiverCommuneCode;
+    private String receiverCommuneName;
     private String note; // ghi chú giao hàng của khách (nullable)
 
     @Enumerated(EnumType.STRING)

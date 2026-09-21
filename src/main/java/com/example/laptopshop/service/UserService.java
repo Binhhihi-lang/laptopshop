@@ -353,6 +353,19 @@ public class UserService {
         if (request.getAddress() != null) {
             existingUser.setAddress(request.getAddress().trim());
         }
+        // Địa chỉ 2 cấp sau sáp nhập 2025 — code + name lưu sẵn để hiển thị
+        if (request.getProvinceCode() != null) {
+            existingUser.setProvinceCode(request.getProvinceCode().trim());
+        }
+        if (request.getProvinceName() != null) {
+            existingUser.setProvinceName(request.getProvinceName().trim());
+        }
+        if (request.getCommuneCode() != null) {
+            existingUser.setCommuneCode(request.getCommuneCode().trim());
+        }
+        if (request.getCommuneName() != null) {
+            existingUser.setCommuneName(request.getCommuneName().trim());
+        }
 
         MultipartFile file = request.getInputFile();
         if (file != null && !file.isEmpty()) {

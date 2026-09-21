@@ -18,5 +18,10 @@ public class UserProfileUpdateRequest {
     private String fullName;
     private String phone;
     private String address;
+    // Địa chỉ 2 cấp sau sáp nhập 2025 — code + name
+    private String provinceCode;
+    private String provinceName;
+    private String communeCode;
+    private String communeName;
     private MultipartFile inputFile; // Ảnh đại diện mới (nếu muốn đổi)
 }

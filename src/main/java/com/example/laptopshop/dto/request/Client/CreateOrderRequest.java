@@ -28,6 +28,15 @@ public class CreateOrderRequest {
     @NotBlank(message = "INVALID_RECEIVER_ADDRESS")
     private String receiverAddress;
 
+    // Địa chỉ 2 cấp sau sáp nhập 2025 — FE gửi code + name lấy từ select
+    @NotBlank(message = "INVALID_RECEIVER_PROVINCE")
+    private String receiverProvinceCode;
+    private String receiverProvinceName;
+
+    @NotBlank(message = "INVALID_RECEIVER_COMMUNE")
+    private String receiverCommuneCode;
+    private String receiverCommuneName;
+
     private String note;
 
     // Mã giảm giá (optional). Không tìm thấy / hết hạn / hết lượt → báo lỗi rõ

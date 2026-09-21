@@ -13,6 +13,10 @@ public class UserResponse {
     private String fullName;
     private String phone;
     private String address;
+    private String provinceCode;
+    private String provinceName;
+    private String communeCode;
+    private String communeName;
     private String avatar;
     private List<String> roleNames;
     private boolean active = true;

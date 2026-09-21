@@ -1,4 +1,4 @@
-package com.example.laptopshop.dto.response.Client;
+package com.example.laptopshop.dto.response.Order;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,10 +10,10 @@ import com.example.laptopshop.domain.PaymentStatus;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Chi tiết đầy đủ 1 đơn hàng — dùng cho trang chi tiết đơn của khách. */
+/** Chi tiết đầy đủ 1 đơn hàng — dùng cho trang chi tiết đơn của admin. */
 @Getter
 @Setter
-public class OrderDetailResponse {
+public class AdminOrderDetailResponse {
 
     private String id;
     private String orderCode;
@@ -22,6 +22,7 @@ public class OrderDetailResponse {
     private OrderStatus status;
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
+    private String paymentTxnRef; // null với COD
 
     private Long subtotal; // tổng tiền hàng (trước giảm giá, chưa ship)
     private Long discountAmount;
@@ -30,21 +31,27 @@ public class OrderDetailResponse {
 
     private String couponCode; // null nếu đơn không dùng mã
 
+    // ===== Khách hàng =====
+    private String userId;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
+
+    // ===== Người nhận =====
     private String receiverFullName;
     private String receiverPhone;
     private String receiverAddress;
-    private String receiverProvinceCode;
-    private String receiverProvinceName;
-    private String receiverCommuneCode;
-    private String receiverCommuneName;
     private String note;
 
-    private List<OrderItemResponse> items;
+    private List<AdminOrderItemResponse> items;
+
+    /** Trạng thái admin có thể chuyển tới từ trạng thái hiện tại. */
+    private List<OrderStatus> allowedNextStatuses;
 
     /** 1 dòng sản phẩm trong đơn — dữ liệu đã snapshot tại thời điểm mua. */
     @Getter
     @Setter
-    public static class OrderItemResponse {
+    public static class AdminOrderItemResponse {
         private String productId;
         private String productCode;
         private String productName;

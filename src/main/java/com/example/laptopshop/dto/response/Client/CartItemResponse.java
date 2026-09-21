@@ -14,6 +14,7 @@ public class CartItemResponse {
     private String productName;
     private String productImage;
     private String factory; // hãng — hiển thị phụ dưới tên sản phẩm
+    private String category; // danh mục — hiển thị cùng hãng: "hãng · danh mục"
     private Long price; // giá hiện tại (tính lại mỗi lần xem giỏ)
     private Long originalPrice; // giá gạch (null nếu không giảm giá)
     private long quantity; // số lượng trong giỏ

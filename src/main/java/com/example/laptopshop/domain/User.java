@@ -31,6 +31,11 @@ public class User {
 
     private String fullName;
     private String address;
+    // Địa chỉ 2 cấp sau sáp nhập 2025: code + name lưu sẵn để hiển thị không cần join
+    private String provinceCode;
+    private String provinceName;
+    private String communeCode;
+    private String communeName;
     private String phone;
 
     private String avatar;

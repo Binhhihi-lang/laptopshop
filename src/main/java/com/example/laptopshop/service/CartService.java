@@ -277,6 +277,7 @@ public class CartService {
         res.setProductName(product.getName());
         res.setProductImage(product.getImage());
         res.setFactory(product.getFactory());
+        res.setCategory(product.getCategory() != null ? product.getCategory().getName() : null);
         res.setPrice(product.getPrice());
         res.setOriginalPrice(product.getOriginalPrice());
         res.setQuantity(item.getQuantity());

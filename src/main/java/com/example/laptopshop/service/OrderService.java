@@ -3,7 +3,10 @@ package com.example.laptopshop.service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +24,13 @@ import com.example.laptopshop.domain.PaymentStatus;
 import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Client.CreateOrderRequest;
+import com.example.laptopshop.dto.request.Order.OrderBulkStatusRequest;
 import com.example.laptopshop.dto.response.Client.CouponValidationResponse;
 import com.example.laptopshop.dto.response.Client.OrderDetailResponse;
 import com.example.laptopshop.dto.response.Client.OrderSummaryResponse;
+import com.example.laptopshop.dto.response.Order.AdminOrderDetailResponse;
+import com.example.laptopshop.dto.response.Order.AdminOrderResponse;
+import com.example.laptopshop.dto.response.Order.OrderStatsResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.CouponRepository;
@@ -121,6 +128,11 @@ public class OrderService {
         order.setReceiverFullName(request.getReceiverFullName().trim());
         order.setReceiverPhone(request.getReceiverPhone().trim());
         order.setReceiverAddress(request.getReceiverAddress().trim());
+        // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu kèm code + name từ select của FE
+        order.setReceiverProvinceCode(request.getReceiverProvinceCode());
+        order.setReceiverProvinceName(request.getReceiverProvinceName());
+        order.setReceiverCommuneCode(request.getReceiverCommuneCode());
+        order.setReceiverCommuneName(request.getReceiverCommuneName());
         order.setNote(request.getNote());
         order.setOrderDate(LocalDateTime.now());
 
@@ -218,6 +230,127 @@ public class OrderService {
             this.productService.saveProduct(product);
         }
     }
+
+    // ===== Quản lý đơn (admin) =====
+
+    /**
+     * Luồng trạng thái hợp lệ. Đơn chỉ đi tiến theo chuỗi
+     * PENDING → CONFIRMED → SHIPPING → COMPLETED; CANCELLED là nhánh phụ chỉ
+     * vào được khi đơn CHƯA giao (PENDING/CONFIRMED).
+     *
+     * Cố ý không cho nhảy cóc hay lùi trạng thái: đơn đã giao thì không hủy
+     * được, đơn đã hủy thì không hồi phục.
+     */
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
+            OrderStatus.PENDING, EnumSet.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
+            OrderStatus.CONFIRMED, EnumSet.of(OrderStatus.SHIPPING, OrderStatus.CANCELLED),
+            OrderStatus.SHIPPING, EnumSet.of(OrderStatus.COMPLETED),
+            OrderStatus.COMPLETED, EnumSet.noneOf(OrderStatus.class),
+            OrderStatus.CANCELLED, EnumSet.noneOf(OrderStatus.class));
+
+    /** Danh sách đơn cho admin, lọc theo trạng thái / thanh toán / ngày / từ khóa. */
+    @Transactional(readOnly = true)
+    public Page<AdminOrderResponse> getOrdersForAdmin(
+            OrderStatus status,
+            PaymentStatus paymentStatus,
+            String keyword,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            Pageable pageable) {
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+        return this.orderRepository
+                .searchAdmin(status, paymentStatus, normalizedKeyword, fromDate, toDate, pageable)
+                .map(this::toAdminSummaryResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminOrderDetailResponse getOrderDetailForAdmin(String orderId) {
+        Order order = this.orderRepository.findWithDetailsById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        return toAdminDetailResponse(order);
+    }
+
+    /** Thẻ thống kê đầu trang quản lý đơn. */
+    @Transactional(readOnly = true)
+    public OrderStatsResponse getOrderStats() {
+        OrderStatsResponse stats = new OrderStatsResponse();
+        long pending = this.orderRepository.countByStatus(OrderStatus.PENDING);
+        long confirmed = this.orderRepository.countByStatus(OrderStatus.CONFIRMED);
+        long shipping = this.orderRepository.countByStatus(OrderStatus.SHIPPING);
+        long completed = this.orderRepository.countByStatus(OrderStatus.COMPLETED);
+        long cancelled = this.orderRepository.countByStatus(OrderStatus.CANCELLED);
+
+        stats.setPendingCount(pending);
+        stats.setConfirmedCount(confirmed);
+        stats.setShippingCount(shipping);
+        stats.setCompletedCount(completed);
+        stats.setCancelledCount(cancelled);
+        stats.setTotalOrders(pending + confirmed + shipping + completed + cancelled);
+        stats.setNeedsAction(pending);
+        stats.setCompletedRevenue(this.orderRepository.sumTotalPriceByStatus(OrderStatus.COMPLETED));
+        return stats;
+    }
+
+    /**
+     * Admin đổi trạng thái 1 đơn. Chặn mọi bước chuyển không nằm trong
+     * {@link #ALLOWED_TRANSITIONS}.
+     *
+     * Hủy đơn phải HOÀN LẠI tồn kho, nếu không kho bị trừ oan. Đơn COD giao
+     * thành công coi như đã thu tiền → paymentStatus = PAID.
+     */
+    @Transactional
+    public AdminOrderDetailResponse updateOrderStatus(String orderId, OrderStatus newStatus) {
+        Order order = this.orderRepository.findWithDetailsById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        applyStatusChange(order, newStatus);
+        return toAdminDetailResponse(this.orderRepository.save(order));
+    }
+
+    /** Đổi trạng thái nhiều đơn; trả về số đơn cập nhật thành công. */
+    @Transactional
+    public int bulkUpdateOrderStatus(OrderBulkStatusRequest request) {
+        int updated = 0;
+        for (String id : request.getIds()) {
+            Order order = this.orderRepository.findWithDetailsById(id).orElse(null);
+            if (order == null || !canTransition(order.getStatus(), request.getStatus())) {
+                continue; // bỏ qua đơn không tồn tại hoặc bước chuyển không hợp lệ
+            }
+            applyStatusChange(order, request.getStatus());
+            this.orderRepository.save(order);
+            updated++;
+        }
+        return updated;
+    }
+
+    /** Áp thay đổi trạng thái + các hệ quả nghiệp vụ đi kèm. */
+    private void applyStatusChange(Order order, OrderStatus newStatus) {
+        if (!canTransition(order.getStatus(), newStatus)) {
+            throw new AppException(ErrorCode.INVALID_ORDER_STATUS);
+        }
+
+        if (newStatus == OrderStatus.CANCELLED) {
+            restoreStock(order);
+            if (order.getPaymentStatus() == PaymentStatus.PAID) {
+                order.setPaymentStatus(PaymentStatus.REFUNDED);
+            }
+        }
+
+        // COD giao xong = đã thu tiền mặt. VNPay sẽ set PAID qua callback riêng.
+        if (newStatus == OrderStatus.COMPLETED && order.getPaymentMethod() == PaymentMethod.COD) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+        }
+
+        order.setStatus(newStatus);
+    }
+
+    private boolean canTransition(OrderStatus from, OrderStatus to) {
+        if (from == null || to == null) {
+            return false;
+        }
+        return ALLOWED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
+    }
+
+    // ===== Mapping =====
 
     // ===== Kiểm tra coupon =====
 
@@ -319,6 +452,10 @@ public class OrderService {
         res.setReceiverFullName(order.getReceiverFullName());
         res.setReceiverPhone(order.getReceiverPhone());
         res.setReceiverAddress(order.getReceiverAddress());
+        res.setReceiverProvinceCode(order.getReceiverProvinceCode());
+        res.setReceiverProvinceName(order.getReceiverProvinceName());
+        res.setReceiverCommuneCode(order.getReceiverCommuneCode());
+        res.setReceiverCommuneName(order.getReceiverCommuneName());
         res.setNote(order.getNote());
 
         List<OrderDetailResponse.OrderItemResponse> items = new ArrayList<>();
@@ -341,5 +478,94 @@ public class OrderService {
         // subtotal suy ra từ các dòng: totalPrice = subtotal - discount + ship
         res.setSubtotal(subtotal);
         return res;
+    }
+
+    // viết gon lại Order để Admin biết của ai để xử lý
+    private AdminOrderResponse toAdminSummaryResponse(Order order) {
+        AdminOrderResponse res = new AdminOrderResponse();
+        res.setId(order.getId());
+        res.setOrderCode(order.getOrderCode());
+        res.setOrderDate(order.getOrderDate());
+        res.setStatus(order.getStatus());
+        res.setPaymentMethod(order.getPaymentMethod());
+        res.setPaymentStatus(order.getPaymentStatus());
+        res.setTotalPrice(order.getTotalPrice());
+        res.setReceiverFullName(order.getReceiverFullName());
+        res.setReceiverPhone(order.getReceiverPhone());
+        fillCustomer(res, order.getUser());
+
+        List<OrderDetail> details = order.getOrderDetails() == null ? List.of() : order.getOrderDetails();
+        res.setItemCount(details.stream().mapToLong(OrderDetail::getQuantity).sum());
+        res.setProductNames(details.stream().map(OrderDetail::getProductName).toList());
+        if (!details.isEmpty()) {
+            res.setFirstProductName(details.get(0).getProductName());
+            res.setFirstProductImage(details.get(0).getProductImage());
+        }
+        res.setAllowedNextStatuses(List.copyOf(
+                ALLOWED_TRANSITIONS.getOrDefault(order.getStatus(), Set.of())));
+        return res;
+    }
+
+    private AdminOrderDetailResponse toAdminDetailResponse(Order order) {
+        AdminOrderDetailResponse res = new AdminOrderDetailResponse();
+        res.setId(order.getId());
+        res.setOrderCode(order.getOrderCode());
+        res.setOrderDate(order.getOrderDate());
+        res.setStatus(order.getStatus());
+        res.setPaymentMethod(order.getPaymentMethod());
+        res.setPaymentStatus(order.getPaymentStatus());
+        res.setPaymentTxnRef(order.getPaymentTxnRef());
+        res.setDiscountAmount(order.getDiscountAmount());
+        res.setShippingFee(order.getShippingFee());
+        res.setTotalPrice(order.getTotalPrice());
+        res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
+        res.setReceiverFullName(order.getReceiverFullName());
+        res.setReceiverPhone(order.getReceiverPhone());
+        res.setReceiverAddress(order.getReceiverAddress());
+        res.setNote(order.getNote());
+        fillCustomer(res, order.getUser());
+
+        List<AdminOrderDetailResponse.AdminOrderItemResponse> items = new ArrayList<>();
+        long subtotal = 0L;
+        if (order.getOrderDetails() != null) {
+            for (OrderDetail detail : order.getOrderDetails()) {
+                AdminOrderDetailResponse.AdminOrderItemResponse item = new AdminOrderDetailResponse.AdminOrderItemResponse();
+                item.setProductId(detail.getProduct() != null ? detail.getProduct().getId() : null);
+                item.setProductCode(detail.getProductCode());
+                item.setProductName(detail.getProductName());
+                item.setProductImage(detail.getProductImage());
+                item.setPrice(detail.getPrice());
+                item.setQuantity(detail.getQuantity());
+                item.setLineTotal(detail.getPrice() * detail.getQuantity());
+                items.add(item);
+                subtotal += (long) (detail.getPrice() * detail.getQuantity());
+            }
+        }
+        res.setItems(items);
+        res.setSubtotal(subtotal);
+        res.setAllowedNextStatuses(List.copyOf(
+                ALLOWED_TRANSITIONS.getOrDefault(order.getStatus(), Set.of())));
+        return res;
+    }
+
+    /** Gán thông tin khách hàng vào response admin — dùng chung cho cả 2 DTO. */
+    private void fillCustomer(AdminOrderResponse res, User user) {
+        if (user == null) {
+            return;
+        }
+        res.setUserId(user.getId());
+        res.setCustomerName(user.getFullName());
+        res.setCustomerEmail(user.getEmail());
+        res.setCustomerPhone(user.getPhone());
+    }
+
+    private void fillCustomer(AdminOrderDetailResponse res, User user) {
+        if (user == null) {
+            return;
+        }
+        res.setUserId(user.getId());
+        res.setCustomerName(user.getFullName());
+        res.setCustomerEmail(user.getEmail());
+        res.setCustomerPhone(user.getPhone());
     }
 }
