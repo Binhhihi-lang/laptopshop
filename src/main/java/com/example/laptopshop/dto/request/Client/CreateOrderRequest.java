@@ -2,6 +2,7 @@ package com.example.laptopshop.dto.request.Client;
 
 import com.example.laptopshop.domain.PaymentMethod;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -27,6 +28,10 @@ public class CreateOrderRequest {
 
     @NotBlank(message = "INVALID_RECEIVER_ADDRESS")
     private String receiverAddress;
+
+    // Email liên hệ người nhận — optional, có thì phải đúng định dạng.
+    @Email(message = "INVALID_RECEIVER_EMAIL")
+    private String receiverEmail;
 
     // Địa chỉ 2 cấp sau sáp nhập 2025 — FE gửi code + name lấy từ select
     @NotBlank(message = "INVALID_RECEIVER_PROVINCE")

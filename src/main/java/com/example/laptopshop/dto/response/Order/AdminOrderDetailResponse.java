@@ -40,6 +40,7 @@ public class AdminOrderDetailResponse {
     // ===== Người nhận =====
     private String receiverFullName;
     private String receiverPhone;
+    private String receiverEmail;
     private String receiverAddress;
     private String note;
 

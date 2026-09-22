@@ -32,6 +32,7 @@ public class OrderDetailResponse {
 
     private String receiverFullName;
     private String receiverPhone;
+    private String receiverEmail;
     private String receiverAddress;
     private String receiverProvinceCode;
     private String receiverProvinceName;
@@ -40,6 +41,16 @@ public class OrderDetailResponse {
     private String note;
 
     private List<OrderItemResponse> items;
+
+    /** Các lần thử thanh toán của đơn (mới nhất trước) — rỗng với đơn COD. */
+    private List<PaymentAttemptResponse> payments;
+
+    /**
+     * Có được bấm "Thanh toán lại" hay không, và nếu không thì vì sao. FE không
+     * tự suy ra rule này để tránh lệch với BE.
+     */
+    private boolean canRetryPayment;
+    private String retryBlockedReason;
 
     /** 1 dòng sản phẩm trong đơn — dữ liệu đã snapshot tại thời điểm mua. */
     @Getter
@@ -52,5 +63,20 @@ public class OrderDetailResponse {
         private double price; // giá tại thời điểm mua
         private long quantity;
         private double lineTotal; // price * quantity
+    }
+
+    /** 1 lần thử thanh toán — dữ liệu cổng trả về đã lưu lại. */
+    @Getter
+    @Setter
+    public static class PaymentAttemptResponse {
+        private String id;
+        private String txnRef;
+        private int attemptNo;
+        private PaymentStatus status;
+        private Long amount;
+        private String responseCode;
+        private String transactionNo;
+        private String bankCode;
+        private LocalDateTime createdAt;
     }
 }

@@ -77,6 +77,21 @@ public enum ErrorCode {
     INVALID_ORDER_TOTAL(5012, "Tổng tiền đơn hàng không hợp lệ", HttpStatus.BAD_REQUEST),
     ORDER_CANNOT_CANCEL(5013, "Chỉ có thể hủy đơn đang chờ xử lý hoặc đã xác nhận", HttpStatus.BAD_REQUEST),
     COUPON_NOT_USABLE(5014, "Mã giảm giá không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    INVALID_RECEIVER_EMAIL(5020, "Email người nhận không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    // === PAYMENT (5021 - 5029) ===
+    PAYMENT_NOT_FOUND(5021, "Không tìm thấy giao dịch thanh toán", HttpStatus.NOT_FOUND),
+    PAYMENT_TOO_MANY_ATTEMPTS(5022, "Đã vượt quá số lần thanh toán cho phép của đơn này",
+            HttpStatus.TOO_MANY_REQUESTS),
+    ORDER_PAYMENT_EXPIRED(5023, "Đơn hàng đã quá hạn thanh toán, vui lòng đặt lại đơn mới",
+            HttpStatus.BAD_REQUEST),
+
+    // === VNPAY (5015 - 5019) ===
+    VNPAY_NOT_CONFIGURED(5015, "Cổng thanh toán VNPay chưa được cấu hình", HttpStatus.SERVICE_UNAVAILABLE),
+    ORDER_ALREADY_PAID(5016, "Đơn hàng đã được thanh toán", HttpStatus.BAD_REQUEST),
+    ORDER_NOT_PAYABLE(5017, "Đơn hàng không thể thanh toán qua VNPay", HttpStatus.BAD_REQUEST),
+    INVALID_ORDER_CODE(5018, "Mã đơn hàng không được để trống", HttpStatus.BAD_REQUEST),
+    VNPAY_INVALID_SIGNATURE(5019, "Chữ ký xác thực từ VNPay không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // ROLE & PERMISSION (6000 - 6999)
     ROLE_NAME_EMPTY(6000, "Tên role không được để trống", HttpStatus.BAD_REQUEST),

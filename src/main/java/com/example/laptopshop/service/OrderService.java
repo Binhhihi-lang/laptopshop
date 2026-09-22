@@ -19,6 +19,7 @@ import com.example.laptopshop.domain.Coupon;
 import com.example.laptopshop.domain.Order;
 import com.example.laptopshop.domain.OrderDetail;
 import com.example.laptopshop.domain.OrderStatus;
+import com.example.laptopshop.domain.Payment;
 import com.example.laptopshop.domain.PaymentMethod;
 import com.example.laptopshop.domain.PaymentStatus;
 import com.example.laptopshop.domain.Product;
@@ -73,6 +74,7 @@ public class OrderService {
     ProductService productService;
     CartService cartService;
     CouponService couponService;
+    PaymentService paymentService;
 
     // ===== Tạo đơn =====
 
@@ -127,6 +129,9 @@ public class OrderService {
         order.setPaymentStatus(PaymentStatus.PENDING);
         order.setReceiverFullName(request.getReceiverFullName().trim());
         order.setReceiverPhone(request.getReceiverPhone().trim());
+        // Email optional: chuỗi rỗng/toàn khoảng trắng quy về null cho sạch dữ liệu.
+        String receiverEmail = request.getReceiverEmail();
+        order.setReceiverEmail(receiverEmail == null || receiverEmail.isBlank() ? null : receiverEmail.trim());
         order.setReceiverAddress(request.getReceiverAddress().trim());
         // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu kèm code + name từ select của FE
         order.setReceiverProvinceCode(request.getReceiverProvinceCode());
@@ -215,6 +220,21 @@ public class OrderService {
         return toDetailResponse(saved);
     }
 
+    /**
+     * Hủy đơn VNPay quá hạn chưa thanh toán — do job dọn đơn gọi. Khác
+     * {@link #cancelMyOrder} ở chỗ không kiểm tra chủ sở hữu (job chạy hệ
+     * thống) và luôn hoàn tồn kho.
+     */
+    @Transactional
+    public void cancelExpiredOrder(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+            return; // đơn đã đổi trạng thái ở luồng khác thì bỏ qua
+        }
+        restoreStock(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        this.orderRepository.save(order);
+    }
+
     /** Hoàn tồn kho cho mọi dòng của đơn — dùng khi hủy đơn. */
     private void restoreStock(Order order) {
         if (order.getOrderDetails() == null) {
@@ -229,6 +249,19 @@ public class OrderService {
             product.setSold(Math.max(0L, product.getSold() - detail.getQuantity()));
             this.productService.saveProduct(product);
         }
+    }
+
+    // ===== Thanh toán VNPay =====
+
+    /**
+     * Tra đơn để mở cổng thanh toán: phải thuộc đúng khách đang đăng nhập
+     * (chống thanh toán hộ đơn người khác). Các điều kiện nghiệp vụ còn lại
+     * (phương thức, trạng thái, hạn giữ đơn, số lần thử) do PaymentService quyết.
+     */
+    @Transactional(readOnly = true)
+    public Order getOrderForPayment(String orderCode, String userId) {
+        return this.orderRepository.findByOrderCodeAndUserId(orderCode, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
     }
 
     // ===== Quản lý đơn (admin) =====
@@ -451,6 +484,7 @@ public class OrderService {
         res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
         res.setReceiverFullName(order.getReceiverFullName());
         res.setReceiverPhone(order.getReceiverPhone());
+        res.setReceiverEmail(order.getReceiverEmail());
         res.setReceiverAddress(order.getReceiverAddress());
         res.setReceiverProvinceCode(order.getReceiverProvinceCode());
         res.setReceiverProvinceName(order.getReceiverProvinceName());
@@ -477,6 +511,28 @@ public class OrderService {
         res.setItems(items);
         // subtotal suy ra từ các dòng: totalPrice = subtotal - discount + ship
         res.setSubtotal(subtotal);
+
+        // Lịch sử giao dịch + rule thanh toán lại do BE quyết, FE không tự suy ra.
+        res.setPayments(this.paymentService.getHistory(order.getId()).stream()
+                .map(this::toPaymentAttemptResponse)
+                .toList());
+        ErrorCode blocked = this.paymentService.checkPayable(order);
+        res.setCanRetryPayment(blocked == null);
+        res.setRetryBlockedReason(blocked == null ? null : blocked.getMessage());
+        return res;
+    }
+
+    private OrderDetailResponse.PaymentAttemptResponse toPaymentAttemptResponse(Payment payment) {
+        OrderDetailResponse.PaymentAttemptResponse res = new OrderDetailResponse.PaymentAttemptResponse();
+        res.setId(payment.getId());
+        res.setTxnRef(payment.getTxnRef());
+        res.setAttemptNo(payment.getAttemptNo());
+        res.setStatus(payment.getStatus());
+        res.setAmount(payment.getAmount());
+        res.setResponseCode(payment.getResponseCode());
+        res.setTransactionNo(payment.getTransactionNo());
+        res.setBankCode(payment.getBankCode());
+        res.setCreatedAt(payment.getCreatedAt());
         return res;
     }
 
@@ -521,6 +577,7 @@ public class OrderService {
         res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
         res.setReceiverFullName(order.getReceiverFullName());
         res.setReceiverPhone(order.getReceiverPhone());
+        res.setReceiverEmail(order.getReceiverEmail());
         res.setReceiverAddress(order.getReceiverAddress());
         res.setNote(order.getNote());
         fillCustomer(res, order.getUser());

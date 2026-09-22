@@ -45,6 +45,7 @@ public class Order {
     // giữ đúng địa chỉ đã dùng để giao.
     private String receiverFullName;
     private String receiverPhone;
+    private String receiverEmail; // email liên hệ người nhận (nullable)
     private String receiverAddress; // đã ghép sẵn "địa chỉ cụ thể, phường/xã, tỉnh/thành"
     // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu code + name để hiển thị cấu trúc lại
     private String receiverProvinceCode;
