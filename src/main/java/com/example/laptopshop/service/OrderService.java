@@ -503,9 +503,10 @@ public class OrderService {
                 item.setProductImage(detail.getProductImage());
                 item.setPrice(detail.getPrice());
                 item.setQuantity(detail.getQuantity());
-                item.setLineTotal(detail.getPrice() * detail.getQuantity());
+                item.setLineTotal(detail.getLineTotal());
+                item.setDiscountAmount(detail.getDiscountAmount());
                 items.add(item);
-                subtotal += (long) (detail.getPrice() * detail.getQuantity());
+                subtotal += detail.getLineTotal();
             }
         }
         res.setItems(items);
@@ -593,9 +594,10 @@ public class OrderService {
                 item.setProductImage(detail.getProductImage());
                 item.setPrice(detail.getPrice());
                 item.setQuantity(detail.getQuantity());
-                item.setLineTotal(detail.getPrice() * detail.getQuantity());
+                item.setLineTotal(detail.getLineTotal());
+                item.setDiscountAmount(detail.getDiscountAmount());
                 items.add(item);
-                subtotal += (long) (detail.getPrice() * detail.getQuantity());
+                subtotal += detail.getLineTotal();
             }
         }
         res.setItems(items);

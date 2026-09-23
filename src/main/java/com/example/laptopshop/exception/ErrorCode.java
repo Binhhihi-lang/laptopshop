@@ -60,7 +60,39 @@ public enum ErrorCode {
     COUPON_CODE_REQUIRED(4008, "Mã giảm giá không được để trống", HttpStatus.BAD_REQUEST),
     INVALID_COUPON_DATA(4009, "Dữ liệu mã giảm giá không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_PERCENT(4006, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
+
     INVALID_DISCOUNT_AMOUNT(4007, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+
+    // === COUPON MODULE mở rộng v1 (4010 - 4099) ===
+    COUPON_SCOPE_INVALID(4010, "Phạm vi áp dụng của mã giảm giá không hợp lệ", HttpStatus.BAD_REQUEST),
+    COUPON_MIN_ORDER_NOT_MET(4011, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này", HttpStatus.BAD_REQUEST),
+    COUPON_PER_USER_LIMIT_REACHED(4012, "Bạn đã dùng hết số lượt cho phép của mã giảm giá này",
+            HttpStatus.BAD_REQUEST),
+    COUPON_NOT_STARTED(4013, "Mã giảm giá chưa đến thời gian sử dụng", HttpStatus.BAD_REQUEST),
+    COUPON_NOT_IN_WALLET(4014, "Mã giảm giá này không có trong ví của bạn", HttpStatus.FORBIDDEN),
+
+    // === PROMOTION MODULE (4100 - 4199) ===
+    PROMOTION_NOT_FOUND(4101, "Không tìm thấy chương trình khuyến mại", HttpStatus.NOT_FOUND),
+    PROMOTION_NAME_REQUIRED(4102, "Tên chương trình khuyến mại không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_CONFIG(4103, "Cấu hình khuyến mại không hợp lệ (chỉ chọn Phần trăm hoặc Số tiền)",
+            HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_PERCENT(4104, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_AMOUNT(4105, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_DATE_RANGE(4106, "Thời gian kết thúc phải sau thời gian bắt đầu", HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_STATUS(4107, "Trạng thái chương trình khuyến mại không hợp lệ", HttpStatus.BAD_REQUEST),
+    PROMOTION_SCOPE_REQUIRED(4108, "Phạm vi áp dụng không được để trống khi không chọn toàn bộ đơn",
+            HttpStatus.BAD_REQUEST),
+    INVALID_PROMOTION_SCOPE(4109, "Phạm vi áp dụng của chương trình không hợp lệ", HttpStatus.BAD_REQUEST),
+    PROMOTION_OVERLAP(4110, "Khoảng thời gian bị trùng với chương trình khác cùng phạm vi",
+            HttpStatus.BAD_REQUEST),
+
+    // === USER VOUCHER / VÍ VOUCHER (4200 - 4299) ===
+    USER_VOUCHER_NOT_FOUND(4201, "Không tìm thấy mã giảm giá trong ví", HttpStatus.NOT_FOUND),
+    USER_VOUCHER_ALREADY_CLAIMED(4202, "Bạn đã nhận mã giảm giá này rồi", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_OUT_OF_STOCK(4203, "Mã giảm giá đã hết lượt nhận", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_EXPIRED(4204, "Mã giảm giá đã hết hạn", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_ALREADY_USED(4205, "Mã giảm giá này đã được sử dụng", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_NOT_CLAIMABLE(4206, "Mã giảm giá này không thể nhận trước", HttpStatus.BAD_REQUEST),
 
     // === ORDER & CART MODULE (5000 - 5999 )
     CART_ITEM_NOT_FOUND(5001, "Không tìm thấy sản phẩm trong giỏ hàng", HttpStatus.NOT_FOUND),

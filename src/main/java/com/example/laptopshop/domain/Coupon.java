@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -46,6 +48,27 @@ public class Coupon {
     private boolean active = true; // true: còn dùng được, false: đã khóa
     private String image; // Ảnh đại diện mã giảm giá (URL Cloudinary)
 
+    // ===== v1: điều kiện áp dụng (tất cả nullable — null = không giới hạn, P3) =====
+    // Coupon cũ trong DB có các cột này NULL → hành vi giữ nguyên như trước.
+
+    private LocalDateTime startDate; // Bắt đầu được dùng; null = dùng ngay
+
+    private Long minOrderValue; // Giá trị đơn tối thiểu; null = không yêu cầu
+
+    private Long maxDiscountAmount; // Trần giảm tối đa (cho coupon %); null = không trần
+
+    private Integer perUserLimit; // Số lần tối đa mỗi khách dùng; null = không giới hạn
+
+    @Enumerated(EnumType.STRING)
+    private ScopeType scopeType; // Phạm vi áp dụng; null = ALL (tương thích coupon cũ)
+
+    @Column(name = "scope_value")
+    private String scopeValue; // Định danh phạm vi: Category.id | Product.factory | Product.id.
+                               // null khi scopeType = ALL. Khớp PromotionScope.targetValue (D18).
+
+    @Enumerated(EnumType.STRING)
+    private CouponType couponType; // PUBLIC | ASSIGNED | GIFT; null = PUBLIC (tương thích coupon cũ)
+
     @CreatedDate
     @Column(updatable = false) // Không bao giờ cho phép UPDATE cột này
     private LocalDateTime createdAt;
@@ -60,5 +83,24 @@ public class Coupon {
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
+    }
+
+    // ===== Getter null-safe cho cột thêm ở Sprint 1 =====
+    // Coupon cũ trong DB có các cột này = NULL. Getter *OrDefault trả giá trị mặc
+    // định an toàn để logic kiểm tra điều kiện không phải tự check null (D22/R1).
+
+    /** PUBLIC khi chưa gán — coupon cũ mặc định là mã công khai. */
+    public CouponType getCouponTypeOrDefault() {
+        return this.couponType == null ? CouponType.PUBLIC : this.couponType;
+    }
+
+    /** ORDER khi chưa gán — mặc định áp cho toàn bộ đơn hàng. */
+    public ScopeType getScopeTypeOrDefault() {
+        return this.scopeType == null ? ScopeType.ALL : this.scopeType;
+    }
+
+    /** 0 khi chưa gán — không yêu cầu giá trị đơn tối thiểu. */
+    public long getMinOrderValueOrDefault() {
+        return this.minOrderValue == null ? 0L : this.minOrderValue;
     }
 }

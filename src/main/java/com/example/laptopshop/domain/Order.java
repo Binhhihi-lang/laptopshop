@@ -33,8 +33,15 @@ public class Order {
     private String orderCode; // mã đơn hàng hiển thị cho khách, ví dụ "DH07114752"
 
     private Long totalPrice; // Tổng tiền
-    private Long discountAmount; // số tiền thực tế được giảm tại thời điểm đặt hàng (giữ nguyên dù coupon sau
-                                 // này đổi %)
+    private Long discountAmount; // TỔNG tiền giảm = promotionDiscount + voucherDiscount (giữ nguyên dù coupon
+                                 // sau này đổi %). Tách 2 cột dưới để biết nguồn giảm.
+
+    // Giảm từ chương trình khuyến mại (cấp DÒNG sản phẩm) — D1.
+    private Long promotionDiscount;
+
+    // Giảm từ voucher/mã giảm giá (cấp ĐƠN) — D1. Đơn cũ (trước khi tách cột) đọc lên là NULL nếu chưa
+    // backfill → luôn đọc qua getter null-safe, KHÔNG dùng trực tiếp.
+    private Long voucherDiscount;
 
     // Phí vận chuyển tại thời điểm đặt (0 nếu được miễn phí). Lưu lại để tổng
     // tiền của đơn cũ không thay đổi khi chính sách phí ship sau này đổi.
@@ -106,6 +113,33 @@ public class Order {
         if (this.discountAmount == null) {
             this.discountAmount = 0L;
         }
+        if (this.promotionDiscount == null) {
+            this.promotionDiscount = 0L;
+        }
+        if (this.voucherDiscount == null) {
+            this.voucherDiscount = 0L;
+        }
+    }
+
+    // ===== Getter null-safe cho 2 cột mới =====
+    // Đơn cũ (tạo trước khi tách cột) có 2 cột này = NULL trong DB. Getter *Safe trả 0L
+    // thay vì null để mọi chỗ tính tiền không phải tự check null (D1/R1).
+    // Getter thô getPromotionDiscount()/getVoucherDiscount() vẫn giữ nguyên (Lombok sinh)
+    // để tầng persistence ghi/đọc đúng giá trị NULL.
+
+    /** Tiền giảm từ promotion, quy NULL về 0. */
+    public long getPromotionDiscountSafe() {
+        return this.promotionDiscount == null ? 0L : this.promotionDiscount;
+    }
+
+    /** Tiền giảm từ voucher, quy NULL về 0. */
+    public long getVoucherDiscountSafe() {
+        return this.voucherDiscount == null ? 0L : this.voucherDiscount;
+    }
+
+    /** Tổng tiền được giảm của đơn = promotion + voucher. */
+    public long getTotalDiscount() {
+        return getPromotionDiscountSafe() + getVoucherDiscountSafe();
     }
 
 }

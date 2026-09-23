@@ -60,9 +60,10 @@ public class OrderDetailResponse {
         private String productCode;
         private String productName;
         private String productImage;
-        private double price; // giá tại thời điểm mua
+        private Long price; // giá tại thời điểm mua
         private long quantity;
-        private double lineTotal; // price * quantity
+        private Long lineTotal; // price * quantity
+        private Long discountAmount; // giảm từ khuyến mại cho dòng này (0 nếu không)
     }
 
     /** 1 lần thử thanh toán — dữ liệu cổng trả về đã lưu lại. */

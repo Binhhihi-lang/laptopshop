@@ -57,8 +57,9 @@ public class AdminOrderDetailResponse {
         private String productCode;
         private String productName;
         private String productImage;
-        private double price; // giá tại thời điểm mua
+        private Long price; // giá tại thời điểm mua
         private long quantity;
-        private double lineTotal; // price * quantity
+        private Long lineTotal; // price * quantity
+        private Long discountAmount; // giảm từ khuyến mại cho dòng này (0 nếu không)
     }
 }
