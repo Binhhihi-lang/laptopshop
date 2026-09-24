@@ -23,4 +23,17 @@ public class CartResponse {
     private Long shippingFee; // 0 nếu được miễn phí
     private Long total; // subtotal + shippingFee (chưa trừ coupon)
     private Long freeShippingThreshold; // ngưỡng miễn phí ship — FE hiển thị gợi ý
+
+    // ===== Khối khuyến mại (Sprint 2, D14) =====
+    // Preview để FE hiển thị "Đã chọn N ưu đãi và khuyến mại ›". Con số ở đây
+    // PHẢI khớp số lúc chốt đơn — cùng chạy qua PromotionEngine.
+
+    /** Tổng tiền promotion giảm (chưa gồm voucher — voucher áp sau, D22). */
+    private Long promotionDiscount;
+
+    /** Tiền phải trả sau khi trừ promotion (voucher trừ tiếp ở bước sau). */
+    private Long payable;
+
+    /** Các promotion đang áp lên giỏ này (chỉ promotion thực sự giảm > 0). */
+    private List<AppliedPromotionResponse> promotions;
 }

@@ -34,6 +34,13 @@ public class ProductResponse {
     private String categoryName;
     private Boolean categoryActive; // trạng thái active của Category (null nếu category bị xóa mềm)
 
+    // ===== Flash sale (Sprint 2b) — null nếu sản phẩm không trong phiên nào =====
+    private Long flashPrice;      // giá sốc thay price khi phiên đang chạy (§0.5)
+    private Integer flashStock;   // kho riêng của phiên
+    private Integer flashSold;    // đã bán trong phiên (progress "Đã bán x/y")
+    private String flashSaleId;   // phiên chứa sản phẩm
+    private LocalDateTime flashEndAt; // lúc phiên kết thúc (đếm ngược)
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

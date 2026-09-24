@@ -1,8 +1,10 @@
 package com.example.laptopshop.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.example.laptopshop.domain.Category;
+import com.example.laptopshop.dto.response.Client.FlashPriceView;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +32,10 @@ public class ProductService {
      ProductRepository productRepository;
      UploadService uploadService;
      ProductMapper productMapper;
+
+     // FlashSaleService phụ thuộc ProductRepository (không phải ProductService)
+     // nên không có vòng phụ thuộc ở đây.
+     FlashSaleService flashSaleService;
 
     public Product getProductById(String id) {
         return this.productRepository.findById(id)
@@ -118,7 +124,7 @@ public class ProductService {
 
         Page<Product> products = this.productRepository.searchStorefront(
                 normalizedCategory, normalizedFactory, minPrice, maxPrice, normalizedKeyword, pageable);
-        return products.map(this.productMapper::toResponse);
+        return products.map(p -> attachFlash(this.productMapper.toResponse(p)));
     }
 
     // Lấy sản phẩm liên quan (cùng category, loại trừ chính sản phẩm đang xem).
@@ -129,7 +135,7 @@ public class ProductService {
         }
         List<Product> related = this.productRepository.findRelatedByCategory(
                 categoryId, excludeProductId, PageRequest.of(0, limit));
-        return this.productMapper.toResponseList(related);
+        return attachFlash(this.productMapper.toResponseList(related));
     }
 
     // Lấy sản phẩm theo CODE (SKU) cho trang chi tiết storefront.
@@ -143,13 +149,48 @@ public class ProductService {
         if (!product.isActive() || product.getCategory() == null || !product.getCategory().isActive()) {
             throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
         }
-        return this.productMapper.toResponse(product);
+        return attachFlash(this.productMapper.toResponse(product));
     }
 
     // Lấy danh sách hãng duy nhất của các sản phẩm active.
     @Transactional(readOnly = true)
     public List<String> getActiveFactoryNames() {
         return this.productRepository.findDistinctActiveFactories();
+    }
+
+    // ===== Flash sale (Sprint 2b) =====
+
+    /** Gắn giá flash vào 1 response — card hiển thị giá sốc không cần gọi thêm API. */
+    private ProductResponse attachFlash(ProductResponse res) {
+        if (res == null || res.getId() == null) {
+            return res;
+        }
+        Map<String, FlashPriceView> map = this.flashSaleService.resolvePriceMap(
+                List.of(res.getId()), java.time.LocalDateTime.now());
+        applyFlash(res, map.get(res.getId()));
+        return res;
+    }
+
+    /** Gắn giá flash cho cả danh sách — 1 query IN theo ids, tránh N+1 (R19). */
+    private List<ProductResponse> attachFlash(List<ProductResponse> list) {
+        if (list == null || list.isEmpty()) {
+            return list == null ? List.of() : list;
+        }
+        List<String> ids = list.stream().map(ProductResponse::getId).filter(java.util.Objects::nonNull).toList();
+        Map<String, FlashPriceView> map = this.flashSaleService.resolvePriceMap(ids, java.time.LocalDateTime.now());
+        list.forEach(res -> applyFlash(res, map.get(res.getId())));
+        return list;
+    }
+
+    private void applyFlash(ProductResponse res, FlashPriceView view) {
+        if (view == null) {
+            return;
+        }
+        res.setFlashPrice(view.flashPrice());
+        res.setFlashStock(view.flashStock());
+        res.setFlashSold(view.soldInFlash());
+        res.setFlashSaleId(view.flashSaleId());
+        res.setFlashEndAt(view.endAt());
     }
 
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh và

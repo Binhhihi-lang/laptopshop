@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,10 +24,12 @@ import com.example.laptopshop.domain.Payment;
 import com.example.laptopshop.domain.PaymentMethod;
 import com.example.laptopshop.domain.PaymentStatus;
 import com.example.laptopshop.domain.Product;
+import com.example.laptopshop.domain.Promotion;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Client.CreateOrderRequest;
 import com.example.laptopshop.dto.request.Order.OrderBulkStatusRequest;
 import com.example.laptopshop.dto.response.Client.CouponValidationResponse;
+import com.example.laptopshop.dto.response.Client.FlashPriceView;
 import com.example.laptopshop.dto.response.Client.OrderDetailResponse;
 import com.example.laptopshop.dto.response.Client.OrderSummaryResponse;
 import com.example.laptopshop.dto.response.Order.AdminOrderDetailResponse;
@@ -36,6 +39,7 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.CouponRepository;
 import com.example.laptopshop.repository.OrderRepository;
+import com.example.laptopshop.repository.PromotionRepository;
 import com.example.laptopshop.repository.UserRepository;
 
 import lombok.AccessLevel;
@@ -75,6 +79,33 @@ public class OrderService {
     CartService cartService;
     CouponService couponService;
     PaymentService paymentService;
+    PromotionService promotionService;
+    PromotionEngine promotionEngine;
+    PromotionRepository promotionRepository;
+    FlashSaleService flashSaleService;
+
+    /**
+     * Map dòng giỏ hàng sang đầu vào engine, kèm giá flash (D25). Cùng nguồn
+     * giá với CartService để preview = chốt đơn (D14).
+     *
+     * @param flash giá flash theo productId, đã tính tại thời điểm chốt (D27)
+     */
+    private List<PromotionEngine.Line> toEngineLines(List<CartItem> cartItems,
+            Map<String, FlashPriceView> flash) {
+        List<PromotionEngine.Line> lines = new ArrayList<>(cartItems.size());
+        for (CartItem item : cartItems) {
+            Product product = item.getProduct();
+            FlashPriceView view = flash == null ? null : flash.get(product.getId());
+            lines.add(new PromotionEngine.Line(
+                    product.getId(),
+                    product.getCategory() != null ? product.getCategory().getId() : null,
+                    product.getFactory(),
+                    product.getPrice(),
+                    (int) item.getQuantity(),
+                    view == null ? null : view.flashPrice()));
+        }
+        return lines;
+    }
 
     // ===== Tạo đơn =====
 
@@ -104,13 +135,33 @@ public class OrderService {
             }
         }
 
-        // 3. Tính tiền: subtotal → coupon → phí ship → tổng.
-        long subtotal = cartItems.stream()
-                .mapToLong(item -> item.getProduct().getPrice() * item.getQuantity())
-                .sum();
+        // 3. Tính tiền. Flash sale được tính lại NGAY LÚC CHỐT (D27): giá ở giỏ
+        //    chỉ là preview, tới đây mới là giá thật. Promotion chạy TRƯỚC trên
+        //    từng dòng, voucher tính trên phần còn lại (D9).
+        LocalDateTime now = LocalDateTime.now();
+        List<String> cartProductIds = cartItems.stream().map(i -> i.getProduct().getId()).toList();
+        Map<String, FlashPriceView> flashMap = this.flashSaleService.resolvePriceMap(cartProductIds, userId, now);
+        PromotionEngine.Result promo = this.promotionEngine.resolve(
+                toEngineLines(cartItems, flashMap), this.promotionService.findApplicable(now), now);
+
+        // D19: tăng usedCount BẰNG UPDATE atomic ngay trong transaction tạo đơn.
+        // 0 dòng bị ảnh hưởng = chương trình vừa hết lượt vì khách khác chốt
+        // song song → ném lỗi; @Transactional rollback nên không để lại lượt
+        // đã tăng cho các promotion khác của cùng đơn này.
+        for (Promotion applied : promo.appliedPromotions()) {
+            if (this.promotionRepository.incrementUsedCount(applied.getId()) == 0) {
+                throw new AppException(ErrorCode.PROMOTION_OUT_OF_STOCK);
+            }
+        }
+
+        long subtotal = promo.subtotal();
+        long promotionDiscount = promo.promotionDiscount();
 
         Coupon coupon = resolveCoupon(request.getCouponCode());
-        long discountAmount = coupon == null ? 0L : this.couponService.calculateDiscount(coupon, subtotal);
+        long voucherDiscount = coupon == null ? 0L
+                : this.couponService.calculateDiscount(coupon, subtotal - promotionDiscount);
+        // D10: tổng giảm của đơn không bao giờ vượt subtotal.
+        long discountAmount = Math.min(promotionDiscount + voucherDiscount, subtotal);
         long shippingFee = this.cartService.calculateShippingFee(subtotal);
         long totalPrice = Math.max(0L, subtotal - discountAmount + shippingFee);
 
@@ -120,6 +171,9 @@ public class OrderService {
         order.setUser(user);
         order.setCoupon(coupon);
         order.setDiscountAmount(discountAmount);
+        // Tách 2 nguồn giảm (D1) để admin và khách thấy rõ tiền đến từ đâu.
+        order.setPromotionDiscount(promotionDiscount);
+        order.setVoucherDiscount(voucherDiscount);
         order.setShippingFee(shippingFee);
         order.setTotalPrice(totalPrice);
         order.setStatus(OrderStatus.PENDING);
@@ -141,19 +195,48 @@ public class OrderService {
         order.setNote(request.getNote());
         order.setOrderDate(LocalDateTime.now());
 
+        // Map kết quả engine theo productId — mỗi dòng giỏ đúng 1 dòng kết quả.
+        Map<String, PromotionEngine.LineResult> promoByProduct = new HashMap<>();
+        for (PromotionEngine.LineResult lr : promo.lines()) {
+            promoByProduct.put(lr.productId(), lr);
+        }
+
         List<OrderDetail> details = new ArrayList<>();
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
+            FlashPriceView flashView = flashMap.get(product.getId());
 
             OrderDetail detail = new OrderDetail();
             detail.setOrder(order);
             detail.setProduct(product);
             detail.setQuantity(item.getQuantity());
-            detail.setPrice(product.getPrice());
+            // D27 + D32: giá bán = flashPrice nếu còn hiệu lực VÀ khách chưa dùng
+            // hết suất của mình, ngược lại giá thường.
+            detail.setPrice(flashView != null && flashView.allowsFlashFor(item.getQuantity())
+                    ? flashView.flashPrice() : product.getPrice());
             detail.setProductCode(product.getCode());
             detail.setProductName(product.getName());
             detail.setProductImage(product.getImage());
+
+            // D2: snapshot giảm giá + id chương trình xuống TỪNG dòng. Promotion
+            // tắt sau đó vẫn không làm sai đơn đã đặt.
+            PromotionEngine.LineResult lr = promoByProduct.get(product.getId());
+            if (lr != null && lr.discount() > 0L) {
+                detail.setDiscountAmount(lr.discount());
+                detail.setPromotionId(lr.promotion().getId());
+            }
             details.add(detail);
+
+            // D29: trừ kho phiên atomic. Cạn giữa chừng → fallback giá thường.
+            if (flashView != null && flashView.allowsFlashFor(item.getQuantity())) {
+                boolean consumed = this.flashSaleService.consumeStock(flashView.itemId(), item.getQuantity());
+                if (!consumed) {
+                    // D27 fallback: hết flashStock, dòng về giá thường, không fail đơn.
+                    detail.setPrice(product.getPrice());
+                    detail.setDiscountAmount(0L);
+                    detail.setPromotionId(null);
+                }
+            }
 
             // 5. Trừ tồn kho + tăng lượt bán. save() để @LastModifiedDate ghi
             //    updatedAt và đảm bảo UPDATE phát ra ngay trong transaction này.
@@ -479,6 +562,11 @@ public class OrderService {
         res.setPaymentMethod(order.getPaymentMethod());
         res.setPaymentStatus(order.getPaymentStatus());
         res.setDiscountAmount(order.getDiscountAmount());
+        // D1: tách 2 nguồn giảm để khách thấy "Giảm giá sản phẩm" và "Voucher"
+        // riêng. Đơn cũ (trước Sprint 1) 2 cột này NULL → giữ null, FE phân biệt
+        // "không có dữ liệu" với "0đ".
+        res.setPromotionDiscount(order.getPromotionDiscount());
+        res.setVoucherDiscount(order.getVoucherDiscount());
         res.setShippingFee(order.getShippingFee());
         res.setTotalPrice(order.getTotalPrice());
         res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);

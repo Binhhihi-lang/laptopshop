@@ -2,6 +2,8 @@ package com.example.laptopshop.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,8 +15,10 @@ import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Client.AddToCartRequest;
 import com.example.laptopshop.dto.request.Client.MergeCartRequest;
 import com.example.laptopshop.dto.request.Client.UpdateCartItemRequest;
+import com.example.laptopshop.dto.response.Client.AppliedPromotionResponse;
 import com.example.laptopshop.dto.response.Client.CartItemResponse;
 import com.example.laptopshop.dto.response.Client.CartResponse;
+import com.example.laptopshop.dto.response.Client.FlashPriceView;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.CartItemRepository;
@@ -50,6 +54,9 @@ public class CartService {
     CartItemRepository cartItemRepository;
     UserRepository userRepository;
     ProductService productService;
+    PromotionService promotionService;
+    PromotionEngine promotionEngine;
+    FlashSaleService flashSaleService;
 
     // ===== Truy vấn =====
 
@@ -255,9 +262,21 @@ public class CartService {
                 .map(this::toItemResponse)
                 .toList();
 
+        // D25: dòng trong phiên flash dùng flashPrice làm giá bán, engine bỏ qua.
+        applyFlashPrices(items, cart);
+
         long totalItems = items.stream().mapToLong(CartItemResponse::getQuantity).sum();
         long subtotal = items.stream().mapToLong(CartItemResponse::getLineTotal).sum();
         long shippingFee = calculateShippingFee(subtotal);
+
+        // Preview khuyến mại (D14). Dùng CÙNG engine với lúc chốt đơn để con số
+        // FE hiển thị không lệch với số thực thu.
+        PromotionEngine.Result promo = promotionEngine.resolve(
+                toEngineLines(items), promotionService.findApplicable(LocalDateTime.now()),
+                LocalDateTime.now());
+
+        applyPromotionToItems(items, promo);
+        long promotionDiscount = promo.promotionDiscount();
 
         response.setId(cart.getId());
         response.setItems(items);
@@ -265,7 +284,72 @@ public class CartService {
         response.setSubtotal(subtotal);
         response.setShippingFee(shippingFee);
         response.setTotal(subtotal + shippingFee);
+        response.setPromotionDiscount(promotionDiscount);
+        response.setPayable(Math.max(0L, subtotal + shippingFee - promotionDiscount));
+        response.setPromotions(toAppliedPromotions(promo));
         return response;
+    }
+
+    /**
+     * D25: dòng trong phiên flash lấy flashPrice làm giá bán. Gắn flashPrice vào
+     * item rồi tính lại lineTotal theo giá flash.
+     *
+     * <p>
+     * Phải hỏi theo ĐÚNG khách đang xem giỏ (không phải bản không-user) để
+     * {@code perUserLimitLeft} có giá trị: preview phải khớp lúc chốt đơn (D14),
+     * nếu không khách thấy giá flash ở giỏ rồi bị tính giá thường khi đặt.
+     */
+    private void applyFlashPrices(List<CartItemResponse> items, Cart cart) {
+        String userId = cart.getUser() == null ? null : cart.getUser().getId();
+        List<String> ids = items.stream().map(CartItemResponse::getProductId).toList();
+        Map<String, FlashPriceView> flash = this.flashSaleService.resolvePriceMap(
+                ids, userId, LocalDateTime.now());
+        for (CartItemResponse item : items) {
+            FlashPriceView view = flash.get(item.getProductId());
+            // D32: hết suất của khách → dòng về giá thường (không chặn đơn).
+            if (view == null || !view.allowsFlashFor(item.getQuantity())) {
+                continue;
+            }
+            item.setFlashPrice(view.flashPrice());
+            item.setLineTotal(view.flashPrice() * item.getQuantity());
+        }
+    }
+
+    /** Map dòng giỏ → dòng engine. flashPrice được nạp để engine bỏ qua dòng flash (D25). */
+    private List<PromotionEngine.Line> toEngineLines(List<CartItemResponse> items) {
+        return items.stream()
+                .map(i -> new PromotionEngine.Line(i.getProductId(), i.getCategoryId(), i.getFactory(),
+                        i.getPrice() == null ? 0L : i.getPrice(), (int) i.getQuantity(),
+                        i.getFlashPrice()))
+                .toList();
+    }
+
+    /** Ghi {@code lineDiscount} trả về từ engine vào từng dòng. */
+    private void applyPromotionToItems(List<CartItemResponse> items, PromotionEngine.Result promo) {
+        Map<String, Long> byProduct = promo.lines().stream()
+                .collect(Collectors.toMap(PromotionEngine.LineResult::productId,
+                        PromotionEngine.LineResult::discount, (a, b) -> a));
+        items.forEach(i -> i.setLineDiscount(byProduct.getOrDefault(i.getProductId(), 0L)));
+    }
+
+    /** Chỉ giữ promotion thực sự giảm tiền — FE không hiện "✓" cho ưu đãi vô hiệu. */
+    private List<AppliedPromotionResponse> toAppliedPromotions(PromotionEngine.Result promo) {
+        Map<String, Long> discountByPromotion = promo.lines().stream()
+                .filter(l -> l.promotion() != null && l.discount() > 0)
+                .collect(Collectors.groupingBy(l -> l.promotion().getId(),
+                        Collectors.summingLong(PromotionEngine.LineResult::discount)));
+
+        return promo.appliedPromotions().stream()
+                .filter(p -> discountByPromotion.getOrDefault(p.getId(), 0L) > 0)
+                .map(p -> {
+                    AppliedPromotionResponse res = new AppliedPromotionResponse();
+                    res.setId(p.getId());
+                    res.setName(p.getName());
+                    res.setTitle(p.getTitle());
+                    res.setDiscountAmount(discountByPromotion.get(p.getId()));
+                    return res;
+                })
+                .toList();
     }
 
     private CartItemResponse toItemResponse(CartItem item) {
@@ -278,6 +362,7 @@ public class CartService {
         res.setProductImage(product.getImage());
         res.setFactory(product.getFactory());
         res.setCategory(product.getCategory() != null ? product.getCategory().getName() : null);
+        res.setCategoryId(product.getCategory() != null ? product.getCategory().getId() : null);
         res.setPrice(product.getPrice());
         res.setOriginalPrice(product.getOriginalPrice());
         res.setQuantity(item.getQuantity());

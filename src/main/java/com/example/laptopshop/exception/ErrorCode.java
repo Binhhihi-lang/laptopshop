@@ -85,6 +85,10 @@ public enum ErrorCode {
     INVALID_PROMOTION_SCOPE(4109, "Phạm vi áp dụng của chương trình không hợp lệ", HttpStatus.BAD_REQUEST),
     PROMOTION_OVERLAP(4110, "Khoảng thời gian bị trùng với chương trình khác cùng phạm vi",
             HttpStatus.BAD_REQUEST),
+    // D19: incrementUsedCount trả 0 dòng = chương trình vừa hết lượt vì khách
+    // khác chốt đơn song song. Tính tiền lại là đủ, không chặn đơn.
+    PROMOTION_OUT_OF_STOCK(4111, "Chương trình khuyến mại vừa hết lượt, đơn được tính lại giá mới",
+            HttpStatus.BAD_REQUEST),
 
     // === USER VOUCHER / VÍ VOUCHER (4200 - 4299) ===
     USER_VOUCHER_NOT_FOUND(4201, "Không tìm thấy mã giảm giá trong ví", HttpStatus.NOT_FOUND),
@@ -93,6 +97,40 @@ public enum ErrorCode {
     USER_VOUCHER_EXPIRED(4204, "Mã giảm giá đã hết hạn", HttpStatus.BAD_REQUEST),
     USER_VOUCHER_ALREADY_USED(4205, "Mã giảm giá này đã được sử dụng", HttpStatus.BAD_REQUEST),
     USER_VOUCHER_NOT_CLAIMABLE(4206, "Mã giảm giá này không thể nhận trước", HttpStatus.BAD_REQUEST),
+
+    // === FLASH SALE (4300 - 4399) ===
+    FLASH_SALE_NOT_FOUND(4301, "Không tìm thấy phiên flash sale", HttpStatus.NOT_FOUND),
+    FLASH_SALE_NAME_REQUIRED(4302, "Tên phiên flash sale không được để trống", HttpStatus.BAD_REQUEST),
+    // D26: flash sale mà giá cao hơn giá thường thì không phải khuyến mại.
+    FLASH_PRICE_NOT_LOWER(4303, "Giá flash sale phải thấp hơn giá bán hiện tại của sản phẩm",
+            HttpStatus.BAD_REQUEST),
+    // Chốt chặn ở tầng DB (UK_flash_sale_items_sale_product) vẫn còn; lỗi này để
+    // admin biết ngay sản phẩm nào bị trùng thay vì nhận message ràng buộc.
+    FLASH_SALE_ITEM_DUPLICATE(4304, "Sản phẩm này đã có trong phiên flash sale", HttpStatus.BAD_REQUEST),
+    INVALID_FLASH_SALE_DATE_RANGE(4305, "Thời gian kết thúc phiên phải sau thời gian bắt đầu",
+            HttpStatus.BAD_REQUEST),
+    FLASH_SALE_NO_ITEMS(4306, "Phiên flash sale phải có ít nhất một sản phẩm", HttpStatus.BAD_REQUEST),
+    INVALID_FLASH_PRICE(4307, "Giá flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+    INVALID_FLASH_STOCK(4308, "Số lượng flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+    // D29: consumeStock trả 0 dòng = khách khác vừa chốt máy cuối cùng. Đơn KHÔNG
+    // fail — dòng đó rơi về giá thường (D27), nên đây là thông báo, không phải lỗi chặn.
+    FLASH_STOCK_EXHAUSTED(4309, "Sản phẩm đã bán hết số lượng dành cho flash sale", HttpStatus.BAD_REQUEST),
+    // D32: perUserLimit — flash giá sốc rất dễ bị dân buôn quét.
+    FLASH_PER_USER_LIMIT_REACHED(4310, "Bạn đã mua đủ số lượng tối đa cho sản phẩm flash sale này",
+            HttpStatus.BAD_REQUEST),
+    FLASH_SALE_PRODUCT_NOT_FOUND(4311, "Sản phẩm đưa vào phiên không tồn tại", HttpStatus.NOT_FOUND),
+
+    // === HOME BANNER (4400 - 4499) ===
+    BANNER_NOT_FOUND(4401, "Không tìm thấy banner trang chủ", HttpStatus.NOT_FOUND),
+    BANNER_TITLE_REQUIRED(4402, "Tiêu đề banner không được để trống", HttpStatus.BAD_REQUEST),
+    BANNER_IMAGE_REQUIRED(4403, "Banner phải có ảnh", HttpStatus.BAD_REQUEST),
+    BANNER_TARGET_REQUIRED(4404, "Banner chưa chọn nơi dẫn tới", HttpStatus.BAD_REQUEST),
+    // D30: banner là nơi admin dán link. Chỉ nhận đường dẫn nội bộ "/...", chặn
+    // javascript: và absolute external để không thành open-redirect.
+    INVALID_BANNER_TARGET_URL(4405,
+            "Liên kết banner không hợp lệ (chỉ chấp nhận đường dẫn nội bộ bắt đầu bằng /)",
+            HttpStatus.BAD_REQUEST),
+    INVALID_BANNER_TARGET(4406, "Đối tượng của banner không tồn tại hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // === ORDER & CART MODULE (5000 - 5999 )
     CART_ITEM_NOT_FOUND(5001, "Không tìm thấy sản phẩm trong giỏ hàng", HttpStatus.NOT_FOUND),

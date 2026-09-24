@@ -57,6 +57,20 @@ public class DataInitializer {
         PERMISSION_SEED.put("READ_COUPON", "Xem mã giảm giá");
         PERMISSION_SEED.put("UPDATE_COUPON", "Cập nhật mã giảm giá");
         PERMISSION_SEED.put("DELETE_COUPON", "Xóa mã giảm giá");
+        // PROMOTION: KHÔNG có DELETE_PROMOTION (chương trình khuyến mại chỉ
+        // ngừng áp dụng bằng active/endDate, giữ lại lịch sử đã áp lên đơn)
+        PERMISSION_SEED.put("CREATE_PROMOTION", "Tạo chương trình khuyến mại");
+        PERMISSION_SEED.put("READ_PROMOTION", "Xem chương trình khuyến mại");
+        PERMISSION_SEED.put("UPDATE_PROMOTION", "Cập nhật chương trình khuyến mại");
+        // FLASH SALE + HOME BANNER (Sprint 2b) — có đủ CREATE/READ/UPDATE/DELETE
+        PERMISSION_SEED.put("CREATE_FLASH_SALE", "Tạo phiên flash sale");
+        PERMISSION_SEED.put("READ_FLASH_SALE", "Xem phiên flash sale");
+        PERMISSION_SEED.put("UPDATE_FLASH_SALE", "Cập nhật phiên flash sale");
+        PERMISSION_SEED.put("DELETE_FLASH_SALE", "Xóa phiên flash sale");
+        PERMISSION_SEED.put("CREATE_HOME_BANNER", "Tạo banner trang chủ");
+        PERMISSION_SEED.put("READ_HOME_BANNER", "Xem banner trang chủ");
+        PERMISSION_SEED.put("UPDATE_HOME_BANNER", "Cập nhật banner trang chủ");
+        PERMISSION_SEED.put("DELETE_HOME_BANNER", "Xóa banner trang chủ");
         // ORDER: KHÔNG có DELETE_ORDER (Order là bản ghi giao dịch)
         PERMISSION_SEED.put("CREATE_ORDER", "Tạo đơn hàng");
         PERMISSION_SEED.put("READ_ORDER", "Xem đơn hàng");
@@ -96,8 +110,10 @@ public class DataInitializer {
             return set;
         };
 
+        // STAFF: CRUD catalog + khuyến mại + flash/banner (KHÔNG DELETE_*). Xem
+        // role-permission-model: STAFF không được xóa bất kỳ module nào.
         List<String> productCatCouponCrud = new ArrayList<>();
-        for (String module : new String[] { "PRODUCT", "CATEGORY", "COUPON" }) {
+        for (String module : new String[] { "PRODUCT", "CATEGORY", "COUPON", "PROMOTION" }) {
             productCatCouponCrud.add("CREATE_" + module);
             productCatCouponCrud.add("READ_" + module);
             productCatCouponCrud.add("UPDATE_" + module);
@@ -123,6 +139,13 @@ public class DataInitializer {
             return roleRepository.save(role);
         });
         List<String> staffPerms = new ArrayList<>(productCatCouponCrud);
+        // Flash/banner: STAFF cũng được tạo/sửa nhưng KHÔNG xóa (P8).
+        staffPerms.add("CREATE_FLASH_SALE");
+        staffPerms.add("READ_FLASH_SALE");
+        staffPerms.add("UPDATE_FLASH_SALE");
+        staffPerms.add("CREATE_HOME_BANNER");
+        staffPerms.add("READ_HOME_BANNER");
+        staffPerms.add("UPDATE_HOME_BANNER");
         staffPerms.add("CREATE_ORDER");
         staffPerms.add("READ_ORDER");
         staffPerms.add("UPDATE_ORDER");

@@ -24,7 +24,9 @@ public class OrderDetailResponse {
     private PaymentStatus paymentStatus;
 
     private Long subtotal; // tổng tiền hàng (trước giảm giá, chưa ship)
-    private Long discountAmount;
+    private Long discountAmount; // TỔNG giảm = promotionDiscount + voucherDiscount (D1)
+    private Long promotionDiscount; // giảm cấp DÒNG từ khuyến mại (null = đơn cũ trước Sprint 1)
+    private Long voucherDiscount; // giảm cấp ĐƠN từ mã/voucher (null = đơn cũ)
     private Long shippingFee;
     private Long totalPrice;
 
