@@ -79,10 +79,6 @@
             khai báo org.flywaydb:flyway-core THÌ KHÔNG ĐỦ: app vẫn khởi động bình
             thường nhưng Flyway im lặng không chạy — không tạo flyway_schema_history,
             không chạy V1/V2. Phải dùng starter dưới đây.
-
-            flyway-mysql vẫn cần tách riêng: flyway-core tự nó không biết ngữ âm
-            của MySQL (báo "No database found to handle jdbc:mysql").
-            Version do spring-boot-starter-parent quản lý, không ghi tay.
         -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
