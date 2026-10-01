@@ -28,6 +28,9 @@ import com.example.laptopshop.repository.ProductRepository;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class HomeBannerService {
 
+    /** Trần số slide bật cùng lúc — khớp số chấm của carousel trang chủ. */
+    private static final int MAX_ACTIVE_BANNERS = 5;
+
     HomeBannerRepository homeBannerRepository;
     ProductRepository productRepository;
     FlashSaleRepository flashSaleRepository;
@@ -56,6 +59,7 @@ public class HomeBannerService {
     @Transactional
     public HomeBannerResponse create(HomeBannerCreationRequest request, MultipartFile file) {
         validate(request);
+        ensureActiveLimit(null, request.getActive() == null || request.getActive());
         HomeBanner banner = new HomeBanner();
         applyFields(banner, request);
         applyImage(banner, request, file, false);
@@ -66,9 +70,35 @@ public class HomeBannerService {
     public HomeBannerResponse update(String id, HomeBannerCreationRequest request, MultipartFile file) {
         HomeBanner banner = findOrThrow(id);
         validate(request);
+        ensureActiveLimit(id, request.getActive() == null || request.getActive());
         applyFields(banner, request);
         applyImage(banner, request, file, true);
         return toResponse(this.homeBannerRepository.save(banner));
+    }
+
+    /** Bật/tắt slide ngay trên thẻ ở màn danh sách. */
+    @Transactional
+    public HomeBannerResponse setActive(String id, boolean active) {
+        HomeBanner banner = findOrThrow(id);
+        ensureActiveLimit(id, active);
+        banner.setActive(active);
+        return toResponse(this.homeBannerRepository.save(banner));
+    }
+
+    /**
+     * Trần 5 slide đang bật — carousel trang chủ chỉ hiển thị gọn trong 5 chấm.
+     * {@code excludeId} là chính slide đang sửa, không tính vào số đang bật.
+     */
+    private void ensureActiveLimit(String excludeId, boolean willBeActive) {
+        if (!willBeActive) {
+            return;
+        }
+        long activeCount = excludeId == null
+                ? this.homeBannerRepository.countByActiveTrue()
+                : this.homeBannerRepository.countByActiveTrueAndIdNot(excludeId);
+        if (activeCount >= MAX_ACTIVE_BANNERS) {
+            throw new AppException(ErrorCode.BANNER_ACTIVE_LIMIT_EXCEEDED);
+        }
     }
 
     /** Xóa mềm banner + xóa ảnh Cloudinary. */
@@ -82,8 +112,8 @@ public class HomeBannerService {
     }
 
     /**
-     * D30: banner là nơi admin dán link. Chặn {@code javascript:} + absolute
-     * external; đồng thời kiểm tra đối tượng đích có tồn tại.
+     * Kiểm tra đối tượng đích có thật và đang dùng được. Không còn loại URL tự
+     * do nên mọi đích đều tra được trong DB — không có đường cho link ngoài.
      */
     private void validate(HomeBannerCreationRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
@@ -101,14 +131,8 @@ public class HomeBannerService {
 
     private void validateTarget(BannerTargetType type, String value) {
         switch (type) {
-            case URL -> {
-                // Chỉ đường dẫn nội bộ "/...", chặn open-redirect (D30).
-                if (!value.startsWith("/") || value.toLowerCase().startsWith("//")
-                        || value.toLowerCase().startsWith("javascript:")) {
-                    throw new AppException(ErrorCode.INVALID_BANNER_TARGET_URL);
-                }
-            }
-            case PRODUCT -> productRepository.findById(value)
+            // Lưu CODE sản phẩm (không phải id): route khách là /products/:code.
+            case PRODUCT -> productRepository.findByCodeIgnoreCase(value)
                     .orElseThrow(() -> new AppException(ErrorCode.INVALID_BANNER_TARGET));
             case CATEGORY -> {
                 Category category = categoryService.getCategoryById(value);
@@ -130,8 +154,8 @@ public class HomeBannerService {
 
     private void applyFields(HomeBanner banner, HomeBannerCreationRequest request) {
         banner.setTitle(request.getTitle().trim());
+        banner.setKicker(request.getKicker() == null ? null : request.getKicker().trim());
         banner.setSubtitle(request.getSubtitle());
-        banner.setBgColor(request.getBgColor());
         banner.setTargetType(request.getTargetType());
         banner.setTargetValue(request.getTargetValue().trim());
         banner.setSortOrder(request.getSortOrder() == null ? 0 : request.getSortOrder());
@@ -167,9 +191,9 @@ public class HomeBannerService {
         return HomeBannerResponse.builder()
                 .id(banner.getId())
                 .title(banner.getTitle())
+                .kicker(banner.getKicker())
                 .subtitle(banner.getSubtitle())
                 .image(banner.getImage())
-                .bgColor(banner.getBgColor())
                 .targetType(banner.getTargetType())
                 .targetValue(banner.getTargetValue())
                 .sortOrder(banner.getSortOrder())

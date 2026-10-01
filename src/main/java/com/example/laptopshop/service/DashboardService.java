@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.dto.response.DashboardStats;
 import com.example.laptopshop.repository.CategoryRepository;
-import com.example.laptopshop.repository.CouponRepository;
+import com.example.laptopshop.repository.VoucherRepository;
 import com.example.laptopshop.repository.ProductRepository;
 import com.example.laptopshop.repository.UserRepository;
 
@@ -23,7 +23,7 @@ public class DashboardService {
     UserRepository userRepository;
     ProductRepository productRepository;
     CategoryRepository categoryRepository;
-    CouponRepository couponRepository;
+    VoucherRepository voucherRepository;
 
     // Tổng hợp số liệu cho Dashboard. Yêu cầu quyền READ_DASHBOARD (STAFF & ADMIN
     // đều có) — trả số đếm tổng hợp, KHÔNG trả danh sách user nên không lộ PII.
@@ -34,7 +34,7 @@ public class DashboardService {
         stats.setActiveUserCount(userRepository.countByActiveTrue());
         stats.setProductCount(productRepository.count());
         stats.setCategoryCount(categoryRepository.count());
-        stats.setCouponCount(couponRepository.count());
+        stats.setVoucherCount(voucherRepository.count());
 
         List<Product> low = productRepository.findFirst5ByQuantityLessThanOrderByQuantityAsc(5);
         List<DashboardStats.LowStockProduct> lowDto = low.stream().map(p -> {

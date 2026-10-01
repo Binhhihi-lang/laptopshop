@@ -26,10 +26,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Chương trình khuyến mại — giảm giá CẤP DÒNG sản phẩm, tự áp khi khớp điều kiện,
- * khách không chọn được (khác {@link Coupon}: cấp đơn, khách gõ mã hoặc chọn từ ví).
+ * khách không chọn được (khác {@link Voucher}: cấp đơn, khách gõ mã hoặc chọn từ ví).
  *
  * <p>
- * Soft delete + audit theo đúng khuôn {@link Coupon}. {@code @SQLRestriction} làm
+ * Soft delete + audit theo đúng khuôn {@link Voucher}. {@code @SQLRestriction} làm
  * mọi truy vấn tự động loại bản ghi đã xóa mềm, nên không được quên khi viết
  * repository query mới.
  */
@@ -95,9 +95,14 @@ public class Promotion {
 	private Integer priority = 0;
 
 	/**
-	 * Cho phép cộng dồn với chương trình khác trên cùng dòng. v1 KHÔNG dùng:
-	 * mỗi dòng chỉ nhận 1 ưu đãi tốt nhất. Để sẵn field để về sau mở rộng mà
-	 * không đổi bảng.
+	 * Cho phép cộng dồn với chương trình khác trên cùng dòng.
+	 *
+	 * <p>
+	 * <b>CHƯA HOẠT ĐỘNG — v1 bỏ qua hoàn toàn.</b> {@code PromotionEngine} luôn
+	 * chọn 1 chương trình thắng cho mỗi dòng, không đọc cờ này. Admin bật cờ sẽ
+	 * nhận mức giảm của MỘT chương trình (ít hơn kỳ vọng), không phải cộng dồn.
+	 * Giữ field để mở rộng sau mà không phải đổi bảng — xem BL-10 trong
+	 * {@code docs/ba/05-backlog.md}.
 	 */
 	private boolean stackable = false;
 

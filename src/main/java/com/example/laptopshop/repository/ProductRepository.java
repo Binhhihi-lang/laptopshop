@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import com.example.laptopshop.domain.Product;
@@ -78,4 +79,58 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     // Dùng cho filter "Hãng" ở trang danh sách sản phẩm.
     @Query("SELECT DISTINCT p.factory FROM Product p WHERE p.active = true AND p.factory IS NOT NULL ORDER BY p.factory ASC")
     List<String> findDistinctActiveFactories();
+
+    // Tìm kiếm cho picker ở trang quản trị (chọn sản phẩm cho phạm vi khuyến mại,
+    // banner...). Khác searchStorefront: KHÔNG lọc theo category active — admin
+    // cần thấy cả sản phẩm thuộc danh mục đang tắt để gán khuyến mại.
+    // keyword tìm trong name + code (case-insensitive, contains).
+    @Query("""
+            SELECT p FROM Product p
+            WHERE (:keyword IS NULL
+                   OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            ORDER BY p.name ASC
+            """)
+    Page<Product> searchForPicker(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * Trừ tồn kho + tăng lượt bán theo kiểu atomic (BR-A04) — chống 2 đơn song
+     * song bán vượt số hàng còn lại.
+     *
+     * <p>
+     * Điều kiện {@code quantity >= :qty} nằm trong câu UPDATE nên DB tự chặn;
+     * 0 dòng = vừa bị khách khác mua hết.
+     *
+     * <p>
+     * Phải set {@code updatedAt = CURRENT_TIMESTAMP} ngay trong câu lệnh:
+     * {@code updatedAt} là {@code @LastModifiedDate} do Hibernate ghi lúc
+     * {@code save()}, nên UPDATE kiểu này KHÔNG đi qua Hibernate → cột "Ngày sửa"
+     * ở màn quản lý sản phẩm sẽ đứng yên nếu quên.
+     *
+     * @return số dòng cập nhật được (0 = không đủ hàng)
+     */
+    @Modifying
+    @Query("""
+            UPDATE Product p
+            SET p.quantity = p.quantity - :qty,
+                p.sold = p.sold + :qty,
+                p.updatedAt = CURRENT_TIMESTAMP
+            WHERE p.id = :id
+              AND p.quantity >= :qty
+            """)
+    int deductStock(@Param("id") String id, @Param("qty") long qty);
+
+    /**
+     * Hoàn tồn kho + giảm lượt bán khi hủy đơn. Chặn {@code sold} dưới 0 để dữ
+     * liệu không âm nếu bị gọi lặp.
+     */
+    @Modifying
+    @Query("""
+            UPDATE Product p
+            SET p.quantity = p.quantity + :qty,
+                p.sold = CASE WHEN p.sold >= :qty THEN p.sold - :qty ELSE 0 END,
+                p.updatedAt = CURRENT_TIMESTAMP
+            WHERE p.id = :id
+            """)
+    int restoreStock(@Param("id") String id, @Param("qty") long qty);
 }

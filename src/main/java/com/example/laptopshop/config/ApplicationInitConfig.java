@@ -37,7 +37,8 @@ public class ApplicationInitConfig {
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            DataInitializer dataInitializer) {
+            DataInitializer dataInitializer,
+            SampleDataInitializer sampleDataInitializer) {
 
         return args -> {
             // 1. Seed Permission + ADMIN/STAFF/CUSTOMER (idempotent)
@@ -64,6 +65,10 @@ public class ApplicationInitConfig {
                 log.warn(">>> Email: {} | Mật khẩu: admin123", adminEmail);
                 log.warn(">>> Vui lòng đổi mật khẩu sau khi đăng nhập lần đầu để bảo mật.");
             }
+
+            // 3. Seed danh mục + sản phẩm mẫu — CHỈ khi bảng products rỗng, nên
+            //    trỏ vào DB đã có dữ liệu thật thì tự bỏ qua (xem SampleDataInitializer).
+            sampleDataInitializer.init();
         };
     }
 }

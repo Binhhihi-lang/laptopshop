@@ -5,9 +5,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.laptopshop.domain.Cart;
 import com.example.laptopshop.domain.CartItem;
-import com.example.laptopshop.domain.Coupon;
+import com.example.laptopshop.domain.Voucher;
 import com.example.laptopshop.domain.Order;
 import com.example.laptopshop.domain.OrderDetail;
 import com.example.laptopshop.domain.OrderStatus;
@@ -27,8 +29,9 @@ import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.domain.Promotion;
 import com.example.laptopshop.domain.User;
 import com.example.laptopshop.dto.request.Client.CreateOrderRequest;
+import com.example.laptopshop.dto.request.Client.ValidateVoucherRequest;
 import com.example.laptopshop.dto.request.Order.OrderBulkStatusRequest;
-import com.example.laptopshop.dto.response.Client.CouponValidationResponse;
+import com.example.laptopshop.dto.response.Client.VoucherValidationResponse;
 import com.example.laptopshop.dto.response.Client.FlashPriceView;
 import com.example.laptopshop.dto.response.Client.OrderDetailResponse;
 import com.example.laptopshop.dto.response.Client.OrderSummaryResponse;
@@ -37,10 +40,15 @@ import com.example.laptopshop.dto.response.Order.AdminOrderResponse;
 import com.example.laptopshop.dto.response.Order.OrderStatsResponse;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
-import com.example.laptopshop.repository.CouponRepository;
+import com.example.laptopshop.domain.UserVoucher;
+import com.example.laptopshop.domain.UserVoucherStatus;
+import com.example.laptopshop.repository.VoucherRepository;
 import com.example.laptopshop.repository.OrderRepository;
+import com.example.laptopshop.repository.ProductRepository;
 import com.example.laptopshop.repository.PromotionRepository;
+import com.example.laptopshop.repository.UserVoucherRepository;
 import com.example.laptopshop.repository.UserRepository;
+import com.example.laptopshop.service.CartService.CartPricing;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -73,16 +81,18 @@ public class OrderService {
     static final SecureRandom RANDOM = new SecureRandom();
 
     OrderRepository orderRepository;
-    CouponRepository couponRepository;
+    VoucherRepository voucherRepository;
     UserRepository userRepository;
-    ProductService productService;
+    ProductRepository productRepository;
+    UserVoucherRepository userVoucherRepository;
     CartService cartService;
-    CouponService couponService;
+    VoucherService voucherService;
     PaymentService paymentService;
     PromotionService promotionService;
     PromotionEngine promotionEngine;
     PromotionRepository promotionRepository;
     FlashSaleService flashSaleService;
+    VoucherWalletService voucherWalletService;
 
     /**
      * Map dòng giỏ hàng sang đầu vào engine, kèm giá flash (D25). Cùng nguồn
@@ -135,12 +145,35 @@ public class OrderService {
             }
         }
 
-        // 3. Tính tiền. Flash sale được tính lại NGAY LÚC CHỐT (D27): giá ở giỏ
-        //    chỉ là preview, tới đây mới là giá thật. Promotion chạy TRƯỚC trên
-        //    từng dòng, voucher tính trên phần còn lại (D9).
+        // 3. Trừ kho phiên flash TRƯỚC khi tính tiền (D29). Phải làm ở bước này
+        //    vì kết quả trừ kho quyết định dòng nào còn được giá flash — mà giá
+        //    flash lại là đầu vào của cả engine promotion lẫn eligibleAmount của
+        //    voucher. Trừ sau khi tính tiền sẽ để lại phần giảm "mồ côi" của dòng
+        //    đã mất flash (BR-F13).
         LocalDateTime now = LocalDateTime.now();
         List<String> cartProductIds = cartItems.stream().map(i -> i.getProduct().getId()).toList();
         Map<String, FlashPriceView> flashMap = this.flashSaleService.resolvePriceMap(cartProductIds, userId, now);
+
+        // flashWonByProduct: dòng nào THỰC SỰ được giá flash (đã trừ kho thành công).
+        Map<String, String> flashItemIdByProduct = new HashMap<>();
+        for (CartItem item : cartItems) {
+            Product product = item.getProduct();
+            FlashPriceView view = flashMap.get(product.getId());
+            if (view == null || !view.allowsFlashFor(item.getQuantity())) {
+                continue; // không có phiên / hết suất khách → giá thường
+            }
+            if (this.flashSaleService.consumeStock(view.itemId(), item.getQuantity())) {
+                flashItemIdByProduct.put(product.getId(), view.itemId());
+            } else {
+                // D27 fallback: kho phiên cạn giữa chừng → dòng về giá thường.
+                // Bỏ khỏi flashMap để engine + eligibleAmount tính theo giá thường.
+                flashMap.remove(product.getId());
+            }
+        }
+
+        // 4. Tính tiền TRÊN giá đã chốt. Flash sale đã xác định xong ở bước 3 nên
+        //    giá ở đây là giá thật, không còn khả năng đổi nữa. Promotion chạy
+        //    TRƯỚC trên từng dòng, voucher tính trên phần còn lại (D9).
         PromotionEngine.Result promo = this.promotionEngine.resolve(
                 toEngineLines(cartItems, flashMap), this.promotionService.findApplicable(now), now);
 
@@ -157,19 +190,70 @@ public class OrderService {
         long subtotal = promo.subtotal();
         long promotionDiscount = promo.promotionDiscount();
 
-        Coupon coupon = resolveCoupon(request.getCouponCode());
-        long voucherDiscount = coupon == null ? 0L
-                : this.couponService.calculateDiscount(coupon, subtotal - promotionDiscount);
+        // Map kết quả engine theo productId — mỗi dòng giỏ đúng 1 dòng kết quả.
+        // Dựng sớm vì cả tính voucher (D22) lẫn snapshot từng dòng đều cần.
+        Map<String, PromotionEngine.LineResult> promoByProduct = new HashMap<>();
+        for (PromotionEngine.LineResult lr : promo.lines()) {
+            promoByProduct.put(lr.productId(), lr);
+        }
+
+        // D11: hai đường giảm giá loại trừ nhau — gửi cả hai là khách (hoặc FE)
+        // nhầm, chặn hẳn thay vì chọn đại một đường rồi thu sai tiền.
+        boolean hasVoucher = request.getVoucherCode() != null && !request.getVoucherCode().isBlank();
+        boolean hasWalletVoucher = request.getUserVoucherId() != null
+                && !request.getUserVoucherId().isBlank();
+        if (hasVoucher && hasWalletVoucher) {
+            throw new AppException(ErrorCode.VOUCHER_AND_VOUCHER_CONFLICT);
+        }
+
+        // D22: mức giảm tính trên tiền hàng KHỚP PHẠM VI (đã trừ promotion của
+        // dòng), không phải tổng giỏ. Dùng chung checkVoucherRules với preview ở
+        // trang giỏ để hai đường không bao giờ lệch luật.
+        List<VoucherService.EligibleLine> voucherLines = cartItems.stream()
+                .map(i -> {
+                    PromotionEngine.LineResult lr = promoByProduct.get(i.getProduct().getId());
+                    return new VoucherService.EligibleLine(
+                            i.getProduct().getId(),
+                            i.getProduct().getCategory() == null ? null
+                                    : i.getProduct().getCategory().getId(),
+                            i.getProduct().getFactory(),
+                            lr != null ? lr.lineTotal() : i.getProduct().getPrice() * i.getQuantity(),
+                            lr != null ? lr.discount() : 0L);
+                })
+                .toList();
+
+        Voucher voucher = null;
+        UserVoucher walletVoucher = null;
+        long voucherDiscount = 0L;
+
+        if (hasWalletVoucher) {
+            walletVoucher = this.voucherWalletService.getUsableVoucher(userId, request.getUserVoucherId());
+            voucher = walletVoucher.getVoucher();
+        } else if (hasVoucher) {
+            voucher = resolveVoucher(request.getVoucherCode());
+        }
+
+        if (voucher != null) {
+            // Ném ĐÚNG mã lỗi của nhánh vi phạm (chưa tới ngày / hết lượt / đơn
+            // chưa đủ tối thiểu…) thay vì gộp thành VOUCHER_NOT_USABLE chung chung
+            // — trước đây biến lỗi bị vứt đi nên khách thấy lý do khác với preview.
+            ErrorCode voucherError = checkVoucherRules(userId, voucher, voucherLines);
+            if (voucherError != null) {
+                throw new AppException(voucherError);
+            }
+            long eligible = this.voucherService.calculateEligibleAmount(voucher, voucherLines);
+            voucherDiscount = this.voucherService.calculateDiscount(voucher, eligible);
+        }
         // D10: tổng giảm của đơn không bao giờ vượt subtotal.
         long discountAmount = Math.min(promotionDiscount + voucherDiscount, subtotal);
         long shippingFee = this.cartService.calculateShippingFee(subtotal);
         long totalPrice = Math.max(0L, subtotal - discountAmount + shippingFee);
 
-        // 4. Dựng Order + snapshot từng dòng vào OrderDetail.
+        // 4. Dựng Order + từng dòng vào OrderDetail.
         Order order = new Order();
         order.setOrderCode(generateUniqueOrderCode());
         order.setUser(user);
-        order.setCoupon(coupon);
+        order.setVoucher(voucher);
         order.setDiscountAmount(discountAmount);
         // Tách 2 nguồn giảm (D1) để admin và khách thấy rõ tiền đến từ đâu.
         order.setPromotionDiscount(promotionDiscount);
@@ -195,15 +279,11 @@ public class OrderService {
         order.setNote(request.getNote());
         order.setOrderDate(LocalDateTime.now());
 
-        // Map kết quả engine theo productId — mỗi dòng giỏ đúng 1 dòng kết quả.
-        Map<String, PromotionEngine.LineResult> promoByProduct = new HashMap<>();
-        for (PromotionEngine.LineResult lr : promo.lines()) {
-            promoByProduct.put(lr.productId(), lr);
-        }
-
         List<OrderDetail> details = new ArrayList<>();
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
+            // Giá flash chỉ còn trong map nếu đã trừ kho thành công ở bước 3, nên
+            // tới đây giá đã là giá chốt hạ — không đổi nữa (BR-F13).
             FlashPriceView flashView = flashMap.get(product.getId());
 
             OrderDetail detail = new OrderDetail();
@@ -218,6 +298,9 @@ public class OrderService {
             detail.setProductName(product.getName());
             detail.setProductImage(product.getImage());
 
+            // Nhớ item đã trừ kho để hủy đơn hoàn ĐÚNG suất vào phiên (D12).
+            detail.setFlashSaleItemId(flashItemIdByProduct.get(product.getId()));
+
             // D2: snapshot giảm giá + id chương trình xuống TỪNG dòng. Promotion
             // tắt sau đó vẫn không làm sai đơn đã đặt.
             PromotionEngine.LineResult lr = promoByProduct.get(product.getId());
@@ -227,34 +310,31 @@ public class OrderService {
             }
             details.add(detail);
 
-            // D29: trừ kho phiên atomic. Cạn giữa chừng → fallback giá thường.
-            if (flashView != null && flashView.allowsFlashFor(item.getQuantity())) {
-                boolean consumed = this.flashSaleService.consumeStock(flashView.itemId(), item.getQuantity());
-                if (!consumed) {
-                    // D27 fallback: hết flashStock, dòng về giá thường, không fail đơn.
-                    detail.setPrice(product.getPrice());
-                    detail.setDiscountAmount(0L);
-                    detail.setPromotionId(null);
-                }
+            // 5. Trừ tồn kho + tăng lượt bán bằng UPDATE ATOMIC (BR-A04). Điều
+            //    kiện `quantity >= qty` nằm trong câu lệnh nên DB tự chặn 2 đơn
+            //    song song bán vượt hàng; 0 dòng = vừa bị khách khác mua hết.
+            if (this.productRepository.deductStock(product.getId(), item.getQuantity()) == 0) {
+                throw new AppException(ErrorCode.CART_QUANTITY_EXCEEDS_STOCK);
             }
-
-            // 5. Trừ tồn kho + tăng lượt bán. save() để @LastModifiedDate ghi
-            //    updatedAt và đảm bảo UPDATE phát ra ngay trong transaction này.
-            product.setQuantity(product.getQuantity() - item.getQuantity());
-            product.setSold(product.getSold() + item.getQuantity());
-            this.productService.saveProduct(product);
         }
         order.setOrderDetails(details);
 
-        // 6. Tăng lượt dùng coupon — chỉ tăng khi đơn thực sự được tạo.
-        if (coupon != null) {
-            coupon.setUsedCount(coupon.getUsedCount() == null ? 1 : coupon.getUsedCount() + 1);
-            this.couponRepository.save(coupon);
+        // 6. Tăng lượt dùng voucher bằng UPDATE ATOMIC (BR-A03) — áp cho CẢ hai
+        //    đường (ví + gõ tay) vì usageLimit là hạn mức toàn hệ thống. 0 dòng =
+        //    voucher vừa hết lượt vì khách khác chốt song song → ném lỗi, rollback
+        //    cả đơn (không được âm thầm bỏ voucher rồi thu nhiều tiền hơn).
+        if (voucher != null && this.voucherRepository.incrementUsedCount(voucher.getId()) == 0) {
+            throw new AppException(ErrorCode.VOUCHER_OUT_OF_STOCK);
         }
 
         Order saved = this.orderRepository.save(order);
 
-        // 7. Xóa giỏ — cùng transaction, nên nếu bước nào trên lỗi thì giỏ
+        // 7. Đánh dấu voucher trong ví đã dùng, gắn luôn đơn để hủy thì hoàn (D12).
+        if (walletVoucher != null) {
+            this.voucherWalletService.markUsed(walletVoucher, saved);
+        }
+
+        // 8. Xóa giỏ — cùng transaction, nên nếu bước nào trên lỗi thì giỏ
         //    vẫn còn nguyên để khách thử lại.
         this.cartService.clearCartForOrder(cart);
 
@@ -293,6 +373,10 @@ public class OrderService {
         }
 
         restoreStock(order);
+        // D12: hoàn voucher về ví + usedCount của voucher/promotion. Chỉ chạy
+        // được ở PENDING/CONFIRMED (state machine chặn ở trên) nên đơn COMPLETED
+        // không bao giờ hoàn — đúng luật.
+        restorePromotions(order);
 
         order.setStatus(OrderStatus.CANCELLED);
         // Đơn đã thanh toán (VNPay, chưa triển khai) thì đánh dấu cần hoàn tiền.
@@ -314,6 +398,7 @@ public class OrderService {
             return; // đơn đã đổi trạng thái ở luồng khác thì bỏ qua
         }
         restoreStock(order);
+        restorePromotions(order);
         order.setStatus(OrderStatus.CANCELLED);
         this.orderRepository.save(order);
     }
@@ -324,13 +409,50 @@ public class OrderService {
             return;
         }
         for (OrderDetail detail : order.getOrderDetails()) {
-            Product product = detail.getProduct();
-            if (product == null) {
+            if (detail.getProduct() == null) {
                 continue; // sản phẩm đã bị xóa cứng khỏi DB
             }
-            product.setQuantity(product.getQuantity() + detail.getQuantity());
-            product.setSold(Math.max(0L, product.getSold() - detail.getQuantity()));
-            this.productService.saveProduct(product);
+            // UPDATE atomic (BR-A04) — chặn `sold` dưới 0 nếu bị gọi lặp.
+            this.productRepository.restoreStock(detail.getProduct().getId(), detail.getQuantity());
+        }
+    }
+
+    /**
+     * Hoàn phần khuyến mại khi hủy đơn (D12). Không làm thì khách mất voucher
+     * oan và ngân sách promotion/voucher bị trừ oan.
+     *
+     * <p>
+     * Gồm 3 việc, phải cùng transaction với việc đổi trạng thái đơn:
+     * <ul>
+     * <li>Voucher trong ví → {@code AVAILABLE} (còn hạn) hoặc {@code EXPIRED}</li>
+     * <li>{@code Voucher.usedCount} −1</li>
+     * <li>{@code Promotion.usedCount} −1 cho TỪNG chương trình đã áp</li>
+     * <li>Kho phiên flash: hoàn suất đã trừ lúc chốt</li>
+     * </ul>
+     */
+    private void restorePromotions(Order order) {
+        this.voucherWalletService.releaseOnCancel(this.voucherWalletService.findByOrderId(order.getId()));
+
+        if (order.getVoucher() != null) {
+            // UPDATE atomic (BR-A03) — chặn usedCount xuống dưới 0 nếu bị gọi lặp.
+            this.voucherRepository.decrementUsedCount(order.getVoucher().getId());
+        }
+
+        // Đếm distinct theo OrderDetail.promotionId: một chương trình có thể giảm
+        // nhiều dòng nhưng usedCount chỉ tăng 1 lần cho cả đơn (D19).
+        if (order.getOrderDetails() != null) {
+            order.getOrderDetails().stream()
+                    .map(OrderDetail::getPromotionId)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .forEach(this.promotionRepository::decrementUsedCount);
+
+            // Hoàn suất flash đã trừ lúc chốt (V5 lưu id item vào dòng).
+            for (OrderDetail detail : order.getOrderDetails()) {
+                if (detail.getFlashSaleItemId() != null) {
+                    this.flashSaleService.releaseStock(detail.getFlashSaleItemId(), detail.getQuantity());
+                }
+            }
         }
     }
 
@@ -446,6 +568,11 @@ public class OrderService {
 
         if (newStatus == OrderStatus.CANCELLED) {
             restoreStock(order);
+            // D12: admin hủy đơn cũng phải hoàn voucher + usedCount + kho phiên,
+            // y như khách tự hủy. Thiếu bước này thì khách mất voucher oan và
+            // ngân sách promotion/voucher bị trừ oan.
+            // An toàn trước gọi lặp: CANCELLED -> noneOf nên canTransition đã chặn.
+            restorePromotions(order);
             if (order.getPaymentStatus() == PaymentStatus.PAID) {
                 order.setPaymentStatus(PaymentStatus.REFUNDED);
             }
@@ -468,45 +595,139 @@ public class OrderService {
 
     // ===== Mapping =====
 
-    // ===== Kiểm tra coupon =====
+    // ===== Kiểm tra voucher =====
 
-    /** Dùng cho trang giỏ: hỏi trước số tiền được giảm mà không tạo đơn. */
+    /**
+     * Dùng cho trang giỏ: hỏi trước số tiền được giảm mà không tạo đơn.
+     *
+     * <p>
+     * D14: KHÔNG nhận {@code orderTotal} từ FE nữa — BE tự đọc giỏ của khách và
+     * tự chạy engine. FE gửi số tiền lên thì (a) sửa được giá, (b) con số preview
+     * lệch với lúc chốt đơn vì thiếu kết quả promotion trên từng dòng.
+     *
+     * <p>
+     * D22: mức giảm tính trên {@code eligibleAmount} (chỉ tiền hàng khớp phạm vi,
+     * đã trừ promotion của dòng), không phải tổng giỏ.
+     *
+     * <p>
+     * Vẫn trả HTTP 200 kèm cờ {@code valid} (kể cả mã sai) để FE hiện thông báo
+     * inline dưới ô nhập mã — nhưng message lấy từ {@link ErrorCode} chi tiết, để
+     * preview và lúc chốt đơn nói CÙNG một lý do.
+     */
     @Transactional(readOnly = true)
-    public CouponValidationResponse validateCoupon(String code, long orderTotal) {
-        if (code == null || code.isBlank()) {
-            return CouponValidationResponse.invalid("Vui lòng nhập mã giảm giá.");
+    public VoucherValidationResponse validateVoucher(String userId, ValidateVoucherRequest request) {
+        Voucher voucher;
+        if (request.getUserVoucherId() != null && !request.getUserVoucherId().isBlank()) {
+            // BR-V13: nhánh chọn voucher TỪ VÍ. Trước đây không có đường này nên FE
+            // tự tính số tiền → bỏ qua phạm vi voucher → lệch với số BE thu.
+            UserVoucher walletVoucher = this.userVoucherRepository
+                    .findByIdAndUserId(request.getUserVoucherId(), userId).orElse(null);
+            if (walletVoucher == null) {
+                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_NOT_FOUND.getMessage());
+            }
+            if (walletVoucher.getStatus() == UserVoucherStatus.USED) {
+                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_ALREADY_USED.getMessage());
+            }
+            if (!walletVoucher.isAvailableAt(LocalDateTime.now())) {
+                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_EXPIRED.getMessage());
+            }
+            voucher = walletVoucher.getVoucher();
+        } else {
+            String code = request.getCode();
+            if (code == null || code.isBlank()) {
+                return VoucherValidationResponse.invalid(ErrorCode.VOUCHER_CODE_EMPTY.getMessage());
+            }
+            voucher = this.voucherRepository.findByCodeIgnoreCase(code.trim()).orElse(null);
+            if (voucher == null) {
+                return VoucherValidationResponse.invalid(ErrorCode.VOUCHER_NOT_FOUND.getMessage());
+            }
         }
 
-        Coupon coupon = this.couponRepository.findByCodeIgnoreCase(code.trim()).orElse(null);
-        if (coupon == null) {
-            return CouponValidationResponse.invalid("Mã giảm giá không tồn tại.");
-        }
-        if (!this.couponService.isCouponUsable(coupon)) {
-            return CouponValidationResponse.invalid("Mã giảm giá đã hết hạn hoặc hết lượt sử dụng.");
+        CartPricing pricing = this.cartService.priceCart(userId);
+        ErrorCode error = checkVoucherRules(userId, voucher, pricing.linesForVoucher());
+        if (error != null) {
+            return VoucherValidationResponse.invalid(error.getMessage());
         }
 
-        long discount = this.couponService.calculateDiscount(coupon, orderTotal);
+        long eligible = this.voucherService.calculateEligibleAmount(voucher, pricing.linesForVoucher());
+        long discount = this.voucherService.calculateDiscount(voucher, eligible);
         if (discount <= 0) {
-            return CouponValidationResponse.invalid("Mã giảm giá không áp dụng được cho đơn này.");
+            return VoucherValidationResponse.invalid(ErrorCode.VOUCHER_NO_DISCOUNT.getMessage());
         }
-        return CouponValidationResponse.ok(coupon.getCode(), discount);
+        // BR-V14: mệnh giá > tiền hàng thì voucher vẫn dùng được nhưng kẹp mức
+        // giảm. Khách mất phần chênh mà không được hoàn — trả kèm để FE cảnh báo
+        // (FE không có mệnh giá gốc của mã gõ tay nên không tự tính được, BR-V13).
+        long nominal = this.voucherService.calculateNominalDiscount(voucher, eligible);
+        long forfeited = Math.max(0L, nominal - discount);
+        return VoucherValidationResponse.ok(voucher.getCode(), discount, forfeited);
     }
 
     /**
-     * Tra coupon để áp vào đơn. Khác {@link #validateCoupon}: mã SAI ở đây ném
+     * Các điều kiện nghiệp vụ của voucher — trả {@link ErrorCode} vi phạm đầu tiên,
+     * hoặc {@code null} nếu hợp lệ. Dùng chung cho preview (lấy {@code getMessage()}
+     * hiện inline) và chốt đơn (ném {@code AppException}) để hai đường không bao
+     * giờ lệch luật VÀ không lệch cả lý do từ chối.
+     */
+    private ErrorCode checkVoucherRules(String userId, Voucher voucher,
+            List<VoucherService.EligibleLine> lines) {
+        if (!this.voucherService.isVoucherUsable(voucher)) {
+            return resolveUnusableReason(voucher);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) {
+            return ErrorCode.VOUCHER_NOT_STARTED;
+        }
+        if (this.voucherService.hasReachedPerUserLimit(userId, voucher)) {
+            return ErrorCode.VOUCHER_PER_USER_LIMIT_REACHED;
+        }
+        long eligible = this.voucherService.calculateEligibleAmount(voucher, lines);
+        if (eligible <= 0) {
+            return ErrorCode.VOUCHER_NO_ELIGIBLE_ITEM;
+        }
+        // D22: ngưỡng tối thiểu xét trên tiền hàng KHỚP PHẠM VI, không phải cả giỏ.
+        if (voucher.getMinOrderValue() != null && eligible < voucher.getMinOrderValue()) {
+            return ErrorCode.VOUCHER_MIN_ORDER_NOT_MET;
+        }
+        return null;
+    }
+
+    /**
+     * Vì sao {@link VoucherService#isVoucherUsable} trả false — tách thành mã lỗi
+     * cụ thể để khách biết đúng lý do (bị khoá / hết hạn / hết lượt) thay vì một
+     * message gộp "hết hạn hoặc hết lượt" như trước.
+     *
+     * <p>
+     * Thứ tự xét khớp {@code isVoucherUsable}: active → hạn → lượt.
+     */
+    private ErrorCode resolveUnusableReason(Voucher voucher) {
+        if (voucher == null) {
+            return ErrorCode.VOUCHER_NOT_FOUND;
+        }
+        if (!voucher.isActive()) {
+            return ErrorCode.VOUCHER_INACTIVE;
+        }
+        if (voucher.getExpiryDate() != null
+                && voucher.getExpiryDate().toLocalDate().isBefore(java.time.LocalDate.now())) {
+            return ErrorCode.VOUCHER_EXPIRED;
+        }
+        return ErrorCode.VOUCHER_OUT_OF_STOCK;
+    }
+
+    /**
+     * Tra voucher để áp vào đơn. Khác {@link #validateVoucher}: mã SAI ở đây ném
      * lỗi thay vì trả về invalid, vì lúc này khách đã bấm "Đặt hàng" — không
      * được âm thầm bỏ qua mã và thu nhiều tiền hơn khách tưởng.
      */
-    private Coupon resolveCoupon(String couponCode) {
-        if (couponCode == null || couponCode.isBlank()) {
+    private Voucher resolveVoucher(String voucherCode) {
+        if (voucherCode == null || voucherCode.isBlank()) {
             return null;
         }
-        Coupon coupon = this.couponRepository.findByCodeIgnoreCase(couponCode.trim())
-                .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_USABLE));
-        if (!this.couponService.isCouponUsable(coupon)) {
-            throw new AppException(ErrorCode.COUPON_NOT_USABLE);
+        Voucher voucher = this.voucherRepository.findByCodeIgnoreCase(voucherCode.trim())
+                .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
+        if (!this.voucherService.isVoucherUsable(voucher)) {
+            throw new AppException(resolveUnusableReason(voucher));
         }
-        return coupon;
+        return voucher;
     }
 
     // ===== Sinh mã đơn =====
@@ -569,7 +790,7 @@ public class OrderService {
         res.setVoucherDiscount(order.getVoucherDiscount());
         res.setShippingFee(order.getShippingFee());
         res.setTotalPrice(order.getTotalPrice());
-        res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
+        res.setVoucherCode(order.getVoucher() != null ? order.getVoucher().getCode() : null);
         res.setReceiverFullName(order.getReceiverFullName());
         res.setReceiverPhone(order.getReceiverPhone());
         res.setReceiverEmail(order.getReceiverEmail());
@@ -582,6 +803,13 @@ public class OrderService {
 
         List<OrderDetailResponse.OrderItemResponse> items = new ArrayList<>();
         long subtotal = 0L;
+        // Tiền hàng GỐC (chưa trừ gì) — tính thẳng price × quantity thay vì
+        // lineTotal + discount, vì getLineTotal() có sàn 0 nên cộng ngược lại sẽ
+        // sai khi dữ liệu bẩn (giảm > giá trị dòng).
+        long totalBeforeDiscount = 0L;
+        // Gộp tiền giảm theo promotionId: 1 chương trình có thể giảm nhiều dòng
+        // nhưng khách chỉ cần thấy tổng của nó.
+        Map<String, Long> discountByPromotion = new LinkedHashMap<>();
         if (order.getOrderDetails() != null) {
             for (OrderDetail detail : order.getOrderDetails()) {
                 OrderDetailResponse.OrderItemResponse item = new OrderDetailResponse.OrderItemResponse();
@@ -595,11 +823,20 @@ public class OrderService {
                 item.setDiscountAmount(detail.getDiscountAmount());
                 items.add(item);
                 subtotal += detail.getLineTotal();
+                totalBeforeDiscount += (detail.getPrice() == null ? 0L : detail.getPrice()) * detail.getQuantity();
+                if (detail.getPromotionId() != null) {
+                    discountByPromotion.merge(detail.getPromotionId(),
+                            detail.getDiscountAmountSafe(), Long::sum);
+                }
             }
         }
         res.setItems(items);
         // subtotal suy ra từ các dòng: totalPrice = subtotal - discount + ship
         res.setSubtotal(subtotal);
+        res.setTotalBeforeDiscount(totalBeforeDiscount);
+        // Gộp tiền giảm theo promotionId để khách thấy đơn giảm nhờ chương trình
+        // NÀO (không chỉ tổng) — cùng cách gộp với màn admin (G10).
+        res.setPromotionLines(toClientPromotionLines(discountByPromotion));
 
         // Lịch sử giao dịch + rule thanh toán lại do BE quyết, FE không tự suy ra.
         res.setPayments(this.paymentService.getHistory(order.getId()).stream()
@@ -663,7 +900,10 @@ public class OrderService {
         res.setDiscountAmount(order.getDiscountAmount());
         res.setShippingFee(order.getShippingFee());
         res.setTotalPrice(order.getTotalPrice());
-        res.setCouponCode(order.getCoupon() != null ? order.getCoupon().getCode() : null);
+        // G10: tách 2 nguồn giảm cho admin đối soát (D1).
+        res.setPromotionDiscount(order.getPromotionDiscount());
+        res.setVoucherDiscount(order.getVoucherDiscount());
+        res.setVoucherCode(order.getVoucher() != null ? order.getVoucher().getCode() : null);
         res.setReceiverFullName(order.getReceiverFullName());
         res.setReceiverPhone(order.getReceiverPhone());
         res.setReceiverEmail(order.getReceiverEmail());
@@ -673,6 +913,11 @@ public class OrderService {
 
         List<AdminOrderDetailResponse.AdminOrderItemResponse> items = new ArrayList<>();
         long subtotal = 0L;
+        // Tiền hàng GỐC (chưa trừ gì) — cùng lý do như bản client.
+        long totalBeforeDiscount = 0L;
+        // Gộp tiền giảm theo promotionId: 1 chương trình có thể giảm nhiều dòng
+        // nhưng admin chỉ cần thấy tổng của nó (G10).
+        Map<String, Long> discountByPromotion = new LinkedHashMap<>();
         if (order.getOrderDetails() != null) {
             for (OrderDetail detail : order.getOrderDetails()) {
                 AdminOrderDetailResponse.AdminOrderItemResponse item = new AdminOrderDetailResponse.AdminOrderItemResponse();
@@ -686,13 +931,62 @@ public class OrderService {
                 item.setDiscountAmount(detail.getDiscountAmount());
                 items.add(item);
                 subtotal += detail.getLineTotal();
+                totalBeforeDiscount += (detail.getPrice() == null ? 0L : detail.getPrice()) * detail.getQuantity();
+                if (detail.getPromotionId() != null) {
+                    discountByPromotion.merge(detail.getPromotionId(),
+                            detail.getDiscountAmountSafe(), Long::sum);
+                }
             }
         }
         res.setItems(items);
+        res.setPromotionLines(toPromotionLines(discountByPromotion));
         res.setSubtotal(subtotal);
+        res.setTotalBeforeDiscount(totalBeforeDiscount);
         res.setAllowedNextStatuses(List.copyOf(
                 ALLOWED_TRANSITIONS.getOrDefault(order.getStatus(), Set.of())));
         return res;
+    }
+
+    /**
+     * Tra tên chương trình cho từng promotionId đã áp. Chương trình bị xóa khỏi
+     * DB thì trả name = null — đơn cũ vẫn xem được, chỉ thiếu tên.
+     */
+    private List<AdminOrderDetailResponse.PromotionLine> toPromotionLines(Map<String, Long> discountById) {
+        if (discountById.isEmpty()) {
+            return List.of();
+        }
+        Map<String, String> nameById = this.promotionRepository.findAllById(discountById.keySet()).stream()
+                .collect(Collectors.toMap(Promotion::getId, Promotion::getName));
+        List<AdminOrderDetailResponse.PromotionLine> lines = new ArrayList<>(discountById.size());
+        discountById.forEach((id, amount) -> {
+            AdminOrderDetailResponse.PromotionLine line = new AdminOrderDetailResponse.PromotionLine();
+            line.setPromotionId(id);
+            line.setName(nameById.get(id));
+            line.setDiscountAmount(amount);
+            lines.add(line);
+        });
+        return lines;
+    }
+
+    /**
+     * Bản rút gọn của {@link #toPromotionLines} cho trang khách: chỉ id + tên +
+     * tiền giảm. Tra tên chương trình đã xóa → null (đơn cũ vẫn xem được).
+     */
+    private List<OrderDetailResponse.PromotionLine> toClientPromotionLines(Map<String, Long> discountById) {
+        if (discountById.isEmpty()) {
+            return List.of();
+        }
+        Map<String, String> nameById = this.promotionRepository.findAllById(discountById.keySet()).stream()
+                .collect(Collectors.toMap(Promotion::getId, Promotion::getName));
+        List<OrderDetailResponse.PromotionLine> lines = new ArrayList<>(discountById.size());
+        discountById.forEach((id, amount) -> {
+            OrderDetailResponse.PromotionLine line = new OrderDetailResponse.PromotionLine();
+            line.setPromotionId(id);
+            line.setName(nameById.get(id));
+            line.setDiscountAmount(amount);
+            lines.add(line);
+        });
+        return lines;
     }
 
     /** Gán thông tin khách hàng vào response admin — dùng chung cho cả 2 DTO. */

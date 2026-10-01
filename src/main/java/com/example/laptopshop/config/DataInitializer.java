@@ -40,7 +40,7 @@ public class DataInitializer {
     private final RoleRepository roleRepository;
 
     // Taxonomy quyền: Module + action. ADMIN = ALL; STAFF = CREATE/READ/UPDATE
-    // cho PRODUCT/CATEGORY/COUPON + CREATE/READ/UPDATE_ORDER + READ_DASHBOARD
+    // cho PRODUCT/CATEGORY/VOUCHER + CREATE/READ/UPDATE_ORDER + READ_DASHBOARD
     // (KHÔNG DELETE_*, KHÔNG USER, KHÔNG MANAGE_ROLES_PERMISSIONS); CUSTOMER =
     // không có quyền /admin nào.
     private static final Map<String, String> PERMISSION_SEED = new LinkedHashMap<>();
@@ -53,10 +53,10 @@ public class DataInitializer {
         PERMISSION_SEED.put("READ_CATEGORY", "Xem danh mục");
         PERMISSION_SEED.put("UPDATE_CATEGORY", "Cập nhật danh mục");
         PERMISSION_SEED.put("DELETE_CATEGORY", "Xóa danh mục");
-        PERMISSION_SEED.put("CREATE_COUPON", "Tạo mã giảm giá");
-        PERMISSION_SEED.put("READ_COUPON", "Xem mã giảm giá");
-        PERMISSION_SEED.put("UPDATE_COUPON", "Cập nhật mã giảm giá");
-        PERMISSION_SEED.put("DELETE_COUPON", "Xóa mã giảm giá");
+        PERMISSION_SEED.put("CREATE_VOUCHER", "Tạo voucher");
+        PERMISSION_SEED.put("READ_VOUCHER", "Xem voucher");
+        PERMISSION_SEED.put("UPDATE_VOUCHER", "Cập nhật voucher");
+        PERMISSION_SEED.put("DELETE_VOUCHER", "Xóa voucher");
         // PROMOTION: KHÔNG có DELETE_PROMOTION (chương trình khuyến mại chỉ
         // ngừng áp dụng bằng active/endDate, giữ lại lịch sử đã áp lên đơn)
         PERMISSION_SEED.put("CREATE_PROMOTION", "Tạo chương trình khuyến mại");
@@ -112,11 +112,11 @@ public class DataInitializer {
 
         // STAFF: CRUD catalog + khuyến mại + flash/banner (KHÔNG DELETE_*). Xem
         // role-permission-model: STAFF không được xóa bất kỳ module nào.
-        List<String> productCatCouponCrud = new ArrayList<>();
-        for (String module : new String[] { "PRODUCT", "CATEGORY", "COUPON", "PROMOTION" }) {
-            productCatCouponCrud.add("CREATE_" + module);
-            productCatCouponCrud.add("READ_" + module);
-            productCatCouponCrud.add("UPDATE_" + module);
+        List<String> productCatVoucherCrud = new ArrayList<>();
+        for (String module : new String[] { "PRODUCT", "CATEGORY", "VOUCHER", "PROMOTION" }) {
+            productCatVoucherCrud.add("CREATE_" + module);
+            productCatVoucherCrud.add("READ_" + module);
+            productCatVoucherCrud.add("UPDATE_" + module);
         }
 
         // 3. Seed ADMIN (toàn quyền)
@@ -135,10 +135,10 @@ public class DataInitializer {
         Role staffRole = roleRepository.findByName("STAFF").orElseGet(() -> {
             Role role = new Role();
             role.setName("STAFF");
-            role.setDescription("Nhân viên quản lý sản phẩm, danh mục, mã giảm giá và đơn hàng");
+            role.setDescription("Nhân viên quản lý sản phẩm, danh mục, voucher và đơn hàng");
             return roleRepository.save(role);
         });
-        List<String> staffPerms = new ArrayList<>(productCatCouponCrud);
+        List<String> staffPerms = new ArrayList<>(productCatVoucherCrud);
         // Flash/banner: STAFF cũng được tạo/sửa nhưng KHÔNG xóa (P8).
         staffPerms.add("CREATE_FLASH_SALE");
         staffPerms.add("READ_FLASH_SALE");

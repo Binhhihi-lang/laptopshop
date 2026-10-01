@@ -13,4 +13,10 @@ public interface HomeBannerRepository extends JpaRepository<HomeBanner, String> 
 
     /** Danh sách cho trang quản trị — gồm cả banner đang tắt. */
     List<HomeBanner> findAllByOrderBySortOrderAsc();
+
+    /** Đếm slide đang bật — dùng để chặn vượt trần 5 slide của carousel. */
+    long countByActiveTrue();
+
+    /** Đếm slide đang bật TRỪ một id (khi sửa/bật lại chính nó). */
+    long countByActiveTrueAndIdNot(String id);
 }

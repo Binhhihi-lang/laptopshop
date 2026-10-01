@@ -5,6 +5,8 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -42,6 +44,19 @@ public class UserRestController {
     public ApiResponse<List<UserResponse>> getAllUsers() {
         ApiResponse<List<UserResponse>> response = new ApiResponse<>();
         response.setResult(this.userService.getAllUserResponses());
+        return response;
+    }
+
+    // 1b. Tìm khách cho picker (gán voucher...). Phân trang để không phải tải
+    // hết danh sách khi shop có nhiều tài khoản. keyword rỗng = trang đầu.
+    @GetMapping("/search")
+    @PreAuthorize("hasAuthority('READ_USER')")
+    public ApiResponse<Page<UserResponse>> searchUsers(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        ApiResponse<Page<UserResponse>> response = new ApiResponse<>();
+        response.setResult(this.userService.searchForPicker(keyword, PageRequest.of(page, size)));
         return response;
     }
 

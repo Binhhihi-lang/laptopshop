@@ -13,7 +13,7 @@ public class DashboardStats {
     private Long activeUserCount;
     private Long productCount;
     private Long categoryCount;
-    private Long couponCount;
+    private Long voucherCount;
     private Long lowStockCount;
     private List<LowStockProduct> lowStockProducts;
 

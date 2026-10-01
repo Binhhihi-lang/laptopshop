@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -188,10 +190,10 @@ class FlashSaleServiceTest {
             flashItem.setPerUserLimit(2);
             when(flashSaleItemRepository.findCurrentByProductIds(List.of("prod-1"), NOW))
                     .thenReturn(List.of(flashItem));
-            when(flashSaleItemRepository.findById("item-1")).thenReturn(Optional.of(flashItem));
-            when(flashSaleRepository.findById("sale-1")).thenReturn(Optional.of(sale));
-            when(flashSaleItemRepository.countQtyBoughtByUserInWindow(
-                    "user-1", "prod-1", sale.getStartAt(), sale.getEndAt())).thenReturn(1L);
+            // BR-F14: đếm GỘP theo phiên — 1 query cho cả nhóm sản phẩm.
+            when(flashSaleItemRepository.sumQtyBoughtByUserForProducts(
+                    "user-1", List.of("prod-1"), sale.getStartAt(), sale.getEndAt()))
+                    .thenReturn(List.<Object[]>of(new Object[] { "prod-1", 1L }));
 
             FlashPriceView view = flashSaleService
                     .resolvePriceMap(List.of("prod-1"), "user-1", NOW).get("prod-1");
@@ -207,10 +209,9 @@ class FlashSaleServiceTest {
             flashItem.setPerUserLimit(1);
             when(flashSaleItemRepository.findCurrentByProductIds(List.of("prod-1"), NOW))
                     .thenReturn(List.of(flashItem));
-            when(flashSaleItemRepository.findById("item-1")).thenReturn(Optional.of(flashItem));
-            when(flashSaleRepository.findById("sale-1")).thenReturn(Optional.of(sale));
-            when(flashSaleItemRepository.countQtyBoughtByUserInWindow(anyString(), anyString(), any(), any()))
-                    .thenReturn(5L);
+            when(flashSaleItemRepository.sumQtyBoughtByUserForProducts(
+                    anyString(), anyList(), any(), any()))
+                    .thenReturn(List.<Object[]>of(new Object[] { "prod-1", 5L }));
 
             FlashPriceView view = flashSaleService
                     .resolvePriceMap(List.of("prod-1"), "user-1", NOW).get("prod-1");
@@ -224,14 +225,45 @@ class FlashSaleServiceTest {
             FlashSale sale = sale("sale-1", NOW.plusHours(1));
             when(flashSaleItemRepository.findCurrentByProductIds(List.of("prod-1"), NOW))
                     .thenReturn(List.of(item("item-1", sale, 10, 0, 15_000_000L)));
-            when(flashSaleItemRepository.findById("item-1"))
-                    .thenReturn(Optional.of(item("item-1", sale, 10, 0, 15_000_000L)));
 
             FlashPriceView view = flashSaleService
                     .resolvePriceMap(List.of("prod-1"), "user-1", NOW).get("prod-1");
 
             assertNull(view.perUserLimitLeft());
-            verify(flashSaleItemRepository, never()).countQtyBoughtByUserInWindow(any(), any(), any(), any());
+            // Không giới hạn thì không cần hỏi DB số đã mua.
+            verify(flashSaleItemRepository, never()).sumQtyBoughtByUserForProducts(any(), anyList(), any(), any());
+        }
+
+        @Test
+        @DisplayName("BR-F14: 2 sản phẩm cùng phiên → CHỈ 1 query đếm, không N+1")
+        void nhieuSanPhamCungPhien_motQuery() {
+            FlashSale sale = sale("sale-1", NOW.plusHours(1));
+            FlashSaleItem item1 = item("item-1", sale, 10, 0, 15_000_000L);
+            FlashSaleItem item2 = item("item-2", sale, 10, 0, 12_000_000L);
+            item1.setPerUserLimit(3);
+            item2.setPerUserLimit(3);
+            // item() dùng chung field `product` → phải gán product RIÊNG cho item2,
+            // nếu không cả hai cùng trỏ một object và map chỉ có 1 khoá.
+            Product product2 = new Product();
+            product2.setId("prod-2");
+            product2.setName("Laptop B");
+            product2.setPrice(18_000_000L);
+            item2.setProduct(product2);
+
+            when(flashSaleItemRepository.findCurrentByProductIds(List.of("prod-1", "prod-2"), NOW))
+                    .thenReturn(List.of(item1, item2));
+            when(flashSaleItemRepository.sumQtyBoughtByUserForProducts(
+                    "user-1", List.of("prod-1", "prod-2"), sale.getStartAt(), sale.getEndAt()))
+                    .thenReturn(List.<Object[]>of(new Object[] { "prod-1", 1L }));
+
+            Map<String, FlashPriceView> map = flashSaleService
+                    .resolvePriceMap(List.of("prod-1", "prod-2"), "user-1", NOW);
+
+            assertEquals(2, map.get("prod-1").perUserLimitLeft(), "3 - 1 đã mua");
+            assertEquals(3, map.get("prod-2").perUserLimitLeft(), "chưa mua lần nào → giữ nguyên 3");
+            // Cùng phiên → gọi đúng MỘT lần, không phải 2.
+            verify(flashSaleItemRepository, times(1))
+                    .sumQtyBoughtByUserForProducts(anyString(), anyList(), any(), any());
         }
     }
 

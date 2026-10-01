@@ -8,6 +8,8 @@ import com.example.laptopshop.domain.Permission;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -265,6 +267,20 @@ public class UserService {
     public UserResponse getUserResponseById(String id) {
         User user = getUserById(id);
         return this.userMapper.toResponse(user);
+    }
+
+    /**
+     * Tìm khách để gán voucher — lọc theo tên hoặc email, phân trang.
+     *
+     * <p>
+     * Chỉ trả tài khoản đang hoạt động: gán voucher cho tài khoản đã khoá thì
+     * khách không bao giờ đăng nhập được để dùng.
+     */
+    @Transactional(readOnly = true)
+    public Page<UserResponse> searchForPicker(String keyword, Pageable pageable) {
+        String normalized = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return this.userRepository.searchForPicker(normalized, pageable)
+                .map(this.userMapper::toResponse);
     }
 
     // nhận về DTO UserCreationRequest, validate dữ liệu, map sang Entity User, mã

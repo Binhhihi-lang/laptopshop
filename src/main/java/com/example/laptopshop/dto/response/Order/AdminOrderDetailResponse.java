@@ -24,12 +24,28 @@ public class AdminOrderDetailResponse {
     private PaymentStatus paymentStatus;
     private String paymentTxnRef; // null với COD
 
-    private Long subtotal; // tổng tiền hàng (trước giảm giá, chưa ship)
+    private Long subtotal; // tổng tiền hàng SAU khi trừ giảm giá cấp DÒNG (chưa trừ voucher)
+    /**
+     * Tiền hàng GỐC = Σ(giá × số lượng), CHƯA trừ bất kỳ khoản giảm nào.
+     *
+     * <p>
+     * Cần riêng field này vì {@link #subtotal} đã trừ giảm giá cấp dòng — nếu FE
+     * hiện {@code subtotal} lên dòng "Tạm tính" rồi trừ tiếp dòng "Giảm giá sản
+     * phẩm" thì khoản giảm cấp dòng bị trừ HAI lần, các dòng không cộng lại ra
+     * tổng. Dùng số này làm mốc đầu thì phép cộng khớp.
+     */
+    private Long totalBeforeDiscount;
     private Long discountAmount;
     private Long shippingFee;
     private Long totalPrice;
 
-    private String couponCode; // null nếu đơn không dùng mã
+    // D1/G10: tách 2 nguồn giảm để admin đối soát được tiền đến từ đâu.
+    private Long promotionDiscount;
+    private Long voucherDiscount;
+    /** Tên các chương trình khuyến mại đã áp — gộp theo promotionId của từng dòng. */
+    private List<PromotionLine> promotionLines;
+
+    private String voucherCode; // null nếu đơn không dùng mã
 
     // ===== Khách hàng =====
     private String userId;
@@ -61,5 +77,19 @@ public class AdminOrderDetailResponse {
         private long quantity;
         private Long lineTotal; // price * quantity
         private Long discountAmount; // giảm từ khuyến mại cho dòng này (0 nếu không)
+    }
+
+    /**
+     * Một chương trình khuyến mại đã áp cho đơn, gộp theo promotionId.
+     * Đơn cũ (trước Sprint 2) không có promotionId → danh sách rỗng.
+     */
+    @Getter
+    @Setter
+    public static class PromotionLine {
+        private String promotionId;
+        /** Tên chương trình; null nếu chương trình đã bị xóa khỏi DB. */
+        private String name;
+        /** Tổng tiền chương trình này đã giảm cho cả đơn. */
+        private Long discountAmount;
     }
 }

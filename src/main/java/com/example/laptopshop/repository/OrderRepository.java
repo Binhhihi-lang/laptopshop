@@ -36,7 +36,7 @@ public interface OrderRepository extends JpaRepository<Order, String> {
      * / từ khóa, tất cả optional (null = bỏ qua điều kiện).
      *
      * Từ khóa tìm trên mã đơn, tên người nhận và SĐT người nhận.
-     * EntityGraph nạp sẵn orderDetails + user để tránh N+1 khi map response.
+     * EntityGraph nạp sẵn orderDetails + user khi lấy order để tránh N+1 khi map response.
      */
     @EntityGraph(attributePaths = { "orderDetails", "user" })
     @Query("""
@@ -59,11 +59,17 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             Pageable pageable);
 
     /** Nạp đơn kèm chi tiết + khách hàng cho trang chi tiết của admin. */
-    @EntityGraph(attributePaths = { "orderDetails", "user", "coupon" })
+    @EntityGraph(attributePaths = { "orderDetails", "user", "voucher" })
     Optional<Order> findWithDetailsById(String id);
 
     /** Đếm số đơn theo từng trạng thái — dùng cho thẻ thống kê ở đầu trang. */
     long countByStatus(OrderStatus status);
+
+    /**
+     * Nguồn đếm {@code perUserLimit} cho MÃ GÕ TAY (D15): đếm đơn của khách đã
+     * dùng voucher này. Loại {@code CANCELLED} — hủy đơn không tính là đã dùng.
+     */
+    long countByUserIdAndVoucherIdAndStatusNot(String userId, String voucherId, OrderStatus status);
 
     /**
      * Đơn VNPay chưa trả tiền đã quá hạn giữ hàng — job dọn đơn dùng để hủy và

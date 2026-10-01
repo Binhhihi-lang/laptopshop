@@ -51,25 +51,33 @@ public enum ErrorCode {
     PRODUCT_CATEGORY_REQUIRED(3007, "Danh mục sản phẩm không được để trống", HttpStatus.BAD_REQUEST),
     PRODUCT_ORIGINAL_PRICE_INVALID(3008, "Giá gốc phải lớn hơn hoặc bằng giá bán", HttpStatus.BAD_REQUEST),
 
-    // === COUPON MODULE (4000 - 4999) ===
-    COUPON_NOT_FOUND(4001, "Không tìm thấy mã giảm giá", HttpStatus.NOT_FOUND),
-    COUPON_ALREADY_EXISTS(4002, "Mã giảm giá này đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
-    COUPON_EXPIRED(4003, "Mã giảm giá đã hết hạn sử dụng", HttpStatus.BAD_REQUEST),
-    COUPON_OUT_OF_STOCK(4004, "Mã giảm giá đã hết lượt sử dụng", HttpStatus.BAD_REQUEST),
-    INVALID_COUPON_CONFIG(4005, "Cấu hình giảm giá không hợp lệ (Chỉ chọn Phần trăm hoặc Số tiền)", HttpStatus.BAD_REQUEST),
-    COUPON_CODE_REQUIRED(4008, "Mã giảm giá không được để trống", HttpStatus.BAD_REQUEST),
-    INVALID_COUPON_DATA(4009, "Dữ liệu mã giảm giá không hợp lệ", HttpStatus.BAD_REQUEST),
+    // === VOUCHER MODULE (4000 - 4999) ===
+    VOUCHER_NOT_FOUND(4001, "Không tìm thấy voucher", HttpStatus.NOT_FOUND),
+    VOUCHER_ALREADY_EXISTS(4002, "Voucher này đã tồn tại trong hệ thống", HttpStatus.BAD_REQUEST),
+    VOUCHER_EXPIRED(4003, "Voucher đã hết hạn sử dụng", HttpStatus.BAD_REQUEST),
+    VOUCHER_OUT_OF_STOCK(4004, "Voucher đã hết lượt sử dụng", HttpStatus.BAD_REQUEST),
+    INVALID_VOUCHER_CONFIG(4005, "Cấu hình giảm giá không hợp lệ (Chỉ chọn Phần trăm hoặc Số tiền)", HttpStatus.BAD_REQUEST),
+    VOUCHER_CODE_REQUIRED(4008, "Voucher không được để trống", HttpStatus.BAD_REQUEST),
+    INVALID_VOUCHER_DATA(4009, "Dữ liệu voucher không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_DISCOUNT_PERCENT(4006, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
 
     INVALID_DISCOUNT_AMOUNT(4007, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
 
-    // === COUPON MODULE mở rộng v1 (4010 - 4099) ===
-    COUPON_SCOPE_INVALID(4010, "Phạm vi áp dụng của mã giảm giá không hợp lệ", HttpStatus.BAD_REQUEST),
-    COUPON_MIN_ORDER_NOT_MET(4011, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này", HttpStatus.BAD_REQUEST),
-    COUPON_PER_USER_LIMIT_REACHED(4012, "Bạn đã dùng hết số lượt cho phép của mã giảm giá này",
+    // === VOUCHER MODULE mở rộng v1 (4010 - 4099) ===
+    VOUCHER_SCOPE_INVALID(4010, "Phạm vi áp dụng của voucher không hợp lệ", HttpStatus.BAD_REQUEST),
+    VOUCHER_MIN_ORDER_NOT_MET(4011, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này", HttpStatus.BAD_REQUEST),
+    VOUCHER_PER_USER_LIMIT_REACHED(4012, "Bạn đã dùng hết số lượt cho phép của voucher này",
             HttpStatus.BAD_REQUEST),
-    COUPON_NOT_STARTED(4013, "Mã giảm giá chưa đến thời gian sử dụng", HttpStatus.BAD_REQUEST),
-    COUPON_NOT_IN_WALLET(4014, "Mã giảm giá này không có trong ví của bạn", HttpStatus.FORBIDDEN),
+    VOUCHER_NOT_STARTED(4013, "Voucher chưa đến thời gian sử dụng", HttpStatus.BAD_REQUEST),
+    // Tách nhánh chi tiết để khách biết ĐÚNG lý do không áp được, thay vì một
+    // message chung "Voucher không hợp lệ hoặc đã hết hạn" (trước đây gộp hết).
+    // Các mã 4003/4004 ở trên nay được dùng thật (trước là mã chết).
+    VOUCHER_INACTIVE(4015, "Voucher đã bị khoá hoặc ngừng áp dụng", HttpStatus.BAD_REQUEST),
+    VOUCHER_NO_ELIGIBLE_ITEM(4017, "Voucher không áp dụng cho sản phẩm nào trong đơn",
+            HttpStatus.BAD_REQUEST),
+    VOUCHER_NO_DISCOUNT(4018, "Voucher không tạo ra khoản giảm nào cho đơn này",
+            HttpStatus.BAD_REQUEST),
+    VOUCHER_CODE_EMPTY(4019, "Vui lòng nhập mã voucher", HttpStatus.BAD_REQUEST),
 
     // === PROMOTION MODULE (4100 - 4199) ===
     PROMOTION_NOT_FOUND(4101, "Không tìm thấy chương trình khuyến mại", HttpStatus.NOT_FOUND),
@@ -79,11 +87,7 @@ public enum ErrorCode {
     INVALID_PROMOTION_PERCENT(4104, "Phần trăm giảm giá phải nằm trong khoảng 1-100", HttpStatus.BAD_REQUEST),
     INVALID_PROMOTION_AMOUNT(4105, "Số tiền giảm giá phải lớn hơn 0", HttpStatus.BAD_REQUEST),
     INVALID_PROMOTION_DATE_RANGE(4106, "Thời gian kết thúc phải sau thời gian bắt đầu", HttpStatus.BAD_REQUEST),
-    INVALID_PROMOTION_STATUS(4107, "Trạng thái chương trình khuyến mại không hợp lệ", HttpStatus.BAD_REQUEST),
     PROMOTION_SCOPE_REQUIRED(4108, "Phạm vi áp dụng không được để trống khi không chọn toàn bộ đơn",
-            HttpStatus.BAD_REQUEST),
-    INVALID_PROMOTION_SCOPE(4109, "Phạm vi áp dụng của chương trình không hợp lệ", HttpStatus.BAD_REQUEST),
-    PROMOTION_OVERLAP(4110, "Khoảng thời gian bị trùng với chương trình khác cùng phạm vi",
             HttpStatus.BAD_REQUEST),
     // D19: incrementUsedCount trả 0 dòng = chương trình vừa hết lượt vì khách
     // khác chốt đơn song song. Tính tiền lại là đủ, không chặn đơn.
@@ -91,12 +95,15 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
 
     // === USER VOUCHER / VÍ VOUCHER (4200 - 4299) ===
-    USER_VOUCHER_NOT_FOUND(4201, "Không tìm thấy mã giảm giá trong ví", HttpStatus.NOT_FOUND),
-    USER_VOUCHER_ALREADY_CLAIMED(4202, "Bạn đã nhận mã giảm giá này rồi", HttpStatus.BAD_REQUEST),
-    USER_VOUCHER_OUT_OF_STOCK(4203, "Mã giảm giá đã hết lượt nhận", HttpStatus.BAD_REQUEST),
-    USER_VOUCHER_EXPIRED(4204, "Mã giảm giá đã hết hạn", HttpStatus.BAD_REQUEST),
-    USER_VOUCHER_ALREADY_USED(4205, "Mã giảm giá này đã được sử dụng", HttpStatus.BAD_REQUEST),
-    USER_VOUCHER_NOT_CLAIMABLE(4206, "Mã giảm giá này không thể nhận trước", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_NOT_FOUND(4201, "Không tìm thấy voucher trong ví", HttpStatus.NOT_FOUND),
+    USER_VOUCHER_ALREADY_CLAIMED(4202, "Bạn đã nhận voucher này rồi", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_OUT_OF_STOCK(4203, "Voucher đã hết lượt nhận", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_EXPIRED(4204, "Voucher đã hết hạn", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_ALREADY_USED(4205, "Voucher này đã được sử dụng", HttpStatus.BAD_REQUEST),
+    USER_VOUCHER_NOT_CLAIMABLE(4206, "Voucher này không thể nhận trước", HttpStatus.BAD_REQUEST),
+    // D11: gửi cả voucherCode lẫn userVoucherId -> không rõ đường nào, chặn hẳn.
+    VOUCHER_AND_VOUCHER_CONFLICT(4208,
+            "Chỉ được dùng một trong hai: voucher hoặc voucher trong ví", HttpStatus.BAD_REQUEST),
 
     // === FLASH SALE (4300 - 4399) ===
     FLASH_SALE_NOT_FOUND(4301, "Không tìm thấy phiên flash sale", HttpStatus.NOT_FOUND),
@@ -113,9 +120,9 @@ public enum ErrorCode {
     INVALID_FLASH_PRICE(4307, "Giá flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
     INVALID_FLASH_STOCK(4308, "Số lượng flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
     // D29: consumeStock trả 0 dòng = khách khác vừa chốt máy cuối cùng. Đơn KHÔNG
-    // fail — dòng đó rơi về giá thường (D27), nên đây là thông báo, không phải lỗi chặn.
-    FLASH_STOCK_EXHAUSTED(4309, "Sản phẩm đã bán hết số lượng dành cho flash sale", HttpStatus.BAD_REQUEST),
-    // D32: perUserLimit — flash giá sốc rất dễ bị dân buôn quét.
+    // fail — dòng đó rơi về giá thường (D27), nên không cần mã lỗi để ném ra.
+    // D32: perUserLimit hết suất cũng về giá thường (BR-F11) → mã dưới đây là
+    // MÃ CHẾT CÓ CHỦ Ý, giữ lại làm tài liệu cho quyết định thiết kế.
     FLASH_PER_USER_LIMIT_REACHED(4310, "Bạn đã mua đủ số lượng tối đa cho sản phẩm flash sale này",
             HttpStatus.BAD_REQUEST),
     FLASH_SALE_PRODUCT_NOT_FOUND(4311, "Sản phẩm đưa vào phiên không tồn tại", HttpStatus.NOT_FOUND),
@@ -125,10 +132,8 @@ public enum ErrorCode {
     BANNER_TITLE_REQUIRED(4402, "Tiêu đề banner không được để trống", HttpStatus.BAD_REQUEST),
     BANNER_IMAGE_REQUIRED(4403, "Banner phải có ảnh", HttpStatus.BAD_REQUEST),
     BANNER_TARGET_REQUIRED(4404, "Banner chưa chọn nơi dẫn tới", HttpStatus.BAD_REQUEST),
-    // D30: banner là nơi admin dán link. Chỉ nhận đường dẫn nội bộ "/...", chặn
-    // javascript: và absolute external để không thành open-redirect.
-    INVALID_BANNER_TARGET_URL(4405,
-            "Liên kết banner không hợp lệ (chỉ chấp nhận đường dẫn nội bộ bắt đầu bằng /)",
+    BANNER_ACTIVE_LIMIT_EXCEEDED(4405,
+            "Chỉ được bật tối đa 5 slide cùng lúc — hãy tắt bớt một slide trước khi bật slide mới",
             HttpStatus.BAD_REQUEST),
     INVALID_BANNER_TARGET(4406, "Đối tượng của banner không tồn tại hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
 
@@ -146,7 +151,7 @@ public enum ErrorCode {
     INVALID_PAYMENT_METHOD(5011, "Phương thức thanh toán không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_ORDER_TOTAL(5012, "Tổng tiền đơn hàng không hợp lệ", HttpStatus.BAD_REQUEST),
     ORDER_CANNOT_CANCEL(5013, "Chỉ có thể hủy đơn đang chờ xử lý hoặc đã xác nhận", HttpStatus.BAD_REQUEST),
-    COUPON_NOT_USABLE(5014, "Mã giảm giá không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    VOUCHER_NOT_USABLE(5014, "Voucher không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
     INVALID_RECEIVER_EMAIL(5020, "Email người nhận không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // === PAYMENT (5021 - 5029) ===

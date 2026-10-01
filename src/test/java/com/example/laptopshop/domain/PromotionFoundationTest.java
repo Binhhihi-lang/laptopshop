@@ -138,46 +138,46 @@ class PromotionFoundationTest {
     }
 
     // ==================================================================
-    // Coupon — 6 field mới mặc định an toàn cho coupon cũ
+    // Voucher — 6 field mới mặc định an toàn cho voucher cũ
     // ==================================================================
 
     @Test
-    void coupon_cu_chuaCoCouponType_thiMacDinhPUBLIC() {
-        Coupon coupon = new Coupon();
+    void voucher_cu_chuaCoVoucherType_thiMacDinhPUBLIC() {
+        Voucher voucher = new Voucher();
 
-        // Coupon tạo trước Sprint 1 không có coupon_type trong DB
-        coupon.setCouponType(null);
+        // Voucher tạo trước Sprint 1 không có voucher_type trong DB
+        voucher.setVoucherType(null);
 
-        assertEquals(CouponType.PUBLIC, coupon.getCouponTypeOrDefault(),
-                "Coupon cũ phải được coi là PUBLIC để không mất hiệu lực");
+        assertEquals(VoucherType.PUBLIC, voucher.getVoucherTypeOrDefault(),
+                "Voucher cũ phải được coi là PUBLIC để không mất hiệu lực");
     }
 
     @Test
-    void coupon_cu_chuaCoScopeType_thiMacDinhALL() {
-        Coupon coupon = new Coupon();
-        coupon.setScopeType(null);
+    void voucher_cu_chuaCoScopeType_thiMacDinhALL() {
+        Voucher voucher = new Voucher();
+        voucher.setScopeType(null);
 
-        assertEquals(ScopeType.ALL, coupon.getScopeTypeOrDefault(),
-                "Coupon cũ áp cho toàn bộ đơn → ALL");
+        assertEquals(ScopeType.ALL, voucher.getScopeTypeOrDefault(),
+                "Voucher cũ áp cho toàn bộ đơn → ALL");
     }
 
     @Test
-    void coupon_hanMucMacDinh_null_nghiaLaKhongGioiHan() {
-        Coupon coupon = new Coupon();
+    void voucher_hanMucMacDinh_null_nghiaLaKhongGioiHan() {
+        Voucher voucher = new Voucher();
 
         // P3 đã chốt: null = không giới hạn
-        assertNull(coupon.getMinOrderValue());
-        assertNull(coupon.getMaxDiscountAmount());
-        assertNull(coupon.getPerUserLimit());
+        assertNull(voucher.getMinOrderValue());
+        assertNull(voucher.getMaxDiscountAmount());
+        assertNull(voucher.getPerUserLimit());
     }
 
     @Test
-    void coupon_haiHinhThucGiamGia_luuDung() {
-        Coupon coupon = new Coupon();
-        coupon.setDiscountPercent(15);
-        coupon.setDiscountAmount(null);
+    void voucher_haiHinhThucGiamGia_luuDung() {
+        Voucher voucher = new Voucher();
+        voucher.setDiscountPercent(15);
+        voucher.setDiscountAmount(null);
 
-        assertEquals(15, coupon.getDiscountPercent());
-        assertNull(coupon.getDiscountAmount(), "Chỉ chọn 1 trong 2 hình thức");
+        assertEquals(15, voucher.getDiscountPercent());
+        assertNull(voucher.getDiscountAmount(), "Chỉ chọn 1 trong 2 hình thức");
     }
 }

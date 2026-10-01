@@ -1,7 +1,10 @@
 package com.example.laptopshop.domain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -10,6 +13,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -21,19 +25,24 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name = "coupons")
-@SQLDelete(sql = "UPDATE coupons SET deleted_at = NOW() WHERE id = ?")
-@SQLRestriction("deleted_at IS NULL") // lấy all coupon chưa xóa mềm
+@Table(name = "vouchers")
+@SQLDelete(sql = "UPDATE vouchers SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL") // lấy all voucher chưa xóa mềm
 @EntityListeners(AuditingEntityListener.class) // BẮT BUỘC để @CreatedDate/@LastModifiedDate được ghi
 @Getter
 @Setter
-public class Coupon {
+public class Voucher {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @Column(unique = true, nullable = false)
-    private String code; // mã giảm giá, ví dụ "GIAM10"
+    private String code; // voucher, ví dụ "GIAM10"
+
+    private String title; // Tiêu đề hiển thị cho khách trên overlay giỏ hàng
+
+    @Column(length = 500)
+    private String description; // Mô tả / điều kiện hiển thị cho khách
 
     private Integer discountPercent; // Phần trăm giảm (0-100), để kiểu Integer để có thể nhận giá trị null
 
@@ -46,28 +55,42 @@ public class Coupon {
     private Integer usedCount = 0; // số lượt đã dùng
 
     private boolean active = true; // true: còn dùng được, false: đã khóa
-    private String image; // Ảnh đại diện mã giảm giá (URL Cloudinary)
+    private String image; // Ảnh đại diện voucher (URL Cloudinary)
 
     // ===== v1: điều kiện áp dụng (tất cả nullable — null = không giới hạn, P3) =====
-    // Coupon cũ trong DB có các cột này NULL → hành vi giữ nguyên như trước.
+    // Voucher cũ trong DB có các cột này NULL → hành vi giữ nguyên như trước.
 
     private LocalDateTime startDate; // Bắt đầu được dùng; null = dùng ngay
 
     private Long minOrderValue; // Giá trị đơn tối thiểu; null = không yêu cầu
 
-    private Long maxDiscountAmount; // Trần giảm tối đa (cho coupon %); null = không trần
+    private Long maxDiscountAmount; // Trần giảm tối đa (cho voucher %); null = không trần
 
     private Integer perUserLimit; // Số lần tối đa mỗi khách dùng; null = không giới hạn
 
     @Enumerated(EnumType.STRING)
-    private ScopeType scopeType; // Phạm vi áp dụng; null = ALL (tương thích coupon cũ)
+    private ScopeType scopeType; // Phạm vi áp dụng; null = ALL (tương thích voucher cũ)
 
+    /**
+     * Phạm vi dạng cũ — 1 giá trị duy nhất. Giữ lại để tương thích cột DB, không
+     * dùng nữa; phạm vi thật nằm ở {@link #scopes} (nhiều giá trị).
+     */
+    @Deprecated
     @Column(name = "scope_value")
-    private String scopeValue; // Định danh phạm vi: Category.id | Product.factory | Product.id.
-                               // null khi scopeType = ALL. Khớp PromotionScope.targetValue (D18).
+    private String scopeValue;
+
+    /**
+     * Phạm vi áp dụng — nhiều dòng, mỗi dòng 1 giá trị. Rỗng = toàn bộ đơn.
+     *
+     * <p>
+     * {@code cascade = ALL} + {@code orphanRemoval} để lưu voucher kèm scope trong
+     * một lần; engine đọc qua getter này nên phải nằm trong cùng transaction.
+     */
+    @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VoucherScope> scopes = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    private CouponType couponType; // PUBLIC | ASSIGNED | GIFT; null = PUBLIC (tương thích coupon cũ)
+    private VoucherType voucherType; // PUBLIC | ASSIGNED; null = PUBLIC (tương thích voucher cũ)
 
     @CreatedDate
     @Column(updatable = false) // Không bao giờ cho phép UPDATE cột này
@@ -86,12 +109,12 @@ public class Coupon {
     }
 
     // ===== Getter null-safe cho cột thêm ở Sprint 1 =====
-    // Coupon cũ trong DB có các cột này = NULL. Getter *OrDefault trả giá trị mặc
+    // Voucher cũ trong DB có các cột này = NULL. Getter *OrDefault trả giá trị mặc
     // định an toàn để logic kiểm tra điều kiện không phải tự check null (D22/R1).
 
-    /** PUBLIC khi chưa gán — coupon cũ mặc định là mã công khai. */
-    public CouponType getCouponTypeOrDefault() {
-        return this.couponType == null ? CouponType.PUBLIC : this.couponType;
+    /** PUBLIC khi chưa gán — voucher cũ mặc định là mã công khai. */
+    public VoucherType getVoucherTypeOrDefault() {
+        return this.voucherType == null ? VoucherType.PUBLIC : this.voucherType;
     }
 
     /** ORDER khi chưa gán — mặc định áp cho toàn bộ đơn hàng. */

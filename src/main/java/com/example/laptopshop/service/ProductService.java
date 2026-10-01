@@ -109,6 +109,17 @@ public class ProductService {
         return this.productMapper.toResponse(product);
     }
 
+    /**
+     * Tìm sản phẩm cho picker ở trang quản trị (phạm vi khuyến mại, banner...).
+     * Trả về trang để dropdown dài vô tận không phải tải hết danh mục.
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> searchForPicker(String keyword, Pageable pageable) {
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return this.productRepository.searchForPicker(normalizedKeyword, pageable)
+                .map(this.productMapper::toResponse);
+    }
+
     // ---- Client storefront (public) ----
 
     // Tìm kiếm sản phẩm cho storefront: chỉ lấy product active VÀ thuộc

@@ -22,9 +22,12 @@ public class HomeBannerCreationRequest {
     @NotBlank(message = "Tiêu đề banner không được để trống")
     private String title;
 
+    /** Nhãn nhỏ in hoa trước tiêu đề (vd "BỘ SƯU TẬP MỚI"). null = không hiện. */
+    private String kicker;
+
     private String subtitle;
 
-    /** Upload trực tiếp (form-data) — theo khuôn CouponCreationRequest. */
+    /** Upload trực tiếp (form-data) — theo khuôn VoucherCreationRequest. */
     private org.springframework.web.multipart.MultipartFile inputFile;
 
     /** Hoặc dán URL ảnh có sẵn. */
@@ -33,15 +36,12 @@ public class HomeBannerCreationRequest {
     /** Xóa ảnh hiện tại khi không gửi file mới. */
     private boolean removeImage = false;
 
-    /** Màu nền chữ/viền, vd "#0F172A". null = FE dùng nền mặc định. */
-    private String bgColor;
-
     @NotNull(message = "Loại liên kết không được để trống")
     private BannerTargetType targetType;
 
     /**
      * Định danh theo {@code targetType}: Product.id | Category.id | tên hãng |
-     * FlashSale.id | đường dẫn "/..." (chỉ khi targetType = URL).
+     * FlashSale.id.
      */
     @NotBlank(message = "Nơi dẫn tới không được để trống")
     private String targetValue;

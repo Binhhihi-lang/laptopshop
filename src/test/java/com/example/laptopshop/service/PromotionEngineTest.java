@@ -51,10 +51,6 @@ class PromotionEngineTest {
 		return promotion(PromotionDiscountType.AMOUNT, value);
 	}
 
-	private Promotion fixedPrice(long value) {
-		return promotion(PromotionDiscountType.FIXED_PRICE, value);
-	}
-
 	private Promotion promotion(PromotionDiscountType type, long value) {
 		Promotion p = new Promotion();
 		p.setId("p-" + type + "-" + value + "-" + System.nanoTime());
@@ -107,7 +103,7 @@ class PromotionEngineTest {
 	}
 
 	// ==================================================================
-	// D21 — PERCENT tính trên tổng dòng, AMOUNT/FIXED_PRICE tính per-unit
+	// D21 — PERCENT tính trên tổng dòng, AMOUNT tính per-unit
 	// ==================================================================
 
 	@Nested
@@ -133,20 +129,6 @@ class PromotionEngineTest {
 		void amount_tinhPerUnit() {
 			Result result = resolve(List.of(line(20_000_000L, 3)), amount(500_000L));
 			assertEquals(1_500_000L, result.promotionDiscount());
-		}
-
-		@Test
-		@DisplayName("FIXED_PRICE: giá cố định 15tr, giá gốc 20tr × 2 = giảm 10.000.000")
-		void fixedPrice_tinhPerUnit() {
-			Result result = resolve(List.of(line(20_000_000L, 2)), fixedPrice(15_000_000L));
-			assertEquals(10_000_000L, result.promotionDiscount());
-		}
-
-		@Test
-		@DisplayName("FIXED_PRICE cao hơn giá gốc → giảm 0, không âm")
-		void fixedPrice_caoHonGiaGoc_giam0() {
-			Result result = resolve(List.of(line(10_000_000L, 1)), fixedPrice(15_000_000L));
-			assertEquals(0L, result.promotionDiscount());
 		}
 
 		@Test

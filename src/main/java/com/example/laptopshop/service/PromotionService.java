@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.laptopshop.domain.Promotion;
 import com.example.laptopshop.domain.PromotionExclude;
 import com.example.laptopshop.domain.PromotionScope;
+import com.example.laptopshop.domain.PromotionType;
 import com.example.laptopshop.domain.ScopeType;
 import com.example.laptopshop.dto.request.Promotion.PromotionCreationRequest;
 import com.example.laptopshop.dto.request.Promotion.PromotionUpdateRequest;
@@ -90,6 +91,25 @@ public class PromotionService {
         promotionRepository.save(promotion);
     }
 
+    /** Bật/tắt chương trình theo id — dùng cho switch và bulk toolbar. */
+    @Transactional
+    public void setActive(List<String> ids, boolean active) {
+        List<Promotion> promotions = promotionRepository.findAllById(ids);
+        if (promotions.size() != ids.size()) {
+            throw new AppException(ErrorCode.PROMOTION_NOT_FOUND);
+        }
+        promotions.forEach(promotion -> promotion.setActive(active));
+        promotionRepository.saveAll(promotions);
+    }
+
+    /**
+     * Ngừng áp hàng loạt. Cùng lý do với {@link #deactivate} — chỉ tắt, không xóa.
+     */
+    @Transactional
+    public void deactivateAll(List<String> ids) {
+        setActive(ids, false);
+    }
+
     private Promotion findOrThrow(String id) {
         return promotionRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.PROMOTION_NOT_FOUND));
     }
@@ -106,9 +126,54 @@ public class PromotionService {
         if (request.getName() == null || request.getName().isBlank()) {
             throw new AppException(ErrorCode.PROMOTION_NAME_REQUIRED);
         }
+        validateType(request);
         validateTimeRange(request);
         validateDiscountValue(request);
+        validateNumericBounds(request);
         validateScope(request);
+    }
+
+    /**
+     * BR-A05 — chặn trường số nhận giá trị vô nghĩa.
+     *
+     * <p>
+     * Không có bước này thì lỗi xảy ra rất khó lần:
+     * <ul>
+     * <li>{@code usageLimit = 0} → {@code hasBudget()} tính {@code usedCount < 0}
+     * = false → chương trình <b>không bao giờ áp</b> mà vẫn hiện "đang bật".
+     * (Chú ý: với VOUCHER thì {@code usageLimit = 0} lại nghĩa "không giới hạn" —
+     * hai loại ngược nhau, xem BR-A05 trong README.)</li>
+     * <li>{@code maxDiscountAmount} âm → trần vô nghĩa, dễ sinh số sai khi cắt.</li>
+     * </ul>
+     *
+     * <p>
+     * {@code null} = không giới hạn (P3). {@code minOrderValue = 0} và
+     * {@code minQuantity = 0} được phép — nghĩa "không yêu cầu".
+     */
+    private void validateNumericBounds(PromotionCreationRequest request) {
+        if (request.getUsageLimit() != null && request.getUsageLimit() <= 0) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_CONFIG);
+        }
+        if (request.getMinQuantity() != null && request.getMinQuantity() < 0) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_CONFIG);
+        }
+        if (request.getMinOrderValue() != null && request.getMinOrderValue() < 0) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_CONFIG);
+        }
+        if (request.getMaxDiscountAmount() != null && request.getMaxDiscountAmount() < 0) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_CONFIG);
+        }
+    }
+
+    /**
+     * v1 chỉ có một loại chương trình ({@link PromotionType#PRODUCT_DISCOUNT}) nên
+     * không còn nhánh "loại chưa hỗ trợ" để chặn. Chỉ giữ kiểm tra null phòng khi
+     * service bị gọi nội bộ mà không qua {@code @Valid} ở controller.
+     */
+    private void validateType(PromotionCreationRequest request) {
+        if (request.getType() == null) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_CONFIG);
+        }
     }
 
     private void validateDiscountValue(PromotionCreationRequest request) {
@@ -121,7 +186,7 @@ public class PromotionService {
                     throw new AppException(ErrorCode.INVALID_PROMOTION_PERCENT);
                 }
             }
-            case AMOUNT, FIXED_PRICE, QUANTITY_TIER -> {
+            case AMOUNT -> {
                 if (request.getDiscountValue() <= 0) {
                     throw new AppException(ErrorCode.INVALID_PROMOTION_AMOUNT);
                 }

@@ -126,8 +126,12 @@ public class PromotionEngine {
 			Promotion p = promotionById.get(entry.getKey());
 			long sum = entry.getValue();
 			Long cap = p.getMaxDiscountAmount();
-			if (cap != null && sum > cap) {
-				remainingExcess.put(entry.getKey(), sum - Math.max(0L, cap));
+			// BR-A05: cap <= 0 bị coi như KHÔNG có trần, không phải trần 0. Trần 0
+			// sẽ cắt sạch giảm giá của chương trình mà vẫn để nó hiện "đang bật" —
+			// lỗi im lặng. Trần 0/âm là dữ liệu vô nghĩa (service đã chặn khi tạo,
+			// đây là chốt an toàn cho dữ liệu cũ trong DB).
+			if (cap != null && cap > 0L && sum > cap) {
+				remainingExcess.put(entry.getKey(), sum - cap);
 			}
 		}
 
@@ -158,7 +162,7 @@ public class PromotionEngine {
 		return new Result(subtotal, promotionDiscount, List.copyOf(results));
 	}
 
-	/** Chọn promotion thắng cho một dòng: priority cao thắng, hoà thì giảm nhiều hơn (D5). */
+	/** Chọn promotion thắng cho một dòng: priority cao thắng, hoà thì giảm nhiều hơn. */
 	private Promotion pickWinner(Line line, List<Promotion> candidates, long subtotal, LocalDateTime now) {
 		Promotion winner = null;
 		long bestDiscount = 0L;
@@ -255,8 +259,8 @@ public class PromotionEngine {
 	}
 
 	/**
-	 * D21 — hai cấp khác nhau, cố ý: PERCENT tính trên tổng dòng, còn
-	 * AMOUNT/FIXED_PRICE tính trên MỖI MÁY rồi nhân số lượng.
+	 * D21 — hai cấp khác nhau, cố ý: PERCENT tính trên tổng dòng, còn AMOUNT
+	 * tính trên MỖI MÁY rồi nhân số lượng.
 	 */
 	private long rawDiscount(Promotion p, Line line) {
 		PromotionDiscountType type = p.getDiscountType();
@@ -271,12 +275,6 @@ public class PromotionEngine {
 				yield lineTotal * pct / 100L;
 			}
 			case AMOUNT -> value * line.quantity();
-			case FIXED_PRICE -> {
-				long perUnit = line.effectiveUnitPrice() - value;
-				yield perUnit <= 0L ? 0L : perUnit * line.quantity();
-			}
-			// Chưa mở ở v1 — xem PromotionDiscountType.
-			case QUANTITY_TIER -> 0L;
 		};
 	}
 

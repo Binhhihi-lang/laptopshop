@@ -44,9 +44,15 @@ public class CreateOrderRequest {
 
     private String note;
 
-    // Mã giảm giá (optional). Không tìm thấy / hết hạn / hết lượt → báo lỗi rõ
+    // Voucher (optional). Không tìm thấy / hết hạn / hết lượt → báo lỗi rõ
     // ràng thay vì âm thầm bỏ qua.
-    private String couponCode;
+    private String voucherCode;
+
+    /**
+     * Voucher lấy từ ví (optional) — id của UserVoucher, không phải mã voucher.
+     * D11: không được gửi cả {@code voucherCode} lẫn trường này.
+     */
+    private String userVoucherId;
 
     @NotNull(message = "INVALID_PAYMENT_METHOD")
     private PaymentMethod paymentMethod;

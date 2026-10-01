@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +34,7 @@ import com.example.laptopshop.dto.request.Promotion.PromotionCreationRequest;
 import com.example.laptopshop.dto.request.Promotion.PromotionUpdateRequest;
 import com.example.laptopshop.dto.response.Promotion.PromotionResponse;
 import com.example.laptopshop.exception.AppException;
+import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.repository.PromotionRepository;
 import com.example.laptopshop.repository.PromotionScopeRepository;
 
@@ -138,6 +140,48 @@ class PromotionServiceTest {
         }
 
         @Test
+        @DisplayName("type null → INVALID_PROMOTION_CONFIG")
+        void typeNullBiChan() {
+            baseRequest.setType(null);
+
+            AppException ex = assertThrows(AppException.class,
+                    () -> promotionService.create(baseRequest));
+            assertEquals(ErrorCode.INVALID_PROMOTION_CONFIG, ex.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("BR-A05: usageLimit = 0 → chặn (0 làm chương trình không bao giờ áp)")
+        void usageLimit0BiChan() {
+            baseRequest.setUsageLimit(0);
+
+            AppException ex = assertThrows(AppException.class,
+                    () -> promotionService.create(baseRequest));
+            assertEquals(ErrorCode.INVALID_PROMOTION_CONFIG, ex.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("BR-A05: maxDiscountAmount âm → chặn")
+        void maxDiscountAmBiChan() {
+            baseRequest.setMaxDiscountAmount(-1L);
+
+            AppException ex = assertThrows(AppException.class,
+                    () -> promotionService.create(baseRequest));
+            assertEquals(ErrorCode.INVALID_PROMOTION_CONFIG, ex.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("BR-A05: minOrderValue = 0 và minQuantity = 0 vẫn hợp lệ (nghĩa 'không yêu cầu')")
+        void min0VanHopLe() {
+            stubSave();
+            baseRequest.setMinOrderValue(0L);
+            baseRequest.setMinQuantity(0);
+
+            PromotionResponse res = promotionService.create(baseRequest);
+
+            assertNotNull(res);
+        }
+
+        @Test
         @DisplayName("D18: scope BRAND lưu chữ HOA")
         void brandChuanHoaHoa() {
             stubSave();
@@ -152,8 +196,7 @@ class PromotionServiceTest {
 
         @Test
         @DisplayName("Scope ALL bỏ qua giá trị scopeValues")
-        void scopeAllLuuNguyenGiaTri() {
-            stubSave();
+        void scopeAllLuuNguyenGiaTri() {            stubSave();
 
             PromotionResponse res = promotionService.create(baseRequest);
 

@@ -5,6 +5,8 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +48,20 @@ public class ProductRestController {
     public ApiResponse<ProductResponse> getProductById(@PathVariable String id) {
         ApiResponse<ProductResponse> response = new ApiResponse<>();
         response.setResult(this.productService.getProductResponseById(id));
+        return response;
+    }
+
+    // 2b. Tìm kiếm cho picker (chọn sản phẩm cho phạm vi khuyến mại/banner).
+    // Phân trang để dropdown không phải tải hết danh mục khi shop có hàng nghìn
+    // sản phẩm. keyword rỗng = lấy trang đầu theo tên.
+    @GetMapping("/search")
+    @PreAuthorize("hasAuthority('READ_PRODUCT')")
+    public ApiResponse<Page<ProductResponse>> searchProducts(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        ApiResponse<Page<ProductResponse>> response = new ApiResponse<>();
+        response.setResult(this.productService.searchForPicker(keyword, PageRequest.of(page, size)));
         return response;
     }
 

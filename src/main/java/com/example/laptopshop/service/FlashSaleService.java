@@ -53,38 +53,90 @@ public class FlashSaleService {
      */
     @Transactional(readOnly = true)
     public Map<String, FlashPriceView> resolvePriceMap(List<String> productIds, LocalDateTime now) {
-        if (productIds == null || productIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        List<String> distinct = productIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
-        if (distinct.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        List<FlashSaleItem> items = this.flashSaleItemRepository.findCurrentByProductIds(distinct, now);
-        Map<String, FlashPriceView> result = new LinkedHashMap<>();
-        for (FlashSaleItem item : items) {
-            if (item.getProduct() == null || !item.hasFlashStock()) {
-                continue; // kho phiên cạn rồi → dòng đó về giá thường (D27)
-            }
-            result.putIfAbsent(item.getProduct().getId(), toPriceView(item));
-        }
-        return result;
+        return toViewMap(findCurrentItems(productIds, now), Map.of());
     }
 
     /** Bản cho giỏ/chốt đơn: thêm {@code perUserLimitLeft} đúng theo khách (D32). */
     @Transactional(readOnly = true)
     public Map<String, FlashPriceView> resolvePriceMap(List<String> productIds, String userId,
             LocalDateTime now) {
-        Map<String, FlashPriceView> base = resolvePriceMap(productIds, now);
-        if (userId == null || userId.isBlank() || base.isEmpty()) {
-            return base;
+        List<FlashSaleItem> items = findCurrentItems(productIds, now);
+        if (items.isEmpty() || userId == null || userId.isBlank()) {
+            return toViewMap(items, Map.of());
         }
-        Map<String, FlashPriceView> withLimit = new HashMap<>(base.size());
-        for (Map.Entry<String, FlashPriceView> entry : base.entrySet()) {
-            withLimit.put(entry.getKey(), applyPerUserLimit(entry.getValue(), userId, now));
+        return toViewMap(items, sumBoughtByProduct(items, userId));
+    }
+
+    /**
+     * Các item flash còn hiệu lực của nhóm sản phẩm — 1 query {@code IN} duy nhất
+     * (BR-F06), đã {@code JOIN FETCH} sẵn product + flashSale.
+     */
+    private List<FlashSaleItem> findCurrentItems(List<String> productIds, LocalDateTime now) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
         }
-        return withLimit;
+        List<String> distinct = productIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (distinct.isEmpty()) {
+            return List.of();
+        }
+        return this.flashSaleItemRepository.findCurrentByProductIds(distinct, now);
+    }
+
+    /**
+     * Số máy khách đã mua trong phiên, gộp theo sản phẩm (BR-F14).
+     *
+     * <p>
+     * Gom item theo PHIÊN rồi hỏi 1 câu cho cả phiên, thay vì 1 câu cho từng sản
+     * phẩm. Trước đây mỗi item còn bị {@code findById} lại 2 lần (item + phiên)
+     * dù {@code findCurrentItems} đã fetch sẵn → N+1 (3N query cho giỏ N sản phẩm).
+     *
+     * <p>
+     * Chỉ hỏi những phiên THỰC SỰ có ít nhất một item đặt {@code perUserLimit} —
+     * phiên không giới hạn thì không cần biết khách đã mua bao nhiêu.
+     *
+     * @return productId → tổng số đã mua; sản phẩm chưa mua không có mặt (coi = 0)
+     */
+    private Map<String, Long> sumBoughtByProduct(List<FlashSaleItem> items, String userId) {
+        Map<String, List<FlashSaleItem>> bySale = new LinkedHashMap<>();
+        for (FlashSaleItem item : items) {
+            if (item.getProduct() == null || item.getFlashSale() == null
+                    || item.getPerUserLimit() == null
+                    || item.getFlashSale().getStartAt() == null || item.getFlashSale().getEndAt() == null) {
+                continue;
+            }
+            bySale.computeIfAbsent(item.getFlashSale().getId(), k -> new ArrayList<>()).add(item);
+        }
+
+        Map<String, Long> bought = new HashMap<>();
+        for (List<FlashSaleItem> saleItems : bySale.values()) {
+            FlashSale sale = saleItems.get(0).getFlashSale();
+            List<String> productIds = saleItems.stream()
+                    .map(i -> i.getProduct().getId())
+                    .distinct()
+                    .toList();
+            for (Object[] row : this.flashSaleItemRepository.sumQtyBoughtByUserForProducts(
+                    userId, productIds, sale.getStartAt(), sale.getEndAt())) {
+                bought.put((String) row[0], ((Number) row[1]).longValue());
+            }
+        }
+        return bought;
+    }
+
+    /**
+     * Dựng map kết quả từ danh sách item, kèm {@code perUserLimitLeft} nếu có dữ
+     * liệu đã mua. Item nào kho phiên cạn thì bỏ — chỗ gọi fallback giá thường (D27).
+     *
+     * @param boughtByProduct productId → số đã mua; rỗng = không xét giới hạn/khách
+     */
+    private Map<String, FlashPriceView> toViewMap(List<FlashSaleItem> items, Map<String, Long> boughtByProduct) {
+        Map<String, FlashPriceView> result = new LinkedHashMap<>();
+        for (FlashSaleItem item : items) {
+            if (item.getProduct() == null || !item.hasFlashStock()) {
+                continue; // kho phiên cạn rồi → dòng đó về giá thường (D27)
+            }
+            result.putIfAbsent(item.getProduct().getId(), toPriceView(item, boughtByProduct));
+        }
+        return result;
     }
 
     /** Phiên đang chạy (kết thúc sớm nhất trước) — trang /flash-sale. */
@@ -99,7 +151,7 @@ public class FlashSaleService {
     /** Danh sách phiên cho trang quản trị. */
     @Transactional(readOnly = true)
     public List<FlashSaleResponse> getAllResponses() {
-        return this.flashSaleRepository.findAll().stream().map(this::toResponse).toList();
+        return this.flashSaleRepository.findAllByOrderByStartAtAsc().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -187,6 +239,18 @@ public class FlashSaleService {
             this.uploadService.handleDeleteFile(flashSale.getBannerImage());
         }
         this.flashSaleRepository.delete(flashSale);
+    }
+
+    /**
+     * Bật/tắt công tắc phiên (màn chi tiết: "Tạm dừng" / "Mở lại"). Tắt công tắc
+     * là tắt NGAY cả khi còn trong khung giờ — {@code resolvePriceMap} lọc theo
+     * {@code active} nên giá flash biến mất khỏi card, KHÔNG chạm giá gốc (D28).
+     */
+    @Transactional
+    public FlashSaleResponse setActive(String id, boolean active) {
+        FlashSale flashSale = findOrThrow(id);
+        flashSale.setActive(active);
+        return toResponse(this.flashSaleRepository.save(flashSale));
     }
 
     // ===== Trừ / hoàn kho phiên =====
@@ -301,29 +365,17 @@ public class FlashSaleService {
     }
 
     /**
-     * Gắn lại {@code perUserLimitLeft} theo đúng khách (D32). Khác với suất cả
-     * phiên: khách A mua 1 máy không làm mất suất của khách B.
+     * Dựng view cho một item. {@code perUserLimitLeft} chỉ có giá trị khi
+     * {@code boughtByProduct} được truyền (bản dành cho giỏ/chốt đơn); bản cho
+     * danh sách sản phẩm để null nghĩa "chưa xét giới hạn/khách".
      */
-    private FlashPriceView applyPerUserLimit(FlashPriceView view, String userId, LocalDateTime now) {
-        if (view.itemId() == null || view.flashSaleId() == null) {
-            return view;
+    private FlashPriceView toPriceView(FlashSaleItem item, Map<String, Long> boughtByProduct) {
+        Integer perUserLimitLeft = null;
+        Integer perUserLimit = item.getPerUserLimit();
+        if (perUserLimit != null && !boughtByProduct.isEmpty() && item.getProduct() != null) {
+            long bought = boughtByProduct.getOrDefault(item.getProduct().getId(), 0L);
+            perUserLimitLeft = (int) Math.max(0, perUserLimit - bought);
         }
-        FlashSaleItem item = this.flashSaleItemRepository.findById(view.itemId()).orElse(null);
-        if (item == null || item.getPerUserLimit() == null || item.getProduct() == null) {
-            return view; // null = phiên không giới hạn -> giữ nguyên view
-        }
-        FlashSale sale = this.flashSaleRepository.findById(view.flashSaleId()).orElse(null);
-        if (sale == null) {
-            return view;
-        }
-        long bought = this.flashSaleItemRepository.countQtyBoughtByUserInWindow(
-                userId, item.getProduct().getId(), sale.getStartAt(), sale.getEndAt());
-        int left = (int) Math.max(0, item.getPerUserLimit() - bought);
-        return new FlashPriceView(view.itemId(), view.flashSaleId(), view.flashPrice(),
-                view.flashStock(), view.soldInFlash(), view.endAt(), left);
-    }
-
-    private FlashPriceView toPriceView(FlashSaleItem item) {
         return new FlashPriceView(
                 item.getId(),
                 item.getFlashSale() == null ? null : item.getFlashSale().getId(),
@@ -331,7 +383,7 @@ public class FlashSaleService {
                 item.getFlashStock(),
                 item.getSoldInFlash(),
                 item.getFlashSale() == null ? null : item.getFlashSale().getEndAt(),
-                null); // perUserLimitLeft: chưa xét — xem note trên resolvePriceMap
+                perUserLimitLeft);
     }
 
     // ===== Response =====

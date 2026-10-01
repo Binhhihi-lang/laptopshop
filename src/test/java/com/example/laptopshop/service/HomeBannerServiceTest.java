@@ -1,6 +1,7 @@
 package com.example.laptopshop.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.example.laptopshop.domain.BannerTargetType;
 import com.example.laptopshop.domain.Category;
 import com.example.laptopshop.domain.HomeBanner;
+import com.example.laptopshop.domain.Product;
 import com.example.laptopshop.dto.request.HomeBanner.HomeBannerCreationRequest;
 import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
@@ -58,6 +60,10 @@ class HomeBannerServiceTest {
     void setUp() {
         // lenient: nhiều test cố tình fail ở validate trước khi chạm tới upload.
         lenient().when(uploadService.handleSaveUploadUrl(any(), any())).thenReturn("https://cdn/banner.jpg");
+        // Đích mặc định của các test là PRODUCT "prod-1" — phải tồn tại thì
+        // validate mới qua được để test chạm tới phần cần kiểm.
+        // Banner PRODUCT lưu CODE (route khách là /products/:code), không lưu id.
+        lenient().when(productRepository.findByCodeIgnoreCase("prod-1")).thenReturn(Optional.of(new Product()));
     }
 
     private HomeBannerCreationRequest request(BannerTargetType type, String value) {
@@ -80,50 +86,19 @@ class HomeBannerServiceTest {
     }
 
     // ==================================================================
-    // D30 — chặn link nguy hiểm
+    // Không còn loại URL tự do — mọi đích đều là thực thể có thật
     // ==================================================================
 
     @Nested
-    @DisplayName("D30 — link nội bộ")
-    class UrlTarget {
+    @DisplayName("Loại đích — không còn URL")
+    class TargetTypes {
 
         @Test
-        @DisplayName("Đường dẫn nội bộ \"/...\" → hợp lệ")
-        void duongDanNoiBo() {
-            stubSave();
-
-            var res = homeBannerService.create(request(BannerTargetType.URL, "/laptop-gaming"), null);
-
-            assertEquals("/laptop-gaming", res.getTargetValue());
-        }
-
-        @Test
-        @DisplayName("javascript: → INVALID_BANNER_TARGET_URL (chặn XSS)")
-        void chanJavascript() {
-            AppException ex = assertThrows(AppException.class, () -> homeBannerService
-                    .create(request(BannerTargetType.URL, "javascript:alert(1)"), null));
-            assertEquals(ErrorCode.INVALID_BANNER_TARGET_URL, ex.getErrorCode());
-        }
-
-        @Test
-        @DisplayName("Link tuyệt đối ra ngoài → INVALID_BANNER_TARGET_URL (chặn open-redirect)")
-        void chanLinkNgoai() {
-            assertThrows(AppException.class, () -> homeBannerService
-                    .create(request(BannerTargetType.URL, "https://evil.example.com"), null));
-        }
-
-        @Test
-        @DisplayName("Protocol-relative \"//evil.com\" → INVALID_BANNER_TARGET_URL")
-        void chanProtocolRelative() {
-            assertThrows(AppException.class, () -> homeBannerService
-                    .create(request(BannerTargetType.URL, "//evil.example.com"), null));
-        }
-
-        @Test
-        @DisplayName("JAVASCRIPT: viết hoa vẫn bị chặn (so khớp không phân biệt hoa thường)")
-        void chanJavascriptHoa() {
-            assertThrows(AppException.class, () -> homeBannerService
-                    .create(request(BannerTargetType.URL, "JaVaScRiPt:alert(1)"), null));
+        @DisplayName("Enum không còn URL — banner không nhận đường dẫn tự do")
+        void khongConLoaiUrl() {
+            for (BannerTargetType type : BannerTargetType.values()) {
+                assertNotEquals("URL", type.name());
+            }
         }
     }
 
@@ -138,7 +113,7 @@ class HomeBannerServiceTest {
         @Test
         @DisplayName("PRODUCT không tồn tại → INVALID_BANNER_TARGET")
         void productKhongTonTai() {
-            when(productRepository.findById("missing")).thenReturn(Optional.empty());
+            when(productRepository.findByCodeIgnoreCase("missing")).thenReturn(Optional.empty());
 
             AppException ex = assertThrows(AppException.class, () -> homeBannerService
                     .create(request(BannerTargetType.PRODUCT, "missing"), null));
@@ -198,7 +173,7 @@ class HomeBannerServiceTest {
         @Test
         @DisplayName("Thiếu tiêu đề → BANNER_TITLE_REQUIRED")
         void thieuTieuDe() {
-            HomeBannerCreationRequest req = request(BannerTargetType.URL, "/laptop");
+            HomeBannerCreationRequest req = request(BannerTargetType.PRODUCT, "prod-1");
             req.setTitle("  ");
 
             AppException ex = assertThrows(AppException.class, () -> homeBannerService.create(req, null));
@@ -209,14 +184,14 @@ class HomeBannerServiceTest {
         @DisplayName("Thiếu nơi dẫn tới → BANNER_TARGET_REQUIRED")
         void thieuNoiDanToi() {
             AppException ex = assertThrows(AppException.class, () -> homeBannerService
-                    .create(request(BannerTargetType.URL, "   "), null));
+                    .create(request(BannerTargetType.PRODUCT, "   "), null));
             assertEquals(ErrorCode.BANNER_TARGET_REQUIRED, ex.getErrorCode());
         }
 
         @Test
         @DisplayName("Tạo banner không ảnh → BANNER_IMAGE_REQUIRED (slide phải có ảnh)")
         void thieuAnh() {
-            HomeBannerCreationRequest req = request(BannerTargetType.URL, "/laptop");
+            HomeBannerCreationRequest req = request(BannerTargetType.PRODUCT, "prod-1");
             req.setImageUrl(null);
 
             AppException ex = assertThrows(AppException.class, () -> homeBannerService.create(req, null));
@@ -227,7 +202,7 @@ class HomeBannerServiceTest {
         @DisplayName("sortOrder null → 0; active null → true (mặc định của DTO)")
         void macDinhSortOrderVaActive() {
             stubSave();
-            HomeBannerCreationRequest req = request(BannerTargetType.URL, "/laptop");
+            HomeBannerCreationRequest req = request(BannerTargetType.PRODUCT, "prod-1");
 
             var res = homeBannerService.create(req, null);
 
@@ -244,7 +219,7 @@ class HomeBannerServiceTest {
             when(homeBannerRepository.findById("banner-1")).thenReturn(Optional.of(banner));
             when(homeBannerRepository.save(any(HomeBanner.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            HomeBannerCreationRequest req = request(BannerTargetType.URL, "/laptop");
+            HomeBannerCreationRequest req = request(BannerTargetType.PRODUCT, "prod-1");
             req.setImageUrl(null);
             req.setRemoveImage(true);
 
@@ -263,7 +238,7 @@ class HomeBannerServiceTest {
             when(homeBannerRepository.findById("banner-1")).thenReturn(Optional.of(banner));
             when(homeBannerRepository.save(any(HomeBanner.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            HomeBannerCreationRequest req = request(BannerTargetType.URL, "/laptop");
+            HomeBannerCreationRequest req = request(BannerTargetType.PRODUCT, "prod-1");
             req.setImageUrl(null);
 
             var res = homeBannerService.update("banner-1", req, null);

@@ -33,13 +33,13 @@ public class Order {
     private String orderCode; // mã đơn hàng hiển thị cho khách, ví dụ "DH07114752"
 
     private Long totalPrice; // Tổng tiền
-    private Long discountAmount; // TỔNG tiền giảm = promotionDiscount + voucherDiscount (giữ nguyên dù coupon
+    private Long discountAmount; // TỔNG tiền giảm = promotionDiscount + voucherDiscount (giữ nguyên dù voucher
                                  // sau này đổi %). Tách 2 cột dưới để biết nguồn giảm.
 
     // Giảm từ chương trình khuyến mại (cấp DÒNG sản phẩm) — D1.
     private Long promotionDiscount;
 
-    // Giảm từ voucher/mã giảm giá (cấp ĐƠN) — D1. Đơn cũ (trước khi tách cột) đọc lên là NULL nếu chưa
+    // Giảm từ voucher/voucher (cấp ĐƠN) — D1. Đơn cũ (trước khi tách cột) đọc lên là NULL nếu chưa
     // backfill → luôn đọc qua getter null-safe, KHÔNG dùng trực tiếp.
     private Long voucherDiscount;
 
@@ -75,10 +75,10 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    // many order - 1 coupon (có thể null nếu đơn hàng không dùng mã giảm giá)
+    // many order - 1 voucher (có thể null nếu đơn hàng không dùng voucher)
     @ManyToOne
-    @JoinColumn(name = "coupon_id")
-    private Coupon coupon;
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucher;
 
     // many orders to one user
     @ManyToOne
@@ -86,9 +86,7 @@ public class Order {
     private User user;
 
     // 1 order to many order_detail.
-    // cascade ALL + orphanRemoval: lưu Order là lưu luôn các dòng chi tiết con
-    // trong cùng 1 transaction (trước đây thiếu cascade nên OrderDetail không
-    // bao giờ được persist).
+    // cascade ALL + orphanRemoval: lưu Order là lưu luôn các dòng chi tiết trong cùng 1 transaction
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     List<OrderDetail> orderDetails = new ArrayList<>();
 

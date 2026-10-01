@@ -37,14 +37,15 @@ public class HomeBanner {
     @Column(nullable = false)
     private String title;
 
+    /** Nhãn nhỏ in hoa đứng trước tiêu đề trên slide (vd "BỘ SƯU TẬP MỚI"). */
+    @Column(length = 100)
+    private String kicker;
+
     private String subtitle;
 
-    /** Ảnh slide (URL Cloudinary). */
+    /** Ảnh slide (URL Cloudinary). Bắt buộc — slide luôn hiển thị bằng ảnh. */
     @Column(nullable = false)
     private String image;
-
-    /** Màu nền chữ khi ảnh chưa tải kịp; null = FE dùng nền mặc định. */
-    private String bgColor;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -33,6 +33,10 @@ public class OrderDetail {
     // Id chương trình khuyến mại đã áp cho dòng (snapshot) — null nếu dòng không được giảm (D2).
     private String promotionId;
 
+    // Item flash sale đã trừ kho lúc chốt đơn — hủy đơn hoàn ĐÚNG suất vào phiên.
+    // Lưu id (không phải quan hệ) để dòng cũ/voucher không kéo theo join thừa.
+    private String flashSaleItemId;
+
     private String productCode; // mã sản phẩm tại thời điểm mua
     private String productName; // tên sản phẩm tại thời điểm mua
     private String productImage; // ảnh sản phẩm tại thời điểm mua

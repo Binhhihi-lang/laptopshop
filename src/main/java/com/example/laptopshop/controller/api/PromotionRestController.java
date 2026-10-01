@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.laptopshop.dto.request.Promotion.PromotionBulkDeactivateRequest;
+import com.example.laptopshop.dto.request.Promotion.PromotionBulkStatusRequest;
 import com.example.laptopshop.dto.request.Promotion.PromotionCreationRequest;
 import com.example.laptopshop.dto.request.Promotion.PromotionUpdateRequest;
 import com.example.laptopshop.dto.response.ApiResponse;
@@ -72,6 +75,22 @@ public class PromotionRestController {
     @PreAuthorize("hasAuthority('UPDATE_PROMOTION')")
     public ApiResponse<Void> deactivate(@PathVariable String id) {
         promotionService.deactivate(id);
+        return ApiResponse.<Void>builder().build();
+    }
+
+    /** Bật/tắt hàng loạt — bulk toolbar ở màn danh sách. */
+    @PatchMapping("/bulk-status")
+    @PreAuthorize("hasAuthority('UPDATE_PROMOTION')")
+    public ApiResponse<Void> updateStatus(@Valid @RequestBody PromotionBulkStatusRequest request) {
+        promotionService.setActive(request.getIds(), request.isActive());
+        return ApiResponse.<Void>builder().build();
+    }
+
+    /** Ngừng áp hàng loạt — bulk toolbar ở màn danh sách. */
+    @PatchMapping("/bulk-deactivate")
+    @PreAuthorize("hasAuthority('UPDATE_PROMOTION')")
+    public ApiResponse<Void> deactivateBulk(@Valid @RequestBody PromotionBulkDeactivateRequest request) {
+        promotionService.deactivateAll(request.getIds());
         return ApiResponse.<Void>builder().build();
     }
 }

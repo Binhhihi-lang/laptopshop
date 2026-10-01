@@ -27,9 +27,9 @@ public class HomeBannerResponse {
 
     private String id;
     private String title;
+    private String kicker;
     private String subtitle;
     private String image;
-    private String bgColor;
     private BannerTargetType targetType;
     private String targetValue;
     private Integer sortOrder;

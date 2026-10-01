@@ -16,12 +16,6 @@ public interface FlashSaleItemRepository extends JpaRepository<FlashSaleItem, St
      * Giá flash hiện hành của một nhóm sản phẩm — nguồn duy nhất của
      * {@code resolvePriceMap} (§3.1b). Một câu theo {@code productIds} để tránh
      * N+1 (R19).
-     *
-     * <p>
-     * Về soft delete: Hibernate KHÔNG áp {@code @SQLRestriction} của bảng cha lên
-     * join to-one. Phiên đã xóa mềm luôn đi kèm {@code active=false} (service set
-     * cả hai khi delete) nên vẫn bị loại; sản phẩm xóa mềm thì không bao giờ tới
-     * được {@code productIds} ở đây. Điều kiện giờ nằm trong câu để DB quyết.
      */
     @Query("""
             SELECT i FROM FlashSaleItem i
@@ -90,6 +84,29 @@ public interface FlashSaleItemRepository extends JpaRepository<FlashSaleItem, St
             """)
     long countQtyBoughtByUserInWindow(@Param("userId") String userId,
             @Param("productId") String productId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt);
+
+    /**
+     * Bản gộp cho NHIỀU sản phẩm cùng một phiên (BR-F14) — thay cho việc gọi
+     * {@link #countQtyBoughtByUserInWindow} từng sản phẩm một (N+1).
+     *
+     * <p>
+     * Trả về {@code [productId, tổngQty]} cho từng sản phẩm khách đã mua trong
+     * khung giờ phiên. Sản phẩm chưa mua lần nào sẽ KHÔNG có dòng nào trong kết
+     * quả — chỗ gọi tự hiểu là 0.
+     */
+    @Query("""
+            SELECT d.product.id, COALESCE(SUM(d.quantity), 0) FROM OrderDetail d
+            WHERE d.order.user.id = :userId
+              AND d.product.id IN :productIds
+              AND d.order.status <> com.example.laptopshop.domain.OrderStatus.CANCELLED
+              AND d.order.orderDate >= :startAt
+              AND d.order.orderDate <= :endAt
+            GROUP BY d.product.id
+            """)
+    List<Object[]> sumQtyBoughtByUserForProducts(@Param("userId") String userId,
+            @Param("productIds") List<String> productIds,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt);
 }

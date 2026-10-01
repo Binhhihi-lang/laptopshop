@@ -243,6 +243,57 @@ public class CartService {
         return FREE_SHIPPING_THRESHOLD;
     }
 
+    /**
+     * Chạy promotion trên giỏ hiện tại của khách, trả kèm dòng hàng để nơi gọi
+     * tính tiếp voucher (D14/D22).
+     *
+     * <p>
+     * Tách ra cho {@code OrderService.validateVoucher} tái dùng: preview ở trang
+     * giỏ phải chạy ĐÚNG engine và ĐÚNG giá (kể cả giá flash) như lúc chốt đơn,
+     * nếu không con số hiển thị lệch với số thực thu.
+     */
+    @Transactional(readOnly = true)
+    public CartPricing priceCart(String userId) {
+        Cart cart = this.cartRepository.findByUserId(userId).orElse(null);
+        if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
+            return new CartPricing(List.of(), 0L, 0L, List.of());
+        }
+        List<CartItemResponse> items = cart.getItems().stream()
+                .filter(item -> item.getProduct() != null)
+                .map(this::toItemResponse)
+                .toList();
+        applyFlashPrices(items, cart);
+
+        long subtotal = items.stream().mapToLong(CartItemResponse::getLineTotal).sum();
+        PromotionEngine.Result promo = this.promotionEngine.resolve(
+                toEngineLines(items), this.promotionService.findApplicable(LocalDateTime.now()),
+                LocalDateTime.now());
+        return new CartPricing(items, subtotal, promo.promotionDiscount(),
+                CartPricing.toEligibleLines(items, promo));
+    }
+
+    /**
+     * Giỏ đã tính tiền, kèm dòng hàng ở dạng đủ để xét scope voucher (D22).
+     *
+     * @param linesForVoucher mỗi dòng kèm categoryId/factory + phần promotion đã giảm
+     */
+    public record CartPricing(List<CartItemResponse> items, long subtotal, long promotionDiscount,
+            List<VoucherService.EligibleLine> linesForVoucher) {
+
+        private static List<VoucherService.EligibleLine> toEligibleLines(List<CartItemResponse> items,
+                PromotionEngine.Result promo) {
+            Map<String, Long> discountByProduct = promo == null ? Map.of()
+                    : promo.lines().stream().collect(Collectors.toMap(
+                            PromotionEngine.LineResult::productId,
+                            PromotionEngine.LineResult::discount, (a, b) -> a));
+            return items.stream()
+                    .map(i -> new VoucherService.EligibleLine(i.getProductId(), i.getCategoryId(),
+                            i.getFactory(), i.getLineTotal(),
+                            discountByProduct.getOrDefault(i.getProductId(), 0L)))
+                    .toList();
+        }
+    }
+
     /** Map cart entity → response kèm phần tính tiền. cart = null → giỏ rỗng. */
     private CartResponse toResponse(Cart cart) {
         CartResponse response = new CartResponse();

@@ -1,18 +1,21 @@
-package com.example.laptopshop.dto.response.Coupon;
+package com.example.laptopshop.dto.response.Voucher;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.example.laptopshop.domain.CouponType;
+import com.example.laptopshop.domain.VoucherType;
 import com.example.laptopshop.domain.ScopeType;
 
 @Getter
 @Setter
-public class CouponResponse {
+public class VoucherResponse {
 
     private String id;
     private String code;
+    private String title;
+    private String description;
     private Integer discountPercent;
     private Long discountAmount;
     private LocalDateTime startDate;
@@ -26,8 +29,9 @@ public class CouponResponse {
     private Long maxDiscountAmount;
     private Integer perUserLimit;
     private ScopeType scopeType;
-    private String scopeValue;
-    private CouponType couponType;
+    /** Danh sách giá trị phạm vi (nhiều dòng). Rỗng = toàn bộ đơn. */
+    private List<String> scopeValues;
+    private VoucherType voucherType;
 
     private String image;
     private LocalDateTime createdAt;

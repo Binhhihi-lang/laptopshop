@@ -29,4 +29,7 @@ public interface FlashSaleRepository extends JpaRepository<FlashSale, String> {
             ORDER BY f.startAt ASC
             """)
     List<FlashSale> findUpcoming(@Param("now") LocalDateTime now);
+
+    /** Danh sách quản trị — xếp theo giờ mở phiên để bảng đọc như lịch trong ngày. */
+    List<FlashSale> findAllByOrderByStartAtAsc();
 }

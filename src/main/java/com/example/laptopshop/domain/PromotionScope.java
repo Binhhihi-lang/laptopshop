@@ -22,10 +22,6 @@ import lombok.Setter;
  * danh mục Phụ kiện). Không có dòng scope nào = áp cho toàn bộ đơn (ALL), giữ
  * tương thích với cách hiểu cũ.
  *
- * <p>
- * <b>D18:</b> {@link ScopeType#BRAND} so khớp với {@code Product.factory} chứ
- * không có bảng Brand riêng, nên {@code targetValue} phải được normalize
- * trim + uppercase ngay khi lưu (xem {@link #normalizeTargetValue}).
  */
 @Entity
 @Table(name = "promotion_scopes")

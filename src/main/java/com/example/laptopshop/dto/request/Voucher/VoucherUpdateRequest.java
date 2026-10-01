@@ -1,6 +1,8 @@
-package com.example.laptopshop.dto.request.Coupon;
+package com.example.laptopshop.dto.request.Voucher;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -8,15 +10,21 @@ import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.laptopshop.domain.CouponType;
+import com.example.laptopshop.domain.VoucherType;
 import com.example.laptopshop.domain.ScopeType;
 
 @Getter
 @Setter
-public class CouponUpdateRequest {
+public class VoucherUpdateRequest {
 
-    @NotBlank(message = "COUPON_CODE_REQUIRED")
+    @NotBlank(message = "VOUCHER_CODE_REQUIRED")
     private String code;
+
+    /** Tiêu đề hiển thị cho khách trên overlay giỏ hàng. */
+    private String title;
+
+    /** Mô tả / điều kiện hiển thị cho khách. */
+    private String description;
 
     private Integer discountPercent;
     private Long discountAmount;
@@ -31,8 +39,9 @@ public class CouponUpdateRequest {
     private Long maxDiscountAmount;
     private Integer perUserLimit;
     private ScopeType scopeType;
-    private String scopeValue;
-    private CouponType couponType;
+    /** Nhiều giá trị phạm vi: Category.id | factory | Product.id. Rỗng = toàn bộ đơn. */
+    private List<String> scopeValues = new ArrayList<>();
+    private VoucherType voucherType;
 
     private boolean active = true;
     private MultipartFile inputFile;

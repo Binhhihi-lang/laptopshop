@@ -20,14 +20,14 @@ public interface PromotionRepository extends JpaRepository<Promotion, String> {
      * engine xử lý vì chúng phụ thuộc sản phẩm trong giỏ.
      *
      * <p>
-     * {@code LEFT JOIN FETCH} scope/exclude để tránh N+1 khi engine duyệt từng
-     * sản phẩm — số promotion đang chạy thường nhỏ nhưng mỗi cái lại có nhiều
-     * dòng scope.
+     * KHÔNG dùng {@code JOIN FETCH} cho scopes/excludes: Hibernate ném
+     * {@code MultipleBagFetchException} khi fetch 2 collection {@code List} cùng
+     * lúc ("cannot simultaneously fetch multiple bags") — lỗi này làm chết cả
+     * luồng đặt hàng khi có bất kỳ chương trình nào đang chạy. Engine chỉ đọc
+     * scope/exclude của vài chương trình đang chạy nên lazy-load là đủ.
      */
     @Query("""
-            SELECT DISTINCT p FROM Promotion p
-            LEFT JOIN FETCH p.scopes
-            LEFT JOIN FETCH p.excludes
+            SELECT p FROM Promotion p
             WHERE p.active = true
               AND p.startDate <= :now
               AND p.endDate >= :now

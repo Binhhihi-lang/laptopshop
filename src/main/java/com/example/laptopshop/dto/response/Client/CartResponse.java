@@ -21,7 +21,7 @@ public class CartResponse {
 
     private Long subtotal; // tổng tiền hàng
     private Long shippingFee; // 0 nếu được miễn phí
-    private Long total; // subtotal + shippingFee (chưa trừ coupon)
+    private Long total; // subtotal + shippingFee (chưa trừ voucher)
     private Long freeShippingThreshold; // ngưỡng miễn phí ship — FE hiển thị gợi ý
 
     // ===== Khối khuyến mại (Sprint 2, D14) =====
