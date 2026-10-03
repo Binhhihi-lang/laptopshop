@@ -202,6 +202,7 @@ public class ProductService {
         res.setFlashSold(view.soldInFlash());
         res.setFlashSaleId(view.flashSaleId());
         res.setFlashEndAt(view.endAt());
+        res.setFlashPerUserLimit(view.perUserLimit());
     }
 
     // Nhận DTO từ Controller, validate dữ liệu thô, map sang Entity, xử lý ảnh và

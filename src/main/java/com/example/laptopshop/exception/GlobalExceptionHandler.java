@@ -29,7 +29,11 @@ public class GlobalExceptionHandler {
         ApiResponse<Void> apiResponse = new ApiResponse<>();
 
         apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
+        // AppException có thể mang message riêng (chi tiết ngữ cảnh) — ưu tiên nó
+        // thay vì message chung của enum.
+        apiResponse.setMessage(exception.getMessage() != null && !exception.getMessage().isBlank()
+                ? exception.getMessage()
+                : errorCode.getMessage());
 
         // Trả về chuẩn HTTP Status (404, 400, 500...) tùy cấu hình trong Enum
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
@@ -108,6 +112,19 @@ public class GlobalExceptionHandler {
         apiResponse.setMessage(finalMessage); // Dùng chuỗi finalMessage đã được map dữ liệu
 
         return ResponseEntity.status(errorCode.getHttpStatus()).body(apiResponse);
+    }
+
+    // Bắt lỗi thiếu part trong request multipart (@RequestPart) — vd client gửi
+    // format cũ thiếu part "flashSaleInfo". Trả 400 kèm mã lỗi rõ thay vì rơi vào
+    // handler Exception chung (500 + "Lỗi hệ thống không xác định").
+    @ExceptionHandler(value = org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingPart(
+            org.springframework.web.multipart.support.MissingServletRequestPartException exception) {
+        ApiResponse<Void> apiResponse = new ApiResponse<>();
+        apiResponse.setCode(ErrorCode.INVALID_KEY.getCode());
+        apiResponse.setMessage("Thiếu dữ liệu phần '" + exception.getRequestPartName()
+                + "' trong yêu cầu — vui lòng tải lại trang và thử lại");
+        return ResponseEntity.status(ErrorCode.INVALID_KEY.getHttpStatus()).body(apiResponse);
     }
 
     // Bắt các lỗi ngầm định, lỗi hệ thống chưa phân loại (NullPointer, SQL,

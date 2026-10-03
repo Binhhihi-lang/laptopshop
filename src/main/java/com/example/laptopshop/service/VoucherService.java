@@ -69,6 +69,9 @@ public class VoucherService {
         voucher.setCode(request.getCode().trim().toUpperCase());
         voucher.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
+        // Mapper ignore `active` nên phải set tay, nếu không toggle "Trạng thái"
+        // lúc tạo bị nuốt im lặng (voucher luôn bật dù admin đã tắt).
+        voucher.setActive(request.isActive());
 
         // Voucher mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         voucher.setUsedCount(0);

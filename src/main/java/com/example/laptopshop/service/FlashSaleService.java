@@ -10,7 +10,6 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.FlashSale;
 import com.example.laptopshop.domain.FlashSaleItem;
@@ -42,7 +41,6 @@ public class FlashSaleService {
     FlashSaleRepository flashSaleRepository;
     FlashSaleItemRepository flashSaleItemRepository;
     ProductRepository productRepository;
-    UploadService uploadService;
 
     // ===== Nguồn giá (đọc) =====
 
@@ -53,7 +51,7 @@ public class FlashSaleService {
      */
     @Transactional(readOnly = true)
     public Map<String, FlashPriceView> resolvePriceMap(List<String> productIds, LocalDateTime now) {
-        return toViewMap(findCurrentItems(productIds, now), Map.of());
+        return toViewMap(findCurrentItems(productIds, now), Map.of(), false);
     }
 
     /** Bản cho giỏ/chốt đơn: thêm {@code perUserLimitLeft} đúng theo khách (D32). */
@@ -62,9 +60,9 @@ public class FlashSaleService {
             LocalDateTime now) {
         List<FlashSaleItem> items = findCurrentItems(productIds, now);
         if (items.isEmpty() || userId == null || userId.isBlank()) {
-            return toViewMap(items, Map.of());
+            return toViewMap(items, Map.of(), false);
         }
-        return toViewMap(items, sumBoughtByProduct(items, userId));
+        return toViewMap(items, sumBoughtByItem(items, userId), true);
     }
 
     /**
@@ -83,25 +81,25 @@ public class FlashSaleService {
     }
 
     /**
-     * Số máy khách đã mua trong phiên, gộp theo sản phẩm (BR-F14).
+     * Số máy khách đã mua cho từng item flash (BR-F14), gộp theo
+     * {@code flashSaleItemId} mà đơn đã lưu lúc chốt.
      *
      * <p>
-     * Gom item theo PHIÊN rồi hỏi 1 câu cho cả phiên, thay vì 1 câu cho từng sản
-     * phẩm. Trước đây mỗi item còn bị {@code findById} lại 2 lần (item + phiên)
-     * dù {@code findCurrentItems} đã fetch sẵn → N+1 (3N query cho giỏ N sản phẩm).
+     * Khớp ĐÚNG item nên hai phiên trùng khung giờ không đếm lẫn nhau (trước đây
+     * lọc theo {@code orderDate BETWEEN startAt AND endAt} nên đếm chéo). Gom theo
+     * PHIÊN rồi hỏi 1 câu cho cả phiên thay vì 1 câu cho từng item (tránh N+1).
      *
      * <p>
      * Chỉ hỏi những phiên THỰC SỰ có ít nhất một item đặt {@code perUserLimit} —
      * phiên không giới hạn thì không cần biết khách đã mua bao nhiêu.
      *
-     * @return productId → tổng số đã mua; sản phẩm chưa mua không có mặt (coi = 0)
+     * @return flashSaleItemId → tổng số đã mua; item chưa mua không có mặt (coi = 0)
      */
-    private Map<String, Long> sumBoughtByProduct(List<FlashSaleItem> items, String userId) {
+    private Map<String, Long> sumBoughtByItem(List<FlashSaleItem> items, String userId) {
         Map<String, List<FlashSaleItem>> bySale = new LinkedHashMap<>();
         for (FlashSaleItem item : items) {
-            if (item.getProduct() == null || item.getFlashSale() == null
-                    || item.getPerUserLimit() == null
-                    || item.getFlashSale().getStartAt() == null || item.getFlashSale().getEndAt() == null) {
+            if (item.getId() == null || item.getProduct() == null || item.getFlashSale() == null
+                    || item.getPerUserLimit() == null) {
                 continue;
             }
             bySale.computeIfAbsent(item.getFlashSale().getId(), k -> new ArrayList<>()).add(item);
@@ -109,13 +107,11 @@ public class FlashSaleService {
 
         Map<String, Long> bought = new HashMap<>();
         for (List<FlashSaleItem> saleItems : bySale.values()) {
-            FlashSale sale = saleItems.get(0).getFlashSale();
-            List<String> productIds = saleItems.stream()
-                    .map(i -> i.getProduct().getId())
+            List<String> itemIds = saleItems.stream()
+                    .map(FlashSaleItem::getId)
                     .distinct()
                     .toList();
-            for (Object[] row : this.flashSaleItemRepository.sumQtyBoughtByUserForProducts(
-                    userId, productIds, sale.getStartAt(), sale.getEndAt())) {
+            for (Object[] row : this.flashSaleItemRepository.sumQtyBoughtByUserForItems(userId, itemIds)) {
                 bought.put((String) row[0], ((Number) row[1]).longValue());
             }
         }
@@ -123,18 +119,24 @@ public class FlashSaleService {
     }
 
     /**
-     * Dựng map kết quả từ danh sách item, kèm {@code perUserLimitLeft} nếu có dữ
-     * liệu đã mua. Item nào kho phiên cạn thì bỏ — chỗ gọi fallback giá thường (D27).
+     * Dựng map kết quả từ danh sách item. Item nào kho phiên cạn thì bỏ — chỗ gọi
+     * fallback giá thường (D27).
      *
-     * @param boughtByProduct productId → số đã mua; rỗng = không xét giới hạn/khách
+     * @param boughtByProduct productId → số đã mua; rỗng = khách chưa mua gì
+     * @param perUserAware    true khi gọi cho MỘT khách cụ thể (giỏ/chốt đơn): lúc
+     *                        đó {@code perUserLimitLeft} phải có giá trị kể cả khi
+     *                        khách chưa mua gì (0 đã mua → left = trần). Trước đây
+     *                        chỉ tính khi đã có người mua nên khách mới bị coi là
+     *                        "không giới hạn" → mua vượt trần mà không ai chặn.
      */
-    private Map<String, FlashPriceView> toViewMap(List<FlashSaleItem> items, Map<String, Long> boughtByProduct) {
+    private Map<String, FlashPriceView> toViewMap(List<FlashSaleItem> items, Map<String, Long> boughtByProduct,
+            boolean perUserAware) {
         Map<String, FlashPriceView> result = new LinkedHashMap<>();
         for (FlashSaleItem item : items) {
             if (item.getProduct() == null || !item.hasFlashStock()) {
                 continue; // kho phiên cạn rồi → dòng đó về giá thường (D27)
             }
-            result.putIfAbsent(item.getProduct().getId(), toPriceView(item, boughtByProduct));
+            result.putIfAbsent(item.getProduct().getId(), toPriceView(item, boughtByProduct, perUserAware));
         }
         return result;
     }
@@ -170,13 +172,13 @@ public class FlashSaleService {
     // ===== CRUD admin =====
 
     @Transactional
-    public FlashSaleResponse create(FlashSaleCreationRequest request, MultipartFile file) {
+    public FlashSaleResponse create(FlashSaleCreationRequest request) {
         LocalDateTime now = LocalDateTime.now();
         validate(request, now);
+        validateNoOverlap(null, request, now);
 
         FlashSale flashSale = new FlashSale();
         applyFields(flashSale, request);
-        applyBannerImage(flashSale, file, request);
         applyItems(flashSale, request.getItems());
 
         FlashSale saved = this.flashSaleRepository.save(flashSale);
@@ -185,14 +187,16 @@ public class FlashSaleService {
 
     /**
      * Cập nhật phiên + dựng lại item. Item nào trùng sản phẩm thì GIỮ object cũ
-     * để không mất {@code soldInFlash}, chỉ đổi giá/kho/limit.
+     * để không mất {@code soldInFlash} (số đã bán), chỉ đổi giá/kho/limit.
+     * {@code flashStock} gửi lên là số CÒN LẠI nên set thẳng — không cộng trừ.
      */
     @Transactional
-    public FlashSaleResponse update(String id, FlashSaleCreationRequest request, MultipartFile file) {
+    public FlashSaleResponse update(String id, FlashSaleCreationRequest request) {
         FlashSale flashSale = findOrThrow(id);
-        validate(request, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        validate(request, now);
+        validateNoOverlap(id, request, now);
         applyFields(flashSale, request);
-        applyBannerImage(flashSale, file, request);
 
         Map<String, FlashSaleItem> existingByProduct = new HashMap<>();
         for (FlashSaleItem item : new ArrayList<>(flashSale.getItems())) {
@@ -207,12 +211,13 @@ public class FlashSaleService {
                 FlashSaleItem existing = itemRequest.getProductId() == null ? null
                         : existingByProduct.remove(itemRequest.getProductId());
                 if (existing != null) {
-                    // Giữ object cũ để nguyên soldInFlash — chỉ đổi giá/kho/limit.
+                    // Giữ object cũ để nguyên soldInFlash (đã bán) — chỉ đổi giá/kho/limit.
                     validateItemFields(itemRequest);
                     existing.setFlashPrice(itemRequest.getFlashPrice());
                     existing.setFlashStock(itemRequest.getFlashStock());
                     existing.setPerUserLimit(itemRequest.getPerUserLimit());
                     validateFlashPriceBelowSellingPrice(itemRequest.getFlashPrice(), existing.getProduct());
+                    validateStockWithinProduct(itemRequest.getFlashStock(), existing.getProduct());
                     flashSale.getItems().add(existing);
                 } else {
                     flashSale.getItems().add(buildItem(flashSale, itemRequest));
@@ -235,9 +240,6 @@ public class FlashSaleService {
         FlashSale flashSale = findOrThrow(id);
         flashSale.setActive(false);
         this.flashSaleRepository.save(flashSale);
-        if (flashSale.getBannerImage() != null) {
-            this.uploadService.handleDeleteFile(flashSale.getBannerImage());
-        }
         this.flashSaleRepository.delete(flashSale);
     }
 
@@ -302,8 +304,19 @@ public class FlashSaleService {
         if (itemRequest.getFlashPrice() == null || itemRequest.getFlashPrice() <= 0L) {
             throw new AppException(ErrorCode.INVALID_FLASH_PRICE);
         }
-        if (itemRequest.getFlashStock() == null || itemRequest.getFlashStock() <= 0) {
+        // flashStock là số CÒN LẠI: 0 = hết suất (hợp lệ, dòng về giá thường), âm = sai.
+        if (itemRequest.getFlashStock() == null || itemRequest.getFlashStock() < 0) {
             throw new AppException(ErrorCode.INVALID_FLASH_STOCK);
+        }
+        // Trần mỗi khách BẮT BUỘC: để trống = vô hạn → một khách ôm hết suất giá
+        // sốc, khách khác không mua được (V16). Phải là số nguyên ≥ 1.
+        if (itemRequest.getPerUserLimit() == null || itemRequest.getPerUserLimit() < 1) {
+            throw new AppException(ErrorCode.FLASH_PER_USER_LIMIT_REQUIRED);
+        }
+        // Trần không được vượt suất còn lại: suất 3 mà cho 1 khách mua tới 5 thì
+        // con số vượt là ảo (cả phiên chỉ có 3 máy).
+        if (itemRequest.getPerUserLimit() > itemRequest.getFlashStock()) {
+            throw new AppException(ErrorCode.FLASH_PER_USER_LIMIT_EXCEEDS_STOCK);
         }
     }
 
@@ -317,26 +330,61 @@ public class FlashSaleService {
         }
     }
 
+    /**
+     * Kho phiên = số CÒN LẠI, không được vượt tồn kho thật — nếu vượt, phiên
+     * quảng cáo còn suất nhưng lúc chốt {@code deductStock} fail → khách không mua
+     * được. Message nêu TÊN sản phẩm và số vượt để admin biết sửa dòng nào.
+     */
+    private void validateStockWithinProduct(Integer remaining, Product product) {
+        if (product == null || remaining == null) {
+            return;
+        }
+        if (remaining > product.getQuantity()) {
+            throw new AppException(ErrorCode.FLASH_STOCK_EXCEEDS_PRODUCT_STOCK,
+                    String.format("Kho phiên của \"%s\" là %d, vượt quá tồn kho hiện tại (%d) — vui lòng giảm %d",
+                            product.getName(), remaining, product.getQuantity(),
+                            remaining - product.getQuantity()));
+        }
+    }
+
+    /**
+     * TASK-001 — chặn phiên trùng: cùng sản phẩm + khung giờ giao nhau với phiên
+     * CHƯA kết thúc. Giữ cách xử lý hiển thị cũ (kết thúc sớm nhất thắng), chỉ
+     * ngăn admin tạo ra tình huống mơ hồ ngay từ đầu.
+     *
+     * @param excludeId id phiên đang sửa (bỏ qua chính nó); null khi tạo mới
+     */
+    private void validateNoOverlap(String excludeId, FlashSaleCreationRequest request, LocalDateTime now) {
+        if (request.getItems() == null || request.getItems().isEmpty()
+                || request.getStartAt() == null || request.getEndAt() == null) {
+            return;
+        }
+        List<String> productIds = request.getItems().stream()
+                .map(FlashSaleItemRequest::getProductId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (productIds.isEmpty()) {
+            return;
+        }
+        List<FlashSale> overlapping = this.flashSaleRepository.findOverlapping(
+                excludeId == null ? "" : excludeId,
+                request.getStartAt(), request.getEndAt(), now, productIds);
+        if (!overlapping.isEmpty()) {
+            FlashSale other = overlapping.get(0);
+            throw new AppException(ErrorCode.FLASH_SALE_OVERLAP,
+                    String.format("Khung giờ trùng với phiên \"%s\" (%s – %s) cùng sản phẩm — hãy đổi thời gian hoặc sản phẩm",
+                            other.getName(),
+                            other.getStartAt(), other.getEndAt()));
+        }
+    }
+
     private void applyFields(FlashSale flashSale, FlashSaleCreationRequest request) {
         flashSale.setName(request.getName().trim());
         flashSale.setDescription(request.getDescription());
         flashSale.setStartAt(request.getStartAt());
         flashSale.setEndAt(request.getEndAt());
         flashSale.setActive(request.getActive() == null || request.getActive());
-    }
-
-    private void applyBannerImage(FlashSale flashSale, MultipartFile file, FlashSaleCreationRequest request) {
-        boolean hasNewFile = file != null && !file.isEmpty();
-        boolean hasImageUrl = request.getImageUrl() != null && !request.getImageUrl().isBlank();
-        if (!hasNewFile && !hasImageUrl) {
-            return;
-        }
-        if (flashSale.getBannerImage() != null) {
-            this.uploadService.handleDeleteFile(flashSale.getBannerImage());
-        }
-        flashSale.setBannerImage(hasNewFile
-                ? this.uploadService.handleSaveUploadFile(file, "flash-sale")
-                : this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "flash-sale"));
     }
 
     private void applyItems(FlashSale flashSale, List<FlashSaleItemRequest> items) {
@@ -353,6 +401,7 @@ public class FlashSaleService {
         Product product = this.productRepository.findById(itemRequest.getProductId())
                 .orElseThrow(() -> new AppException(ErrorCode.FLASH_SALE_PRODUCT_NOT_FOUND));
         validateFlashPriceBelowSellingPrice(itemRequest.getFlashPrice(), product);
+        validateStockWithinProduct(itemRequest.getFlashStock(), product);
 
         FlashSaleItem item = new FlashSaleItem();
         item.setFlashSale(flashSale);
@@ -366,14 +415,14 @@ public class FlashSaleService {
 
     /**
      * Dựng view cho một item. {@code perUserLimitLeft} chỉ có giá trị khi
-     * {@code boughtByProduct} được truyền (bản dành cho giỏ/chốt đơn); bản cho
-     * danh sách sản phẩm để null nghĩa "chưa xét giới hạn/khách".
+     * {@code perUserAware} = true (bản dành cho giỏ/chốt đơn); bản cho danh sách
+     * sản phẩm để null nghĩa "chưa xét giới hạn/khách".
      */
-    private FlashPriceView toPriceView(FlashSaleItem item, Map<String, Long> boughtByProduct) {
+    private FlashPriceView toPriceView(FlashSaleItem item, Map<String, Long> boughtByItem, boolean perUserAware) {
         Integer perUserLimitLeft = null;
         Integer perUserLimit = item.getPerUserLimit();
-        if (perUserLimit != null && !boughtByProduct.isEmpty() && item.getProduct() != null) {
-            long bought = boughtByProduct.getOrDefault(item.getProduct().getId(), 0L);
+        if (perUserAware && perUserLimit != null) {
+            long bought = boughtByItem.getOrDefault(item.getId(), 0L);
             perUserLimitLeft = (int) Math.max(0, perUserLimit - bought);
         }
         return new FlashPriceView(
@@ -383,6 +432,7 @@ public class FlashSaleService {
                 item.getFlashStock(),
                 item.getSoldInFlash(),
                 item.getFlashSale() == null ? null : item.getFlashSale().getEndAt(),
+                item.getPerUserLimit(),
                 perUserLimitLeft);
     }
 
@@ -411,7 +461,6 @@ public class FlashSaleService {
                 .id(flashSale.getId())
                 .name(flashSale.getName())
                 .description(flashSale.getDescription())
-                .bannerImage(flashSale.getBannerImage())
                 .startAt(flashSale.getStartAt())
                 .endAt(flashSale.getEndAt())
                 .active(flashSale.isActive())

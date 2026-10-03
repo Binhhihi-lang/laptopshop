@@ -40,6 +40,7 @@ public class ProductResponse {
     private Integer flashSold;    // đã bán trong phiên (progress "Đã bán x/y")
     private String flashSaleId;   // phiên chứa sản phẩm
     private LocalDateTime flashEndAt; // lúc phiên kết thúc (đếm ngược)
+    private Integer flashPerUserLimit; // trần mỗi khách; null = không giới hạn
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

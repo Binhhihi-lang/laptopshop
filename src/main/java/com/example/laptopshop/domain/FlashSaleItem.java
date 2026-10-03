@@ -40,15 +40,19 @@ public class FlashSaleItem {
     @Column(nullable = false)
     private Long flashPrice;
 
-    /** Kho tạm của phiên, tách khỏi {@code Product.quantity}. */
+    /**
+     * Kho phiên CÒN LẠI — sống, tự giảm khi bán (giống {@code Product.quantity}).
+     * Không phải hạn mức gốc: muốn "còn 2 suất" thì set thẳng 2.
+     */
     @Column(nullable = false)
     private Integer flashStock;
 
-    /** Chỉ đổi qua UPDATE atomic ở repository (D29), không set từ service. */
+    /** Số đã bán trong phiên — chỉ tăng (giống {@code Product.sold}). */
     @Column(nullable = false)
     private Integer soldInFlash = 0;
 
-    /** Tối đa mỗi khách trong phiên; null = không giới hạn (D32). */
+    /** Tối đa mỗi khách trong phiên — BẮT BUỘC, luôn ≥ 1 (V16). */
+    @Column(nullable = false)
     private Integer perUserLimit;
 
     @PrePersist
@@ -58,16 +62,13 @@ public class FlashSaleItem {
         }
     }
 
+    /** Còn suất để bán? {@code flashStock} là số CÒN LẠI nên chỉ cần > 0. */
     public boolean hasFlashStock() {
-        return this.soldInFlash == null
-                || this.flashStock == null
-                || this.soldInFlash < this.flashStock;
+        return this.flashStock != null && this.flashStock > 0;
     }
 
-    /** Số máy còn lại của kho phiên — FE vẽ "Đã bán x/y". */
+    /** Số máy còn lại của kho phiên — chính là {@code flashStock}. */
     public int getRemainingFlashStock() {
-        int stock = this.flashStock == null ? 0 : this.flashStock;
-        int sold = this.soldInFlash == null ? 0 : this.soldInFlash;
-        return Math.max(0, stock - sold);
+        return this.flashStock == null ? 0 : Math.max(0, this.flashStock);
     }
 }

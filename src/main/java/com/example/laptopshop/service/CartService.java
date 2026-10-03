@@ -98,6 +98,7 @@ public class CartService {
         long targetQty = currentQty + request.getQuantity();
 
         validateStock(product, targetQty);
+        enforceFlashPerUserLimit(userId, product, targetQty);
 
         if (existing == null) {
             CartItem item = new CartItem();
@@ -125,6 +126,7 @@ public class CartService {
         }
 
         validateStock(item.getProduct(), request.getQuantity());
+        enforceFlashPerUserLimit(userId, item.getProduct(), request.getQuantity());
         item.setQuantity(request.getQuantity());
 
         cart.setUpdatedAt(LocalDateTime.now());
@@ -189,6 +191,12 @@ public class CartService {
                 // Cộng dồn nhưng không vượt tồn kho: giỏ guest cũ có thể xin
                 // nhiều hơn số hàng còn lại.
                 long merged = Math.min(currentQty + guestItem.getQuantity(), product.getQuantity());
+                // Không vượt trần mỗi khách của phiên flash: giỏ guest (localStorage)
+                // có thể được nhồi số lượng khi chưa đăng nhập, gộp vào sẽ vượt suất.
+                Long flashCap = flashPerUserLimitLeft(userId, product);
+                if (flashCap != null) {
+                    merged = Math.min(merged, flashCap);
+                }
                 if (merged <= 0) {
                     continue;
                 }
@@ -229,6 +237,46 @@ public class CartService {
         if (requestedQty > product.getQuantity()) {
             throw new AppException(ErrorCode.CART_QUANTITY_EXCEEDS_STOCK);
         }
+    }
+
+    /**
+     * Chặn số lượng vượt trần mỗi khách của phiên flash (V16/BR-F17).
+     *
+     * <p>
+     * Trước đây giỏ chỉ kiểm tồn kho nên khách đặt 3 máy trong khi phiên cho tối
+     * đa 1/khách vẫn lưu được — dòng lặng lẽ rơi về giá thường rồi khách mới ngỡ
+     * ngàng ở bước sau. Nay chặn thẳng ở thao tác giỏ.
+     *
+     * @param userId khách đang thao tác (cần để biết họ đã mua bao nhiêu)
+     */
+    private void enforceFlashPerUserLimit(String userId, Product product, long requestedQty) {
+        Map<String, FlashPriceView> flash = this.flashSaleService.resolvePriceMap(
+                List.of(product.getId()), userId, LocalDateTime.now());
+        FlashPriceView view = flash.get(product.getId());
+        if (view == null || view.allowsFlashFor(requestedQty)) {
+            return; // không có phiên, hoặc số lượng vẫn nằm trong suất còn lại
+        }
+        Integer limit = view.perUserLimit();
+        String detail = limit != null
+                ? String.format("Bạn chỉ được mua tối đa %d máy/khách ở giá sốc của phiên này", limit)
+                : "Bạn đã dùng hết suất giá sốc của phiên này";
+        throw new AppException(ErrorCode.FLASH_PER_USER_LIMIT_EXCEEDED, detail);
+    }
+
+    /**
+     * Số máy tối đa khách còn được thêm cho sản phẩm trong phiên flash, hoặc
+     * {@code null} nếu sản phẩm không có phiên (không cần kẹp). Dùng cho luồng gộp
+     * giỏ guest — ở đó ta KẸP thay vì ném lỗi để không làm hỏng cả thao tác merge.
+     */
+    private Long flashPerUserLimitLeft(String userId, Product product) {
+        Map<String, FlashPriceView> flash = this.flashSaleService.resolvePriceMap(
+                List.of(product.getId()), userId, LocalDateTime.now());
+        FlashPriceView view = flash.get(product.getId());
+        if (view == null) {
+            return null;
+        }
+        Integer left = view.perUserLimitLeft();
+        return left == null ? null : (long) left;
     }
 
     /** Tính phí ship theo chính sách hiện hành. subtotal = 0 → chưa tính ship. */
@@ -358,7 +406,15 @@ public class CartService {
         for (CartItemResponse item : items) {
             FlashPriceView view = flash.get(item.getProductId());
             // D32: hết suất của khách → dòng về giá thường (không chặn đơn).
-            if (view == null || !view.allowsFlashFor(item.getQuantity())) {
+            if (view == null) {
+                continue;
+            }
+            // Ghi trần mỗi khách để FE nói rõ "tối đa N/khách" — kể cả khi đã hết
+            // suất (flashPrice vẫn null nhưng FE cần con số trần để giải thích).
+            item.setFlashPerUserLimit(view.perUserLimit());
+            if (!view.allowsFlashFor(item.getQuantity())) {
+                // Có phiên + có trần + khách đã dùng hết suất → cờ để FE báo chữ.
+                item.setFlashLimitReached(true);
                 continue;
             }
             item.setFlashPrice(view.flashPrice());

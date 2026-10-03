@@ -8,9 +8,10 @@ import lombok.Setter;
  * Một sản phẩm trong phiên flash sale.
  *
  * <p>
- * {@code flashStock} là kho DÀNH RIÊNG cho phiên, không phải tồn kho của sản
- * phẩm — hai con số này độc lập (D29): bán hết flash thì dòng đó về giá thường,
- * không chặn mua và không trừ vào {@code Product.quantity}.
+ * {@code flashStock} là số suất CÒN LẠI của phiên (giống {@code Product.quantity})
+ * — admin nhập thẳng "còn bao nhiêu suất", hệ thống tự trừ khi bán. Không phải
+ * tồn kho của sản phẩm: hai con số độc lập (D29), bán hết flash thì dòng đó về
+ * giá thường, không chặn mua và không trừ vào {@code Product.quantity}.
  */
 @Getter
 @Setter
@@ -23,6 +24,7 @@ public class FlashSaleItemRequest {
     @NotNull(message = "Giá flash không được để trống")
     private Long flashPrice;
 
+    /** Số suất CÒN LẠI của phiên (tự trừ khi bán, như tồn kho). */
     @NotNull(message = "Số lượng flash không được để trống")
     private Integer flashStock;
 

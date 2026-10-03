@@ -159,8 +159,16 @@ public class OrderService {
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
             FlashPriceView view = flashMap.get(product.getId());
-            if (view == null || !view.allowsFlashFor(item.getQuantity())) {
-                continue; // không có phiên / hết suất khách → giá thường
+            if (view == null) {
+                continue; // không có phiên → giá thường
+            }
+            // D32/BR-F11: khách đã hết suất cá nhân → dòng về giá thường. Phải bỏ
+            // khỏi flashMap để engine promotion + eligibleAmount cũng tính theo giá
+            // thường (BR-F13), không chỉ riêng detail.setPrice — nếu không, promotion
+            // bị bỏ qua oan (D25) và subtotal lệch.
+            if (!view.allowsFlashFor(item.getQuantity())) {
+                flashMap.remove(product.getId());
+                continue;
             }
             if (this.flashSaleService.consumeStock(view.itemId(), item.getQuantity())) {
                 flashItemIdByProduct.put(product.getId(), view.itemId());
@@ -294,6 +302,8 @@ public class OrderService {
             // hết suất của mình, ngược lại giá thường.
             detail.setPrice(flashView != null && flashView.allowsFlashFor(item.getQuantity())
                     ? flashView.flashPrice() : product.getPrice());
+            // Snapshot giá gốc để chi tiết đơn hiện gạch ngang khi dòng được giảm giá.
+            detail.setOriginalPrice(product.getPrice());
             detail.setProductCode(product.getCode());
             detail.setProductName(product.getName());
             detail.setProductImage(product.getImage());
@@ -818,6 +828,7 @@ public class OrderService {
                 item.setProductName(detail.getProductName());
                 item.setProductImage(detail.getProductImage());
                 item.setPrice(detail.getPrice());
+                item.setOriginalPrice(detail.getOriginalPrice());
                 item.setQuantity(detail.getQuantity());
                 item.setLineTotal(detail.getLineTotal());
                 item.setDiscountAmount(detail.getDiscountAmount());
@@ -926,6 +937,7 @@ public class OrderService {
                 item.setProductName(detail.getProductName());
                 item.setProductImage(detail.getProductImage());
                 item.setPrice(detail.getPrice());
+                item.setOriginalPrice(detail.getOriginalPrice());
                 item.setQuantity(detail.getQuantity());
                 item.setLineTotal(detail.getLineTotal());
                 item.setDiscountAmount(detail.getDiscountAmount());

@@ -118,7 +118,7 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
     FLASH_SALE_NO_ITEMS(4306, "Phiên flash sale phải có ít nhất một sản phẩm", HttpStatus.BAD_REQUEST),
     INVALID_FLASH_PRICE(4307, "Giá flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
-    INVALID_FLASH_STOCK(4308, "Số lượng flash sale phải lớn hơn 0", HttpStatus.BAD_REQUEST),
+    INVALID_FLASH_STOCK(4308, "Số suất còn lại của phiên không được âm", HttpStatus.BAD_REQUEST),
     // D29: consumeStock trả 0 dòng = khách khác vừa chốt máy cuối cùng. Đơn KHÔNG
     // fail — dòng đó rơi về giá thường (D27), nên không cần mã lỗi để ném ra.
     // D32: perUserLimit hết suất cũng về giá thường (BR-F11) → mã dưới đây là
@@ -126,6 +126,30 @@ public enum ErrorCode {
     FLASH_PER_USER_LIMIT_REACHED(4310, "Bạn đã mua đủ số lượng tối đa cho sản phẩm flash sale này",
             HttpStatus.BAD_REQUEST),
     FLASH_SALE_PRODUCT_NOT_FOUND(4311, "Sản phẩm đưa vào phiên không tồn tại", HttpStatus.NOT_FOUND),
+    // Chặn tạo/sửa phiên trùng: cùng sản phẩm + khung giờ giao nhau với phiên
+    // CHƯA kết thúc. Phiên đã hết/dừng không cản (admin tái sử dụng được).
+    FLASH_SALE_OVERLAP(4312,
+            "Khung giờ của phiên bị trùng với một phiên khác cùng sản phẩm — hãy đổi thời gian hoặc sản phẩm",
+            HttpStatus.BAD_REQUEST),
+    // Kho phiên không được vượt tồn kho thật: nếu vượt, phiên quảng cáo còn suất
+    // nhưng khách không mua được (deductStock fail) → UX sai.
+    FLASH_STOCK_EXCEEDS_PRODUCT_STOCK(4313,
+            "Kho số lượng flash không được vượt tồn kho hiện tại của sản phẩm",
+            HttpStatus.BAD_REQUEST),
+    // Trần mỗi khách vượt suất còn lại của phiên → con số vượt là ảo. Chặn ở
+    // service vì cần so 2 trường trong cùng một dòng item.
+    FLASH_PER_USER_LIMIT_EXCEEDS_STOCK(4314,
+            "Giới hạn mỗi khách không được vượt số suất còn lại của phiên",
+            HttpStatus.BAD_REQUEST),
+    // Trần mỗi khách là BẮT BUỘC: để trống = vô hạn, một khách ôm hết suất giá
+    // sốc. Chặn ngay khi lưu phiên (V16).
+    FLASH_PER_USER_LIMIT_REQUIRED(4315,
+            "Vui lòng nhập số máy tối đa mỗi khách được mua trong phiên",
+            HttpStatus.BAD_REQUEST),
+    // Khách tăng số lượng trong giỏ vượt trần mỗi khách của phiên flash.
+    FLASH_PER_USER_LIMIT_EXCEEDED(4316,
+            "Bạn chỉ được mua tối đa số máy cho phép của phiên giá sốc",
+            HttpStatus.BAD_REQUEST),
 
     // === HOME BANNER (4400 - 4499) ===
     BANNER_NOT_FOUND(4401, "Không tìm thấy banner trang chủ", HttpStatus.NOT_FOUND),

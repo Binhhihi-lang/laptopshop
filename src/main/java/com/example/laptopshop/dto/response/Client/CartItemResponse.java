@@ -19,6 +19,8 @@ public class CartItemResponse {
     private Long price; // giá hiện tại (tính lại mỗi lần xem giỏ)
     private Long originalPrice; // giá gạch (null nếu không giảm giá)
     private Long flashPrice; // giá sốc nếu dòng đang trong phiên flash (D25), null = không
+    private Integer flashPerUserLimit; // trần mỗi khách của phiên; null = không giới hạn
+    private boolean flashLimitReached; // dòng này CÓ phiên nhưng khách đã hết suất → về giá thường
     private long quantity; // số lượng trong giỏ
     private Long lineTotal; // price * quantity (đã dùng flashPrice nếu có)
     private Long lineDiscount; // tiền promotion giảm cho dòng này (D5: best-of 1 promotion/dòng)

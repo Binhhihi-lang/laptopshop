@@ -12,12 +12,14 @@ public record FlashPriceView(
         String flashSaleId,
         /** Giá bán trong phiên (₫). */
         Long flashPrice,
-        /** Kho dành riêng cho phiên. */
+        /** Số suất CÒN LẠI của phiên (sống, tự giảm khi bán). */
         Integer flashStock,
         /** Đã bán trong phiên — FE vẽ progress "Đã bán x/y". */
         Integer soldInFlash,
         /** Lúc phiên kết thúc — đồng hồ đếm ngược. */
         java.time.LocalDateTime endAt,
+        /** Trần mỗi khách của phiên (gốc, không trừ đã mua); null = không giới hạn. */
+        Integer perUserLimit,
         /** Khách còn mua được bao nhiêu máy (D32); null = chưa xét, 0 = hết suất. */
         Integer perUserLimitLeft) {
 

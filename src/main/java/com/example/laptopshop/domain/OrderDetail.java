@@ -26,6 +26,10 @@ public class OrderDetail {
     // Long (không phải double) để cả hệ tiền dùng một kiểu, tránh sai số khi cộng trừ (L1/R22).
     private Long price;
 
+    // Giá GỐC của sản phẩm lúc mua (chưa trừ flash) — snapshot để FE hiện gạch ngang.
+    // NULL với đơn cũ (cột thêm sau) → FE hiện như trước, không có giá so sánh.
+    private Long originalPrice;
+
     // Tiền giảm của RIÊNG dòng này từ chương trình khuyến mại (snapshot — D2).
     // Long nullable: cột mới thêm vào bảng đã có dữ liệu → đơn cũ = NULL, KHÔNG dùng primitive long (D13/G2).
     private Long discountAmount;

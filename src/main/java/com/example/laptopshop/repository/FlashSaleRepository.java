@@ -32,4 +32,28 @@ public interface FlashSaleRepository extends JpaRepository<FlashSale, String> {
 
     /** Danh sách quản trị — xếp theo giờ mở phiên để bảng đọc như lịch trong ngày. */
     List<FlashSale> findAllByOrderByStartAtAsc();
+
+    /**
+     * Tìm phiên CHƯA kết thúc có item trùng sản phẩm VÀ khung giờ giao nhau với
+     * {@code [startAt, endAt]} — dùng để chặn tạo/sửa phiên trùng (TASK-001).
+     *
+     * <p>
+     * Bỏ qua {@code excludeId} (chính phiên đang sửa). Chỉ xét phiên còn hiệu lực
+     * ({@code endAt >= now}) — phiên đã hết/dừng không cản admin tạo phiên mới.
+     * Giao nhau: {@code startAt <= newEnd AND endAt >= newStart}.
+     */
+    @Query("""
+            SELECT DISTINCT f FROM FlashSale f
+            JOIN f.items i
+            WHERE f.id <> :excludeId
+              AND f.endAt >= :now
+              AND f.startAt <= :endAt
+              AND f.endAt >= :startAt
+              AND i.product.id IN :productIds
+            """)
+    List<FlashSale> findOverlapping(@Param("excludeId") String excludeId,
+            @Param("startAt") LocalDateTime startAt,
+            @Param("endAt") LocalDateTime endAt,
+            @Param("now") LocalDateTime now,
+            @Param("productIds") List<String> productIds);
 }

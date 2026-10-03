@@ -15,4 +15,14 @@ public class AppException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    /**
+     * Biến thể kèm message RIÊNG (ghi đè message của ErrorCode) — dùng khi cần nói
+     * rõ ngữ cảnh cụ thể, vd "Kho phiên của \"Dell XPS\" vượt tồn kho 90".
+     * HTTP status vẫn lấy theo {@code errorCode}.
+     */
+    public AppException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
 }

@@ -40,73 +40,55 @@ public interface FlashSaleItemRepository extends JpaRepository<FlashSaleItem, St
     List<FlashSaleItem> findByFlashSaleId(@Param("flashSaleId") String flashSaleId);
 
     /**
-     * Trừ kho phiên atomic (D29). Điều kiện {@code soldInFlash + qty <= flashStock}
-     * nằm trong UPDATE nên DB tự chặn; 2 khách chốt máy cuối song song thì đúng
-     * 1 câu có tác dụng. 0 dòng = kho cạn.
+     * Trừ kho phiên atomic (D29). {@code flashStock} là số CÒN LẠI nên trừ thẳng;
+     * điều kiện {@code flashStock >= qty} nằm trong UPDATE nên DB tự chặn. 0 dòng =
+     * kho cạn.
      */
     @Modifying
     @Query("""
             UPDATE FlashSaleItem i
-            SET i.soldInFlash = i.soldInFlash + :qty
+            SET i.flashStock = i.flashStock - :qty,
+                i.soldInFlash = i.soldInFlash + :qty
             WHERE i.id = :id
-              AND i.soldInFlash + :qty <= i.flashStock
+              AND i.flashStock >= :qty
             """)
     int consumeStock(@Param("id") String id, @Param("qty") long qty);
 
     /**
-     * Hoàn kho phiên khi hủy đơn (nối D12). Chặn dưới 0 để dữ liệu không âm nếu
-     * bị gọi lặp.
+     * Hoàn kho phiên khi hủy đơn (nối D12): cộng lại {@code flashStock}, trừ
+     * {@code soldInFlash}. Chặn dưới 0 để dữ liệu không âm nếu bị gọi lặp.
      */
     @Modifying
     @Query("""
             UPDATE FlashSaleItem i
-            SET i.soldInFlash = CASE
+            SET i.flashStock = i.flashStock + :qty,
+                i.soldInFlash = CASE
                     WHEN i.soldInFlash >= :qty THEN i.soldInFlash - :qty
                     ELSE 0
                 END
             WHERE i.id = :id
-              AND i.soldInFlash > 0
             """)
     int releaseStock(@Param("id") String id, @Param("qty") long qty);
 
     /**
-     * Đếm máy khách này đã mua trong một phiên (D32). Đi qua OrderDetail vì đơn
-     * không lưu id item flash; phiên suy ra từ product + khung giờ. Đơn canceled
-     * bị loại để hủy không mất lượt.
-     */
-    @Query("""
-            SELECT COALESCE(SUM(d.quantity), 0) FROM OrderDetail d
-            WHERE d.order.user.id = :userId
-              AND d.product.id = :productId
-              AND d.order.status <> com.example.laptopshop.domain.OrderStatus.CANCELLED
-              AND d.order.orderDate >= :startAt
-              AND d.order.orderDate <= :endAt
-            """)
-    long countQtyBoughtByUserInWindow(@Param("userId") String userId,
-            @Param("productId") String productId,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt);
-
-    /**
-     * Bản gộp cho NHIỀU sản phẩm cùng một phiên (BR-F14) — thay cho việc gọi
-     * {@link #countQtyBoughtByUserInWindow} từng sản phẩm một (N+1).
+     * Đếm máy khách này đã mua cho từng item flash (BR-F14/D32), gộp theo
+     * {@code flashSaleItemId} mà đơn đã lưu lúc chốt.
      *
      * <p>
-     * Trả về {@code [productId, tổngQty]} cho từng sản phẩm khách đã mua trong
-     * khung giờ phiên. Sản phẩm chưa mua lần nào sẽ KHÔNG có dòng nào trong kết
-     * quả — chỗ gọi tự hiểu là 0.
+     * Khớp ĐÚNG item (không dùng khung giờ phiên) nên hai phiên trùng giờ không
+     * đếm lẫn nhau. Đơn {@code CANCELLED} bị loại để hủy không mất lượt.
+     *
+     * <p>
+     * Trả về {@code [flashSaleItemId, tổngQty]} cho từng item khách đã mua; item
+     * chưa mua lần nào KHÔNG có dòng — chỗ gọi tự hiểu là 0.
      */
     @Query("""
-            SELECT d.product.id, COALESCE(SUM(d.quantity), 0) FROM OrderDetail d
+            SELECT d.flashSaleItemId, COALESCE(SUM(d.quantity), 0) FROM OrderDetail d
             WHERE d.order.user.id = :userId
-              AND d.product.id IN :productIds
+              AND d.flashSaleItemId IN :itemIds
               AND d.order.status <> com.example.laptopshop.domain.OrderStatus.CANCELLED
-              AND d.order.orderDate >= :startAt
-              AND d.order.orderDate <= :endAt
-            GROUP BY d.product.id
+            GROUP BY d.flashSaleItemId
             """)
-    List<Object[]> sumQtyBoughtByUserForProducts(@Param("userId") String userId,
-            @Param("productIds") List<String> productIds,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt);
+    List<Object[]> sumQtyBoughtByUserForItems(@Param("userId") String userId,
+            @Param("itemIds") List<String> itemIds);
 }

@@ -26,10 +26,13 @@ public class FlashSaleItemResponse {
     /** Giá bán thường — FE gạch ngang cạnh {@code flashPrice}. */
     private Long regularPrice;
 
+    /** Số suất CÒN LẠI của phiên (sống, tự giảm khi bán). */
     private Integer flashStock;
+
+    /** Số đã bán trong phiên (chỉ tăng). */
     private Integer soldInFlash;
 
-    /** Còn lại trong kho phiên — cùng {@code flashStock} vẽ progress "Đã bán x/y". */
+    /** Còn lại trong kho phiên — chính bằng {@code flashStock}. */
     private Integer remainingStock;
 
     /** null = không giới hạn mỗi khách (D32). */

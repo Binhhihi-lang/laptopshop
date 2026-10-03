@@ -79,32 +79,32 @@ class FlashSaleDomainTest {
     // ==================================================================
 
     @Test
-    @DisplayName("soldInFlash < flashStock → còn kho")
+    @DisplayName("flashStock (số còn lại) > 0 → còn kho")
     void conKhoFlash() {
         FlashSale sale = runningSale();
         assertTrue(item(sale, 10, 5, 1000L).hasFlashStock());
     }
 
     @Test
-    @DisplayName("soldInFlash == flashStock → hết kho, dòng về giá thường (D27)")
+    @DisplayName("flashStock == 0 → hết kho, dòng về giá thường (D27)")
     void hetKhoFlash() {
         FlashSale sale = runningSale();
-        assertFalse(item(sale, 10, 10, 1000L).hasFlashStock());
+        assertFalse(item(sale, 0, 10, 1000L).hasFlashStock());
     }
 
     @Test
-    @DisplayName("flashStock null → coi như còn kho (an toàn, không NPE)")
-    void flashStockNull_vanConKho() {
+    @DisplayName("flashStock null → hết kho (không NPE)")
+    void flashStockNull_hetKho() {
         FlashSale sale = runningSale();
-        assertTrue(item(sale, null, 0, 1000L).hasFlashStock());
+        assertFalse(item(sale, null, 0, 1000L).hasFlashStock());
     }
 
     @Test
-    @DisplayName("getRemainingFlashStock = flashStock − sold, sàn 0")
+    @DisplayName("getRemainingFlashStock = flashStock (số còn lại), sàn 0")
     void remainingKhongAm() {
         FlashSale sale = runningSale();
-        assertEquals(5, item(sale, 10, 5, 1000L).getRemainingFlashStock());
-        assertEquals(0, item(sale, 10, 12, 1000L).getRemainingFlashStock());
+        assertEquals(5, item(sale, 5, 5, 1000L).getRemainingFlashStock());
+        assertEquals(0, item(sale, 0, 12, 1000L).getRemainingFlashStock());
     }
 
     // ==================================================================

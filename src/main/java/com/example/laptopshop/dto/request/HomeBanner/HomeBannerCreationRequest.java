@@ -27,9 +27,6 @@ public class HomeBannerCreationRequest {
 
     private String subtitle;
 
-    /** Upload trực tiếp (form-data) — theo khuôn VoucherCreationRequest. */
-    private org.springframework.web.multipart.MultipartFile inputFile;
-
     /** Hoặc dán URL ảnh có sẵn. */
     private String imageUrl;
 

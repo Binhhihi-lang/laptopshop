@@ -40,9 +40,6 @@ public class FlashSale {
 
     private String description;
 
-    /** Ảnh banner đầu trang /flash-sale (URL Cloudinary). */
-    private String bannerImage;
-
     @Column(nullable = false)
     private LocalDateTime startAt;
 

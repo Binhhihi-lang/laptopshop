@@ -20,7 +20,6 @@ public class FlashSaleResponse {
     private String id;
     private String name;
     private String description;
-    private String bannerImage;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
 

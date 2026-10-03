@@ -47,6 +47,9 @@ public class FlashSaleTestSupport {
         item.setFlashPrice(flashPrice);
         item.setFlashStock(flashStock);
         item.setSoldInFlash(0);
+        // Trần mỗi khách BẮT BUỘC (V16) — mặc định bằng suất để không chặn gì;
+        // test nào cần siết thì tự setPerUserLimit lại rồi gọi saveItems.
+        item.setPerUserLimit(Math.max(1, flashStock));
         sale.getItems().add(item);
         return this.flashSaleRepository.save(sale);
     }

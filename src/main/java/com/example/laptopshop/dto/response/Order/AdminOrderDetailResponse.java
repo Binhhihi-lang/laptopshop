@@ -74,6 +74,8 @@ public class AdminOrderDetailResponse {
         private String productName;
         private String productImage;
         private Long price; // giá tại thời điểm mua
+        /** Giá gốc lúc mua (chưa trừ flash) — FE gạch ngang khi khác `price`. */
+        private Long originalPrice;
         private long quantity;
         private Long lineTotal; // price * quantity
         private Long discountAmount; // giảm từ khuyến mại cho dòng này (0 nếu không)

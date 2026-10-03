@@ -80,6 +80,8 @@ class OrderCheckoutIntegrationTest {
     @Autowired
     private com.example.laptopshop.repository.FlashSaleItemRepository flashSaleItemRepository;
     @Autowired
+    private CartService cartService;
+    @Autowired
     private jakarta.persistence.EntityManager entityManager;
 
     private User user;
@@ -593,6 +595,8 @@ class OrderCheckoutIntegrationTest {
         oldDetail.setProduct(product);
         oldDetail.setQuantity(1);
         oldDetail.setPrice(15_000_000L);
+        // Suất cá nhân đếm theo flashSaleItemId (BR-F14) → đơn cũ phải gắn đúng item.
+        oldDetail.setFlashSaleItemId(sale.getItems().get(0).getId());
         old.setOrderDetails(List.of(oldDetail));
         this.orderRepository.save(old);
         flashSaleSupport.saveItems(sale);
@@ -601,6 +605,103 @@ class OrderCheckoutIntegrationTest {
 
         assertEquals(20_000_000L, res.getItems().get(0).getPrice(),
                 "Hết suất mỗi khách thì về giá thường (D32 cách 1)");
+    }
+
+    @Test
+    @DisplayName("BR-F16: giỏ hàng gắn cờ flashLimitReached + trả trần mỗi khách để FE báo chữ")
+    void gioHangBaoHetSuatMoiKhach() {
+        addToCart(1);
+        var sale = flashSaleSupport.runningSaleFor(product, 15_000_000L, 10);
+        sale.getItems().get(0).setPerUserLimit(1);
+        // Đơn cũ đã mua 1 máy cùng item → khách đã hết suất.
+        Order old = new Order();
+        old.setOrderCode("OLD-FLASH-2");
+        old.setUser(user);
+        old.setStatus(OrderStatus.COMPLETED);
+        old.setOrderDate(LocalDateTime.now());
+        old.setDiscountAmount(0L);
+        old.setShippingFee(0L);
+        old.setTotalPrice(0L);
+        OrderDetail oldDetail = new OrderDetail();
+        oldDetail.setOrder(old);
+        oldDetail.setProduct(product);
+        oldDetail.setQuantity(1);
+        oldDetail.setPrice(15_000_000L);
+        oldDetail.setFlashSaleItemId(sale.getItems().get(0).getId());
+        old.setOrderDetails(List.of(oldDetail));
+        this.orderRepository.save(old);
+        flashSaleSupport.saveItems(sale);
+
+        var cart = cartService.getMyCart(user.getId());
+        var line = cart.getItems().get(0);
+
+        assertTrue(line.isFlashLimitReached(), "Đã hết suất → cờ phải bật để FE hiện chữ");
+        assertEquals(1, line.getFlashPerUserLimit(), "FE cần trần để nói 'tối đa 1 máy/khách'");
+        assertNull(line.getFlashPrice(), "Hết suất → không còn giá flash trên dòng");
+    }
+
+    @Test
+    @DisplayName("BR-F16: còn suất → giỏ hiện giá flash + trần, KHÔNG bật cờ")
+    void gioHangConSuatThiHienGiaFlash() {
+        addToCart(1);
+        var sale = flashSaleSupport.runningSaleFor(product, 15_000_000L, 10);
+        sale.getItems().get(0).setPerUserLimit(2);
+        flashSaleSupport.saveItems(sale);
+
+        var cart = cartService.getMyCart(user.getId());
+        var line = cart.getItems().get(0);
+
+        assertFalse(line.isFlashLimitReached());
+        assertEquals(15_000_000L, line.getFlashPrice());
+        assertEquals(2, line.getFlashPerUserLimit());
+    }
+
+    @Test
+    @DisplayName("V16: thêm vào giỏ vượt trần mỗi khách → FLASH_PER_USER_LIMIT_EXCEEDED")
+    void themGioVuotTranKhach_biChan() {
+        var sale = flashSaleSupport.runningSaleFor(product, 15_000_000L, 10);
+        sale.getItems().get(0).setPerUserLimit(1); // tối đa 1 máy/khách
+        flashSaleSupport.saveItems(sale);
+
+        // Khách xin 3 máy trong khi phiên chỉ cho 1 → phải chặn ngay ở giỏ.
+        var req = new com.example.laptopshop.dto.request.Client.AddToCartRequest();
+        req.setProductId(product.getId());
+        req.setQuantity(3);
+
+        AppException ex = assertThrows(AppException.class, () -> cartService.addItem(user.getId(), req));
+        assertEquals(ErrorCode.FLASH_PER_USER_LIMIT_EXCEEDED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("V16: tăng số lượng trong giỏ vượt trần mỗi khách → chặn")
+    void tangSoLuongVuotTranKhach_biChan() {
+        var sale = flashSaleSupport.runningSaleFor(product, 15_000_000L, 10);
+        sale.getItems().get(0).setPerUserLimit(2);
+        flashSaleSupport.saveItems(sale);
+        addToCart(1);
+
+        var req = new com.example.laptopshop.dto.request.Client.UpdateCartItemRequest();
+        req.setQuantity(3); // trần 2
+
+        AppException ex = assertThrows(AppException.class,
+                () -> cartService.updateQuantity(user.getId(), product.getId(), req));
+        assertEquals(ErrorCode.FLASH_PER_USER_LIMIT_EXCEEDED, ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("V16: số lượng bằng đúng trần → cho phép")
+    void soLuongBangTran_choPhep() {
+        var sale = flashSaleSupport.runningSaleFor(product, 15_000_000L, 10);
+        sale.getItems().get(0).setPerUserLimit(2);
+        flashSaleSupport.saveItems(sale);
+
+        var req = new com.example.laptopshop.dto.request.Client.AddToCartRequest();
+        req.setProductId(product.getId());
+        req.setQuantity(2);
+
+        var cart = cartService.addItem(user.getId(), req);
+        assertEquals(2, cart.getItems().get(0).getQuantity());
+        assertEquals(15_000_000L, cart.getItems().get(0).getFlashPrice(), "vẫn được giá sốc");
     }
 
     @Test
