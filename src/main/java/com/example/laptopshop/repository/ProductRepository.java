@@ -32,6 +32,16 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     // số lượng. Tự động áp dụng @SQLRestriction (soft-delete: deleted_at IS NULL).
     List<Product> findFirst5ByQuantityLessThanOrderByQuantityAsc(int qty);
 
+    // ===== DASHBOARD =====
+
+    /** Đếm sản phẩm theo cờ đang bán / ngừng bán (Dashboard). */
+    long countByActiveTrue();
+
+    long countByActiveFalse();
+
+    /** Đếm sản phẩm tồn kho dưới ngưỡng (Dashboard: sắp hết / nguy hiểm). */
+    long countByQuantityLessThan(long qty);
+
     // Tìm kiếm sản phẩm cho nhánh client (storefront): chỉ lấy product đang
     // active VÀ thuộc category đang active (quy tắc storefront đã chốt).
     // Tất cả filter là optional — NULL nghĩa là không lọc theo tiêu chí đó.

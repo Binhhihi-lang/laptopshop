@@ -16,6 +16,10 @@ Bộ tài liệu này mô tả **4 chức năng** được bổ sung vào Laptop
 > **Phần CHƯA LÀM** (14 hạng mục cho sprint sau) nằm ở [05-backlog.md](05-backlog.md) —
 > gồm cả một **bug cần sửa sớm** (BL-05: `PromotionType` chưa bị chặn).
 
+> **Tài liệu khác trong thư mục này:** [06-dashboard.md](06-dashboard.md) — Bảng điều khiển
+> quản trị (số liệu thật, biểu đồ doanh thu, phân quyền Admin/Staff). Không thuộc module
+> khuyến mại nhưng dùng chung quy ước tài liệu và ma trận phân quyền ở §7.
+
 ---
 
 ## 1. Bối cảnh & mục tiêu

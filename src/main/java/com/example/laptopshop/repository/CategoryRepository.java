@@ -17,4 +17,7 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     // Dùng cho nhánh client (storefront) — chỉ hiển thị category đang bật.
     List<Category> findByActiveTrueOrderByDisplayOrderAsc();
 
+    // Đếm danh mục đang hoạt động (Dashboard).
+    long countByActiveTrue();
+
 }

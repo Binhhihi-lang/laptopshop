@@ -161,6 +161,9 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
     INVALID_BANNER_TARGET(4406, "Đối tượng của banner không tồn tại hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
 
+    // === DASHBOARD (4500 - 4599) ===
+    INVALID_DASHBOARD_RANGE(4501, "Khoảng thời gian không hợp lệ", HttpStatus.BAD_REQUEST),
+
     // === ORDER & CART MODULE (5000 - 5999 )
     CART_ITEM_NOT_FOUND(5001, "Không tìm thấy sản phẩm trong giỏ hàng", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND(5002, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),

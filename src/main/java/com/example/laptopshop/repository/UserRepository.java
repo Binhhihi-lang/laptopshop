@@ -25,6 +25,9 @@ public interface UserRepository extends JpaRepository<User, String> {
     // Đếm số user đang active (dùng cho KPI "Người dùng hoạt động" trên Dashboard)
     long countByActiveTrue();
 
+    /** Đếm khách đăng ký trong khoảng thời gian (Dashboard — BR-D06, cần READ_USER). */
+    long countByCreatedAtAfter(java.time.LocalDateTime since);
+
     /**
      * Tìm khách cho picker gán voucher. Lọc theo tên hoặc email, chỉ tài khoản
      * đang hoạt động — gán cho tài khoản đã khoá thì khách không dùng được.

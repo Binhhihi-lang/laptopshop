@@ -62,4 +62,32 @@ public interface VoucherRepository extends JpaRepository<Voucher, String> {
             WHERE v.id = :id
             """)
     int decrementUsedCount(@Param("id") String id);
+
+    // ===== DASHBOARD =====
+
+    /**
+     * Voucher ĐANG CHẠY (BR-D18): đang bật VÀ nằm trong khoảng
+     * {@code startDate..expiryDate}. Chỉ kiểm {@code active} là chưa đủ — voucher
+     * bật nhưng chưa tới ngày bắt đầu hoặc đã quá hạn thì không dùng được.
+     * {@code startDate}/{@code expiryDate} null = không giới hạn phía đó.
+     */
+    @Query("""
+            SELECT COUNT(v) FROM Voucher v
+            WHERE v.active = true
+              AND (v.startDate IS NULL OR v.startDate <= :now)
+              AND (v.expiryDate IS NULL OR v.expiryDate >= :now)
+            """)
+    long countActiveVouchers(@Param("now") java.time.LocalDateTime now);
+
+    /** Voucher sắp hết hạn: đang chạy và hết hạn trong khoảng {@code [now, soon]}. */
+    @Query("""
+            SELECT COUNT(v) FROM Voucher v
+            WHERE v.active = true
+              AND v.expiryDate IS NOT NULL
+              AND v.expiryDate >= :now
+              AND v.expiryDate <= :soon
+            """)
+    long countExpiringSoon(
+            @Param("now") java.time.LocalDateTime now,
+            @Param("soon") java.time.LocalDateTime soon);
 }

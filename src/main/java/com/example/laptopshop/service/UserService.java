@@ -353,9 +353,10 @@ public class UserService {
     }
 
     // Cập nhật HỒ SƠ CÁ NHÂN của chính user đang đăng nhập (endpoint /me).
-    // CHỈ cho phép đổi fullName / phone / address / avatar. KHÔNG đụng đến
-    // email, roleNames, active, password — đảm bảo STAFF/user thường không tự
-    // nâng quyền hay đổi email của mình. Không evict cache quyền vì quyền không đổi.
+    // Cho phép đổi fullName / email / phone / address / avatar. Email đổi được
+    // nhưng phải validate trùng (trùng chính mình thì bỏ qua). KHÔNG đụng đến
+    // roleNames / active / password — user không tự nâng quyền được.
+    // Không evict cache quyền vì quyền không đổi.
     @Transactional
     public UserResponse handleUpdateMyProfile(String userId, UserProfileUpdateRequest request) {
         User existingUser = getUserById(userId);
@@ -363,10 +364,21 @@ public class UserService {
         if (request.getFullName() != null) {
             existingUser.setFullName(request.getFullName().trim());
         }
+        // Đổi email: chỉ áp dụng khi khác email hiện tại, và không trùng người khác
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String newEmail = request.getEmail().trim();
+            if (!newEmail.equalsIgnoreCase(existingUser.getEmail())) {
+                validateEmail(newEmail, userId);
+                existingUser.setEmail(newEmail);
+            }
+        }
         if (request.getPhone() != null) {
             existingUser.setPhone(request.getPhone().trim());
         }
         if (request.getAddress() != null) {
+            // `address` chỉ lưu phần ĐƯỜNG (số nhà, đường). Phường/xã và
+            // tỉnh/thành nằm ở cột riêng (provinceCode/Name, communeCode/Name) —
+            // KHÔNG ghép vào đây, tránh trùng lặp khi hiển thị/đặt hàng.
             existingUser.setAddress(request.getAddress().trim());
         }
         // Địa chỉ 2 cấp sau sáp nhập 2025 — code + name lưu sẵn để hiển thị

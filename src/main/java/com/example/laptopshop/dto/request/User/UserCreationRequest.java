@@ -21,8 +21,14 @@ public class UserCreationRequest {
     private String password;
 
     private String fullName;
-    private String address;
+    private String address; // chỉ phần đường (số nhà, đường)
     private String phone;
+
+    // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu ở cột riêng, KHÔNG ghép vào address
+    private String provinceCode;
+    private String provinceName;
+    private String communeCode;
+    private String communeName;
 
     // Đổi từ roleName (String, 1 role) sang roleNames (List<String>, nhiều
     // role). Form-data gửi nhiều field cùng tên "roleNames" (vd checkbox nhiều

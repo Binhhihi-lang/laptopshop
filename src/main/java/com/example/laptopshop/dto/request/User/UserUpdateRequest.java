@@ -15,7 +15,13 @@ public class UserUpdateRequest {
     private String email; // Dùng để validate trùng lặp nếu họ muốn đổi email
     private String fullName;
     private String phone;
-    private String address;
+    private String address; // chỉ phần đường (số nhà, đường)
+
+    // Địa chỉ 2 cấp sau sáp nhập 2025 — lưu ở cột riêng, KHÔNG ghép vào address
+    private String provinceCode;
+    private String provinceName;
+    private String communeCode;
+    private String communeName;
 
     @NotEmpty(message = "USER_ROLES_EMPTY")
     private List<String> roleNames;

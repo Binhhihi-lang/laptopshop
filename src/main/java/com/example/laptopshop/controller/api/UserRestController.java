@@ -144,8 +144,9 @@ public class UserRestController {
     }
 
     // 9. Cập nhật hồ sơ cá nhân của chính người dùng đang đăng nhập.
-    // Chỉ nhận fullName/phone/address/avatar (xem UserProfileUpdateRequest),
-    // đảm bảo không thể tự đổi email / vai trò / quyền.
+    // Nhận fullName/email/phone/address/avatar (xem UserProfileUpdateRequest);
+    // email đổi được nhưng validate trùng (trùng chính mình thì bỏ qua).
+    // KHÔNG nhận vai trò / quyền — không thể tự nâng quyền.
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<UserResponse> updateMyProfile(
