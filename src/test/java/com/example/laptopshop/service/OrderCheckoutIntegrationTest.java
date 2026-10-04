@@ -303,18 +303,21 @@ class OrderCheckoutIntegrationTest {
     }
 
     @Test
-    @DisplayName("D11: gửi cả voucherCode lẫn userVoucherId → VOUCHER_AND_VOUCHER_CONFLICT")
-    void guiCaHaiLoaiMa() {
+    @DisplayName("Voucher trong ví đã dùng → USER_VOUCHER_ALREADY_USED")
+    void voucherDaDung_biChan() {
         addToCart(1);
-        Voucher c = voucher("CONFLICT", 100_000L, null);
+        Voucher c = voucher("USEDV", 100_000L, null);
         UserVoucher v = walletVoucher(c);
+        v.setStatus(UserVoucherStatus.USED);
+        v.setUsedAt(LocalDateTime.now());
+        this.userVoucherRepository.save(v);
+
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("CONFLICT");
         req.setUserVoucherId(v.getId());
 
         AppException ex = assertThrows(AppException.class,
                 () -> orderService.createOrder(user.getId(), req));
-        assertEquals(ErrorCode.VOUCHER_AND_VOUCHER_CONFLICT, ex.getErrorCode());
+        assertEquals(ErrorCode.USER_VOUCHER_ALREADY_USED, ex.getErrorCode());
     }
 
     @Test
@@ -345,29 +348,21 @@ class OrderCheckoutIntegrationTest {
     }
 
     @Test
-    @DisplayName("D15: gõ mã đã đạt perUserLimit → VOUCHER_PER_USER_LIMIT_REACHED")
-    void goMaQuaGioiHanMoiKhach() {
+    @DisplayName("BUG-031: claim voucher (chưa dùng) + perUserLimit=1 → vẫn dùng được")
+    void claimChuaDung_khongChan() {
         addToCart(1);
-        // perUserLimit=1 nhưng đã có 1 đơn trước đó dùng mã này.
-        Voucher c = voucher("LIMIT1", 100_000L, 1);
-        Order old = new Order();
-        old.setOrderCode("OLD-001");
-        old.setUser(user);
-        old.setVoucher(c);
-        old.setStatus(OrderStatus.COMPLETED);
-        old.setOrderDate(LocalDateTime.now());
-        old.setDiscountAmount(0L);
-        old.setShippingFee(0L);
-        old.setTotalPrice(0L);
-        this.orderRepository.save(old);
+        // Voucher perUserLimit=1, khách đã CLAIM vào ví (bản ghi AVAILABLE) nhưng
+        // CHƯA dùng lần nào → phải dùng được. Trước đây đếm cả bản ghi AVAILABLE
+        // nên báo VOUCHER_PER_USER_LIMIT_REACHED oan ngay khi vừa lưu mã.
+        Voucher c = voucher("CLAIM1", 100_000L, 1);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("LIMIT1");
+        req.setUserVoucherId(v.getId());
 
-        AppException ex = assertThrows(AppException.class,
-                () -> orderService.createOrder(user.getId(), req));
-        // Trả ĐÚNG nhánh vi phạm (không còn gộp thành VOUCHER_NOT_USABLE chung).
-        assertEquals(ErrorCode.VOUCHER_PER_USER_LIMIT_REACHED, ex.getErrorCode());
+        OrderDetailResponse res = orderService.createOrder(user.getId(), req);
+
+        assertEquals(100_000L, res.getVoucherDiscount(), "Claim chưa dùng phải áp được voucher");
     }
 
     @Test
@@ -382,9 +377,10 @@ class OrderCheckoutIntegrationTest {
         c.setScopeType(com.example.laptopshop.domain.ScopeType.ALL);
         c.setMinOrderValue(25_000_000L);
         this.voucherRepository.save(c);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("MINHIGH");
+        req.setUserVoucherId(v.getId());
 
         AppException ex = assertThrows(AppException.class,
                 () -> orderService.createOrder(user.getId(), req));
@@ -406,9 +402,10 @@ class OrderCheckoutIntegrationTest {
         c.getScopes().add(scope);
         c.setMinOrderValue(10_000_000L);
         this.voucherRepository.save(c);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("DELLONLY");
+        req.setUserVoucherId(v.getId());
 
         AppException ex = assertThrows(AppException.class,
                 () -> orderService.createOrder(user.getId(), req));
@@ -710,8 +707,9 @@ class OrderCheckoutIntegrationTest {
         addToCart(1);
         // Đơn 20tr, voucher 50tr → cho dùng, giảm hết 20tr. KHÔNG ném lỗi.
         Voucher c = voucher("BIG", 50_000_000L, null);
+        UserVoucher v = walletVoucher(c);
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("BIG");
+        req.setUserVoucherId(v.getId());
 
         OrderDetailResponse res = orderService.createOrder(user.getId(), req);
 
@@ -751,10 +749,11 @@ class OrderCheckoutIntegrationTest {
         this.promotionRepository.save(promo);
 
         // Voucher "giảm thẳng 500k" — lớn hơn cả đơn.
-        voucher("GIAM500K", 500_000L, null);
+        Voucher c = voucher("GIAM500K", 500_000L, null);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("GIAM500K");
+        req.setUserVoucherId(v.getId());
 
         OrderDetailResponse res = orderService.createOrder(user.getId(), req);
 
@@ -802,9 +801,10 @@ class OrderCheckoutIntegrationTest {
         c.setUsageLimit(1);
         c.setUsedCount(1);
         this.voucherRepository.save(c);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("HETLUOT");
+        req.setUserVoucherId(v.getId());
 
         AppException ex = assertThrows(AppException.class,
                 () -> orderService.createOrder(user.getId(), req));
@@ -824,9 +824,10 @@ class OrderCheckoutIntegrationTest {
         Voucher c = voucher("NULLCOUNT", 100_000L, null);
         c.setUsedCount(null); // cột thêm ở Sprint 1 → voucher cũ có thể NULL
         this.voucherRepository.save(c);
+        UserVoucher v = walletVoucher(c);
 
         CreateOrderRequest req = orderRequest();
-        req.setVoucherCode("NULLCOUNT");
+        req.setUserVoucherId(v.getId());
 
         OrderDetailResponse res = orderService.createOrder(user.getId(), req);
 

@@ -7,8 +7,6 @@ import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.VoucherType;
 import com.example.laptopshop.domain.ScopeType;
@@ -28,9 +26,7 @@ public class VoucherUpdateRequest {
 
     private Integer discountPercent;
     private Long discountAmount;
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime startDate; // null = hiệu lực ngay
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime expiryDate;
     private Integer usageLimit;
 
@@ -44,8 +40,5 @@ public class VoucherUpdateRequest {
     private VoucherType voucherType;
 
     private boolean active = true;
-    private MultipartFile inputFile;
-    private boolean removeImage = false; // true = xóa ảnh hiện tại nếu không gửi file mới
-    private String imageUrl; // URL ảnh online (thay cho inputFile khi admin dán link)
 
 }

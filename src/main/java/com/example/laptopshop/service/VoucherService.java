@@ -8,13 +8,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.laptopshop.domain.Voucher;
 import com.example.laptopshop.domain.VoucherScope;
 import com.example.laptopshop.domain.VoucherType;
-import com.example.laptopshop.domain.OrderStatus;
 import com.example.laptopshop.domain.ScopeType;
+import com.example.laptopshop.domain.UserVoucherStatus;
 import com.example.laptopshop.dto.request.Voucher.VoucherCreationRequest;
 import com.example.laptopshop.dto.request.Voucher.VoucherUpdateRequest;
 import com.example.laptopshop.dto.response.Voucher.VoucherResponse;
@@ -22,9 +21,7 @@ import com.example.laptopshop.exception.AppException;
 import com.example.laptopshop.exception.ErrorCode;
 import com.example.laptopshop.mapper.VoucherMapper;
 import com.example.laptopshop.repository.VoucherRepository;
-import com.example.laptopshop.repository.OrderRepository;
 import com.example.laptopshop.repository.UserVoucherRepository;
-import com.example.laptopshop.service.UploadService;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Service
@@ -32,9 +29,7 @@ public class VoucherService {
 
     VoucherRepository voucherRepository;
     VoucherMapper voucherMapper;
-    UploadService uploadService;
     UserVoucherRepository userVoucherRepository;
-    OrderRepository orderRepository;
 
 
     @Transactional(readOnly = true)
@@ -63,8 +58,8 @@ public class VoucherService {
         validateNumericBounds(request);
 
         // Map các field thuần (discountPercent, discountAmount, expiryDate) từ DTO
-        // sang Entity qua MapStruct. code/usageLimit/usedCount/image KHÔNG được map
-        // ở đây (đã ignore trong VoucherMapper) vì cần xử lý riêng bên dưới.
+        // sang Entity qua MapStruct. code/usageLimit/usedCount KHÔNG được map ở đây
+        // (đã ignore trong VoucherMapper) vì cần xử lý riêng bên dưới.
         Voucher voucher = this.voucherMapper.toEntity(request);
         voucher.setCode(request.getCode().trim().toUpperCase());
         voucher.setUsageLimit(
@@ -76,18 +71,6 @@ public class VoucherService {
         // Voucher mới tạo luôn bắt đầu từ 0 lượt đã dùng, không cho client tự set
         voucher.setUsedCount(0);
         applyScopes(voucher, request.getScopeType(), request.getScopeValues());
-
-        // Xử lý upload ảnh voucher nếu có (ưu tiên file mới, rồi tới URL online)
-        MultipartFile file = request.getInputFile();
-        if (file != null && !file.isEmpty()) {
-            String image = this.uploadService.handleSaveUploadFile(file, "voucher");
-            voucher.setImage(image);
-        } else {
-            String imageFromUrl = this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "voucher");
-            if (imageFromUrl != null) {
-                voucher.setImage(imageFromUrl);
-            }
-        }
 
         Voucher voucherSaved = this.voucherRepository.save(voucher);
         return this.voucherMapper.toResponse(voucherSaved);
@@ -110,23 +93,6 @@ public class VoucherService {
         voucher.setUsageLimit(
                 request.getUsageLimit() == null || request.getUsageLimit() < 0 ? 0 : request.getUsageLimit());
         applyScopes(voucher, request.getScopeType(), request.getScopeValues());
-
-        // Xử lý ảnh: ưu tiên file mới > URL online > cờ xóa; còn lại giữ nguyên ảnh hiện tại
-        MultipartFile file = request.getInputFile();
-        boolean hasNewFile = file != null && !file.isEmpty();
-        boolean hasImageUrl = request.getImageUrl() != null && !request.getImageUrl().isBlank();
-        if (hasNewFile || hasImageUrl) {
-            if (voucher.getImage() != null) {
-                this.uploadService.handleDeleteFile(voucher.getImage());
-            }
-            String newImage = hasNewFile
-                    ? this.uploadService.handleSaveUploadFile(file, "voucher")
-                    : this.uploadService.handleSaveUploadUrl(request.getImageUrl(), "voucher");
-            voucher.setImage(newImage);
-        } else if (request.isRemoveImage() && voucher.getImage() != null) {
-            this.uploadService.handleDeleteFile(voucher.getImage());
-            voucher.setImage(null);
-        }
 
         // usedCount KHÔNG cho cập nhật thủ công qua form update, chỉ hệ thống tự tăng
         // khi voucher được áp dụng vào đơn hàng
@@ -162,28 +128,19 @@ public class VoucherService {
         }
     }
 
-    // Xóa mềm voucher theo id (nhờ @SQLDelete ở Voucher.java). Xóa ảnh Cloudinary trước.
+    // Xóa mềm voucher theo id (nhờ @SQLDelete ở Voucher.java).
     public void deleteVoucher(String id) {
         Voucher voucher = getVoucherById(id);
-        if (voucher.getImage() != null) {
-            this.uploadService.handleDeleteFile(voucher.getImage());
-        }
         this.voucherRepository.delete(voucher);
     }
 
-    // Xóa hàng loạt voucher theo danh sách id: xóa ảnh vật lý từng voucher trước khi
-    // xóa record (giống deleteVoucher đơn), wrap trong 1 transaction để nhất quán.
+    // Xóa hàng loạt voucher theo danh sách id, wrap trong 1 transaction để nhất quán.
     // Nhờ @SQLDelete, deleteAll() tự động đổi thành xóa MỀM (UPDATE deleted_at).
     @Transactional
     public void deleteVouchersByIds(List<String> ids) {
         List<Voucher> vouchers = this.voucherRepository.findAllById(ids);
         if (vouchers.size() != ids.size()) {
             throw new AppException(ErrorCode.VOUCHER_NOT_FOUND);
-        }
-        for (Voucher voucher : vouchers) {
-            if (voucher.getImage() != null) {
-                this.uploadService.handleDeleteFile(voucher.getImage());
-            }
         }
         this.voucherRepository.deleteAll(vouchers);
     }
@@ -281,15 +238,13 @@ public class VoucherService {
     }
 
     /**
-     * Khách đã chạm trần {@code perUserLimit} của voucher này chưa? (D15)
+     * Khách đã chạm trần {@code perUserLimit} của voucher này chưa?
      *
      * <p>
-     * Voucher có HAI đường vào đơn nên phải đếm ở hai nguồn: voucher lấy từ ví
-     * ({@code user_vouchers}) và mã gõ tay ({@code orders}). Đếm riêng từng nguồn
-     * sẽ hở: khách gõ mã 1 lần rồi claim voucher cùng voucher đó để dùng lần 2.
-     *
-     * <p>
-     * Đơn {@code CANCELLED} bị loại — hủy đơn không tính là đã dùng.
+     * Voucher chỉ vào đơn qua VÍ (đã bỏ đường gõ mã tay), nên chỉ đếm bản ghi
+     * trong {@code user_vouchers} ở trạng thái ĐÃ DÙNG. Claim (nhận) tạo bản ghi
+     * AVAILABLE — chưa dùng thì không được tính là một lượt, nếu không khách vừa
+     * lưu mã đã bị báo "hết lượt".
      */
     @Transactional(readOnly = true)
     public boolean hasReachedPerUserLimit(String userId, Voucher voucher) {
@@ -297,10 +252,9 @@ public class VoucherService {
                 || voucher.getPerUserLimit() <= 0) {
             return false; // null/<=0 = không giới hạn (P3)
         }
-        long fromWallet = this.userVoucherRepository.countByUserIdAndVoucherId(userId, voucher.getId());
-        long typed = this.orderRepository.countByUserIdAndVoucherIdAndStatusNot(
-                userId, voucher.getId(), OrderStatus.CANCELLED);
-        return fromWallet + typed >= voucher.getPerUserLimit();
+        long used = this.userVoucherRepository.countByUserIdAndVoucherIdAndStatus(
+                userId, voucher.getId(), UserVoucherStatus.USED);
+        return used >= voucher.getPerUserLimit();
     }
 
     /**

@@ -205,15 +205,6 @@ public class OrderService {
             promoByProduct.put(lr.productId(), lr);
         }
 
-        // D11: hai đường giảm giá loại trừ nhau — gửi cả hai là khách (hoặc FE)
-        // nhầm, chặn hẳn thay vì chọn đại một đường rồi thu sai tiền.
-        boolean hasVoucher = request.getVoucherCode() != null && !request.getVoucherCode().isBlank();
-        boolean hasWalletVoucher = request.getUserVoucherId() != null
-                && !request.getUserVoucherId().isBlank();
-        if (hasVoucher && hasWalletVoucher) {
-            throw new AppException(ErrorCode.VOUCHER_AND_VOUCHER_CONFLICT);
-        }
-
         // D22: mức giảm tính trên tiền hàng KHỚP PHẠM VI (đã trừ promotion của
         // dòng), không phải tổng giỏ. Dùng chung checkVoucherRules với preview ở
         // trang giỏ để hai đường không bao giờ lệch luật.
@@ -230,15 +221,14 @@ public class OrderService {
                 })
                 .toList();
 
+        // Voucher chỉ vào đơn qua VÍ (đã bỏ đường gõ mã tay).
         Voucher voucher = null;
         UserVoucher walletVoucher = null;
         long voucherDiscount = 0L;
 
-        if (hasWalletVoucher) {
+        if (request.getUserVoucherId() != null && !request.getUserVoucherId().isBlank()) {
             walletVoucher = this.voucherWalletService.getUsableVoucher(userId, request.getUserVoucherId());
             voucher = walletVoucher.getVoucher();
-        } else if (hasVoucher) {
-            voucher = resolveVoucher(request.getVoucherCode());
         }
 
         if (voucher != null) {
@@ -620,38 +610,31 @@ public class OrderService {
      * đã trừ promotion của dòng), không phải tổng giỏ.
      *
      * <p>
-     * Vẫn trả HTTP 200 kèm cờ {@code valid} (kể cả mã sai) để FE hiện thông báo
-     * inline dưới ô nhập mã — nhưng message lấy từ {@link ErrorCode} chi tiết, để
-     * preview và lúc chốt đơn nói CÙNG một lý do.
+     * Voucher chỉ vào đơn qua VÍ — request bắt buộc có {@code userVoucherId}.
+     * Vẫn trả HTTP 200 kèm cờ {@code valid} để FE hiện thông báo inline, nhưng
+     * message lấy từ {@link ErrorCode} chi tiết, để preview và lúc chốt đơn nói
+     * CÙNG một lý do.
      */
     @Transactional(readOnly = true)
     public VoucherValidationResponse validateVoucher(String userId, ValidateVoucherRequest request) {
-        Voucher voucher;
-        if (request.getUserVoucherId() != null && !request.getUserVoucherId().isBlank()) {
-            // BR-V13: nhánh chọn voucher TỪ VÍ. Trước đây không có đường này nên FE
-            // tự tính số tiền → bỏ qua phạm vi voucher → lệch với số BE thu.
-            UserVoucher walletVoucher = this.userVoucherRepository
-                    .findByIdAndUserId(request.getUserVoucherId(), userId).orElse(null);
-            if (walletVoucher == null) {
-                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_NOT_FOUND.getMessage());
-            }
-            if (walletVoucher.getStatus() == UserVoucherStatus.USED) {
-                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_ALREADY_USED.getMessage());
-            }
-            if (!walletVoucher.isAvailableAt(LocalDateTime.now())) {
-                return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_EXPIRED.getMessage());
-            }
-            voucher = walletVoucher.getVoucher();
-        } else {
-            String code = request.getCode();
-            if (code == null || code.isBlank()) {
-                return VoucherValidationResponse.invalid(ErrorCode.VOUCHER_CODE_EMPTY.getMessage());
-            }
-            voucher = this.voucherRepository.findByCodeIgnoreCase(code.trim()).orElse(null);
-            if (voucher == null) {
-                return VoucherValidationResponse.invalid(ErrorCode.VOUCHER_NOT_FOUND.getMessage());
-            }
+        // Voucher chỉ vào đơn qua VÍ (đã bỏ đường gõ mã tay) — bắt buộc có
+        // userVoucherId trỏ tới một voucher trong ví của chính khách.
+        String userVoucherId = request.getUserVoucherId();
+        if (userVoucherId == null || userVoucherId.isBlank()) {
+            return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_NOT_FOUND.getMessage());
         }
+        UserVoucher walletVoucher = this.userVoucherRepository
+                .findByIdAndUserId(userVoucherId, userId).orElse(null);
+        if (walletVoucher == null) {
+            return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_NOT_FOUND.getMessage());
+        }
+        if (walletVoucher.getStatus() == UserVoucherStatus.USED) {
+            return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_ALREADY_USED.getMessage());
+        }
+        if (!walletVoucher.isAvailableAt(LocalDateTime.now())) {
+            return VoucherValidationResponse.invalid(ErrorCode.USER_VOUCHER_EXPIRED.getMessage());
+        }
+        Voucher voucher = walletVoucher.getVoucher();
 
         CartPricing pricing = this.cartService.priceCart(userId);
         ErrorCode error = checkVoucherRules(userId, voucher, pricing.linesForVoucher());
@@ -721,23 +704,6 @@ public class OrderService {
             return ErrorCode.VOUCHER_EXPIRED;
         }
         return ErrorCode.VOUCHER_OUT_OF_STOCK;
-    }
-
-    /**
-     * Tra voucher để áp vào đơn. Khác {@link #validateVoucher}: mã SAI ở đây ném
-     * lỗi thay vì trả về invalid, vì lúc này khách đã bấm "Đặt hàng" — không
-     * được âm thầm bỏ qua mã và thu nhiều tiền hơn khách tưởng.
-     */
-    private Voucher resolveVoucher(String voucherCode) {
-        if (voucherCode == null || voucherCode.isBlank()) {
-            return null;
-        }
-        Voucher voucher = this.voucherRepository.findByCodeIgnoreCase(voucherCode.trim())
-                .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
-        if (!this.voucherService.isVoucherUsable(voucher)) {
-            throw new AppException(resolveUnusableReason(voucher));
-        }
-        return voucher;
     }
 
     // ===== Sinh mã đơn =====

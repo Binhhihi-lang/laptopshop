@@ -1,7 +1,5 @@
 package com.example.laptopshop.repository;
 
-import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,8 +9,6 @@ import com.example.laptopshop.domain.Voucher;
 
 public interface VoucherRepository extends JpaRepository<Voucher, String> {
     Voucher save(Voucher voucher);
-
-    Optional<Voucher> findByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCase(String code);
 

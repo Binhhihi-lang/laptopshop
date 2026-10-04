@@ -8,7 +8,6 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -56,11 +55,14 @@ public class VoucherRestController {
         return response;
     }
 
-    // Voucher có ảnh nên nhận dữ liệu dạng form-data qua @ModelAttribute (giống
-    // Category/Product) để hỗ trợ upload ảnh. Toàn bộ map/validate/xử lý ảnh nằm ở Service.
+    // Voucher không còn ảnh nên nhận JSON qua @RequestBody (giống Promotion).
+    // Trước đây dùng @ModelAttribute (form-data) vì có upload ảnh — form-data khiến
+    // toàn bộ trường text đi qua giới hạn maxPostSize của Tomcat (mặc định 2MB), thêm
+    // mô tả dài / nhiều giá trị phạm vi là vượt → "Maximum upload size exceeded".
+    // JSON không đi qua giới hạn đó.
     @PostMapping("/vouchers")
     @PreAuthorize("hasAuthority('CREATE_VOUCHER')")
-    public ApiResponse<VoucherResponse> createVoucher(@Valid @ModelAttribute VoucherCreationRequest request) {
+    public ApiResponse<VoucherResponse> createVoucher(@Valid @RequestBody VoucherCreationRequest request) {
         VoucherResponse created = this.voucherService.createVoucher(request);
         ApiResponse<VoucherResponse> response = new ApiResponse<>();
         response.setResult(created);
@@ -70,7 +72,7 @@ public class VoucherRestController {
     @PutMapping("/vouchers/{id}")
     @PreAuthorize("hasAuthority('UPDATE_VOUCHER')")
     public ApiResponse<VoucherResponse> updateVoucher(@PathVariable String id,
-            @Valid @ModelAttribute VoucherUpdateRequest request) {
+            @Valid @RequestBody VoucherUpdateRequest request) {
         VoucherResponse updated = this.voucherService.updateVoucher(id, request);
         ApiResponse<VoucherResponse> response = new ApiResponse<>();
         response.setResult(updated);

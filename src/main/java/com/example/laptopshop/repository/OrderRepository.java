@@ -66,12 +66,6 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     long countByStatus(OrderStatus status);
 
     /**
-     * Nguồn đếm {@code perUserLimit} cho MÃ GÕ TAY (D15): đếm đơn của khách đã
-     * dùng voucher này. Loại {@code CANCELLED} — hủy đơn không tính là đã dùng.
-     */
-    long countByUserIdAndVoucherIdAndStatusNot(String userId, String voucherId, OrderStatus status);
-
-    /**
      * Đơn VNPay chưa trả tiền đã quá hạn giữ hàng — job dọn đơn dùng để hủy và
      * hoàn tồn kho. Lọc theo orderDate nên không cần cột hạn riêng.
      */

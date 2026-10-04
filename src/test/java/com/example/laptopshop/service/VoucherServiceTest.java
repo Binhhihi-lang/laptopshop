@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -21,17 +20,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.laptopshop.domain.Voucher;
 import com.example.laptopshop.domain.VoucherScope;
-import com.example.laptopshop.domain.OrderStatus;
 import com.example.laptopshop.domain.ScopeType;
+import com.example.laptopshop.domain.UserVoucherStatus;
 import com.example.laptopshop.mapper.VoucherMapper;
 import com.example.laptopshop.repository.VoucherRepository;
-import com.example.laptopshop.repository.OrderRepository;
 import com.example.laptopshop.repository.UserVoucherRepository;
 import com.example.laptopshop.service.VoucherService.EligibleLine;
 
 /**
  * Test VoucherService
- * D22 ({@code eligibleAmount} — cơ sở tính giảm) và D15 (đếm perUserLimit).
+ * D22 ({@code eligibleAmount} — cơ sở tính giảm) và perUserLimit (đếm lượt đã dùng).
  */
 @ExtendWith(MockitoExtension.class)
 class VoucherServiceTest {
@@ -44,8 +42,6 @@ class VoucherServiceTest {
     private UploadService uploadService;
     @Mock
     private UserVoucherRepository userVoucherRepository;
-    @Mock
-    private OrderRepository orderRepository;
 
     @InjectMocks
     private VoucherService voucherService;
@@ -190,11 +186,11 @@ class VoucherServiceTest {
     }
 
     // ==================================================================
-    // D15 — perUserLimit đếm GỘP cả 2 nguồn (ví + mã gõ tay)
+    // perUserLimit — voucher chỉ vào đơn qua VÍ, đếm bản ghi ĐÃ DÙNG
     // ==================================================================
 
     @Nested
-    @DisplayName("hasReachedPerUserLimit (D15)")
+    @DisplayName("hasReachedPerUserLimit")
     class PerUserLimit {
 
         @BeforeEach
@@ -205,44 +201,40 @@ class VoucherServiceTest {
         @Test
         @DisplayName("Chưa dùng lần nào → chưa chạm trần")
         void chuaDung() {
-            when(userVoucherRepository.countByUserIdAndVoucherId("u1", "voucher-1")).thenReturn(0L);
-            when(orderRepository.countByUserIdAndVoucherIdAndStatusNot("u1", "voucher-1",
-                    OrderStatus.CANCELLED)).thenReturn(0L);
+            when(userVoucherRepository.countByUserIdAndVoucherIdAndStatus("u1", "voucher-1",
+                    UserVoucherStatus.USED)).thenReturn(0L);
 
             assertFalse(voucherService.hasReachedPerUserLimit("u1", voucher));
         }
 
         @Test
-        @DisplayName("Đã gõ mã 1 lần (limit=1) → chạm trần")
-        void daGoMa() {
-            when(userVoucherRepository.countByUserIdAndVoucherId(anyString(), anyString())).thenReturn(0L);
-            when(orderRepository.countByUserIdAndVoucherIdAndStatusNot("u1", "voucher-1",
-                    OrderStatus.CANCELLED)).thenReturn(1L);
+        @DisplayName("BUG-031: vừa CLAIM (AVAILABLE) chưa dùng → KHÔNG chặn")
+        void vuaClaimChuaDung() {
+            // Claim tạo bản ghi AVAILABLE; chỉ bản ghi USED mới tính là một lượt.
+            // Trước đây đếm mọi status nên khách vừa lưu mã đã bị báo hết lượt.
+            when(userVoucherRepository.countByUserIdAndVoucherIdAndStatus("u1", "voucher-1",
+                    UserVoucherStatus.USED)).thenReturn(0L);
+
+            assertFalse(voucherService.hasReachedPerUserLimit("u1", voucher));
+        }
+
+        @Test
+        @DisplayName("Đã dùng 1 lần (limit=1) → chạm trần")
+        void daDung() {
+            when(userVoucherRepository.countByUserIdAndVoucherIdAndStatus("u1", "voucher-1",
+                    UserVoucherStatus.USED)).thenReturn(1L);
 
             assertTrue(voucherService.hasReachedPerUserLimit("u1", voucher));
         }
 
         @Test
-        @DisplayName("Gộp 2 nguồn: gõ mã 1 lần + voucher trong ví 1 lần = 2 (chống lách)")
-        void gopHaiNguon() {
+        @DisplayName("limit=2, đã dùng 2 lần → chạm trần")
+        void daDungHaiLan() {
             voucher.setPerUserLimit(2);
-            when(userVoucherRepository.countByUserIdAndVoucherId("u1", "voucher-1")).thenReturn(1L);
-            when(orderRepository.countByUserIdAndVoucherIdAndStatusNot("u1", "voucher-1",
-                    OrderStatus.CANCELLED)).thenReturn(1L);
+            when(userVoucherRepository.countByUserIdAndVoucherIdAndStatus("u1", "voucher-1",
+                    UserVoucherStatus.USED)).thenReturn(2L);
 
             assertTrue(voucherService.hasReachedPerUserLimit("u1", voucher));
-        }
-
-        @Test
-        @DisplayName("Đơn CANCELLED bị loại khỏi phép đếm (hủy không mất lượt)")
-        void huyDonKhongTinh() {
-            // Repository nhận OrderStatus.CANCELLED làm tham số loại trừ — khẳng
-            // định đúng tham số đó được truyền xuống, vì đó là toàn bộ cơ chế.
-            when(userVoucherRepository.countByUserIdAndVoucherId(anyString(), anyString())).thenReturn(0L);
-            when(orderRepository.countByUserIdAndVoucherIdAndStatusNot("u1", "voucher-1",
-                    OrderStatus.CANCELLED)).thenReturn(0L);
-
-            assertFalse(voucherService.hasReachedPerUserLimit("u1", voucher));
         }
 
         @Test

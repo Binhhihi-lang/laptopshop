@@ -18,8 +18,8 @@ giảm tiền khi thanh toán. Voucher giảm ở **cấp đơn hàng** — tr�
 - Admin tạo/sửa/xoá mềm mẫu voucher, bật/tắt hàng loạt, phát voucher đích danh cho khách.
 - Cấu hình: mức giảm (% hoặc số tiền), thời gian hiệu lực, phạm vi áp dụng (nhiều giá
   trị), đơn tối thiểu, trần giảm, giới hạn lượt toàn hệ thống, giới hạn lượt mỗi khách.
-- Khách: xem kho voucher có thể nhận, bấm "Lưu mã" để đưa vào ví, xem ví, gõ mã hoặc
-  chọn từ ví khi thanh toán.
+- Khách: xem kho voucher có thể nhận, bấm "Lưu mã" để đưa vào ví, xem ví, **chọn voucher
+  từ ví** khi thanh toán.
 - Kiểm tra mã ở giỏ hàng (preview) khớp 100% với số tiền ghi vào đơn.
 - Hoàn voucher về ví khi đơn bị huỷ.
 
@@ -61,9 +61,8 @@ giảm tiền khi thanh toán. Voucher giảm ở **cấp đơn hàng** — tr�
 1. Admin mở form tạo voucher.
 2. Nhập: mã (code), tiêu đề, mô tả, mức giảm (chọn **một trong hai**: phần trăm HOẶC
    số tiền), thời gian hiệu lực, lượt dùng, phạm vi, điều kiện.
-3. Tải ảnh đại diện (file hoặc dán URL).
-4. Hệ thống kiểm tra: mã chưa tồn tại, cấu hình giảm giá hợp lệ, phạm vi hợp lệ.
-5. Hệ thống chuẩn hoá mã (viết hoa, cắt khoảng trắng), lưu voucher, `usedCount = 0`.
+3. Hệ thống kiểm tra: mã chưa tồn tại, cấu hình giảm giá hợp lệ, phạm vi hợp lệ.
+4. Hệ thống chuẩn hoá mã (viết hoa, cắt khoảng trắng), lưu voucher, `usedCount = 0`.
 
 **Luồng phụ:**
 - *Mã đã tồn tại* → lỗi `VOUCHER_ALREADY_EXISTS` (4002).
@@ -78,19 +77,15 @@ giảm tiền khi thanh toán. Voucher giảm ở **cấp đơn hàng** — tr�
 
 **Luồng chính:**
 1. Admin sửa thông tin voucher.
-2. Xử lý ảnh theo thứ tự ưu tiên: **file mới** > **URL mới** > cờ **xoá ảnh** > giữ nguyên.
-3. Phạm vi được **dựng lại toàn bộ** từ dữ liệu form gửi lên (không so khớp từng dòng).
-4. `usedCount` **không** cho sửa thủ công — chỉ hệ thống tăng khi voucher vào đơn.
-
-**Luồng phụ:**
-- *Xoá ảnh* → xoá file trên Cloudinary rồi set `image = null`.
+2. Phạm vi được **dựng lại toàn bộ** từ dữ liệu form gửi lên (không so khớp từng dòng).
+3. `usedCount` **không** cho sửa thủ công — chỉ hệ thống tăng khi voucher vào đơn.
 
 ---
 
 ### UC-V03 — Admin xoá / bật-tắt hàng loạt
 **Actor:** Admin/Staff
 
-- **Xoá:** `DELETE_VOUCHER` — xoá **mềm** (`deleted_at`), đồng thời xoá ảnh Cloudinary.
+- **Xoá:** `DELETE_VOUCHER` — xoá **mềm** (`deleted_at`).
   Xoá hàng loạt theo danh sách id; nếu một id không tồn tại → lỗi `VOUCHER_NOT_FOUND`.
 - **Bật/tắt:** `PATCH bulk-status` — đặt `active` cho cả lô.
 
@@ -148,17 +143,18 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 **Actor:** Customer · **Endpoint:** `POST /client/vouchers/validate`
 
 **Luồng chính:**
-1. Khách gõ mã **hoặc** chọn voucher từ ví ở overlay "Ưu đãi và khuyến mại".
-2. Hệ thống tra voucher (theo code, hoặc theo `userVoucherId` trong ví của chính khách).
+1. Khách chọn voucher từ ví ở overlay "Ưu đãi và khuyến mại".
+2. Hệ thống tra voucher theo `userVoucherId` trong ví của chính khách.
 3. Hệ thống **tự đọc giỏ của khách**, chạy engine promotion, tính `eligibleAmount`.
 4. Kiểm tra lần lượt các điều kiện (xem BR-V04).
 5. Trả về `{valid, code, discountAmount, forfeitedAmount, message}` — **luôn HTTP 200** kể cả
-   mã sai, để FE hiển thị thông báo inline dưới ô nhập thay vì lỗi đỏ.
+   khi voucher không hợp lệ, để FE hiển thị thông báo inline.
 
-**Request:** gửi **đúng một** trong hai — `code` (mã gõ tay) hoặc `userVoucherId` (từ ví).
+**Request:** `userVoucherId` (voucher trong ví khách). **Đã bỏ** đường gõ mã tay — voucher
+chỉ vào đơn qua ví.
 
-**Luồng phụ (nhánh từ ví):**
-- *Voucher không thuộc khách này* → `USER_VOUCHER_NOT_FOUND` (4201).
+**Luồng phụ:**
+- *Voucher không thuộc khách này / thiếu id* → `USER_VOUCHER_NOT_FOUND` (4201).
 - *Voucher trong ví đã dùng* → `USER_VOUCHER_ALREADY_USED` (4205).
 - *Voucher trong ví hết hạn* → `USER_VOUCHER_EXPIRED` (4204).
 
@@ -166,10 +162,9 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 > số tiền lên thì (a) khách sửa được giá, (b) con số preview lệch với lúc chốt đơn vì thiếu
 > kết quả promotion trên từng dòng.
 
-> **BR-V13 — nhánh "chọn từ ví" phải đi qua API này.** Trước đây endpoint chỉ nhận `code`,
-> nên khi khách chọn voucher từ ví thì FE **tự tính** số tiền trên `subtotal` — bỏ qua
-> **phạm vi** (scope) của voucher → lệch với số BE thu. Có ca lệch hàng chục triệu (xem
-> BL-15 trong [05-backlog.md](05-backlog.md)).
+> **BR-V13 — voucher từ ví phải đi qua API này.** Trước đây FE **tự tính** số tiền trên
+> `subtotal` — bỏ qua **phạm vi** (scope) của voucher → lệch với số BE thu. Có ca lệch hàng
+> chục triệu (xem BL-15 trong [05-backlog.md](05-backlog.md)).
 
 ---
 
@@ -177,16 +172,15 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 **Actor:** Customer · **Endpoint:** `POST /client/orders`
 
 **Luồng chính:**
-1. Khách gửi kèm **một trong hai**: `voucherCode` (gõ tay) HOẶC `userVoucherId` (từ ví).
+1. Khách gửi kèm `userVoucherId` (voucher từ ví).
 2. Hệ thống dựng đơn từ **giỏ server**, chạy promotion engine trước.
-3. Tra voucher: từ ví (kiểm tra thuộc đúng khách, chưa dùng, còn hạn) hoặc theo code.
+3. Tra voucher từ ví (kiểm tra thuộc đúng khách, chưa dùng, còn hạn).
 4. Kiểm tra điều kiện (BR-V04), tính `eligibleAmount`, tính `voucherDiscount`.
 5. Ghi `Order.voucherDiscount` + `Order.voucher` (snapshot).
-6. Tăng `Voucher.usedCount` (cả hai đường: ví và gõ tay).
-7. Nếu dùng từ ví → đánh dấu `UserVoucher = USED`, gắn `order_id`, `usedAt`.
+6. Tăng `Voucher.usedCount`.
+7. Đánh dấu `UserVoucher = USED`, gắn `order_id`, `usedAt`.
 
 **Luồng phụ:**
-- *Gửi cả hai* → `VOUCHER_AND_VOUCHER_CONFLICT` (4208).
 - *Voucher từ ví của người khác* → `USER_VOUCHER_NOT_FOUND` (4201).
 - *Voucher trong ví đã dùng* → `USER_VOUCHER_ALREADY_USED` (4205).
 - *Mã sai ở bước chốt đơn* → ném `VOUCHER_NOT_USABLE` (5014), **không** âm thầm bỏ qua và
@@ -233,11 +227,11 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 | **BR-V04** | Điều kiện áp voucher (kiểm theo thứ tự): còn `active` → chưa hết hạn → chưa hết lượt tổng → đã tới `startDate` → chưa chạm `perUserLimit` → `eligibleAmount > 0` → `eligibleAmount ≥ minOrderValue`. Mỗi nhánh vi phạm trả **một `ErrorCode` riêng** (xem §7.3) | `checkVoucherRules` + `resolveUnusableReason` |
 | **BR-V05** | `eligibleAmount` = Σ(`lineTotal` − `lineDiscount`) của **các dòng khớp phạm vi**. Dùng cho **cả** `minOrderValue` **lẫn** base tính giảm | `VoucherService.calculateEligibleAmount` |
 | **BR-V06** | Phạm vi khai `!= ALL` mà **danh sách giá trị rỗng** → **không khớp gì** (trả `false`) | `matchesScope` |
-| **BR-V07** | `perUserLimit` đếm ở **hai nguồn**: ví (`user_vouchers`) + mã gõ tay (`orders`, loại `CANCELLED`) | `hasReachedPerUserLimit` |
+| **BR-V07** | `perUserLimit` đếm số lượt **ĐÃ DÙNG** của khách trên voucher này: chỉ tính bản ghi `user_vouchers` ở trạng thái `USED`. Claim (nhận) tạo bản ghi `AVAILABLE` — **chưa dùng thì không tính**. Hủy đơn hoàn voucher về `AVAILABLE` nên cũng không tính | `hasReachedPerUserLimit` |
 | **BR-V08** | Voucher % có trần: `min(eligibleAmount × % / 100, maxDiscountAmount)`. Voucher số tiền không cần trần | `calculateDiscount` |
 | **BR-V09** | Huỷ đơn hoàn **cả 3 thứ** (voucher về ví + `voucher.usedCount`−1 + `promotion.usedCount`−1) trong cùng transaction | `restorePromotions` |
 | **BR-V10** | Chỉ voucher `PUBLIC` khách mới tự nhận được. `ASSIGNED` phải do admin phát | `claim` |
-| **BR-V11** | Tối đa **1 voucher/đơn** — gõ mã HOẶC chọn ví, không cả hai | `VOUCHER_AND_VOUCHER_CONFLICT` |
+| **BR-V11** | Tối đa **1 voucher/đơn**, và voucher **chỉ vào đơn qua VÍ** (`userVoucherId`) — đã bỏ đường gõ mã tay | `createOrder` |
 | **BR-V12** | `maxDiscountAmount` **phải chạy thật** — trước đây là field chết: lưu DB nhưng không được đọc, khiến voucher 10% trên đơn 90tr giảm thẳng 9tr, và FE preview áp trần còn BE thì không → lệch số | Đã sửa `calculateDiscount` |
 | **BR-V13** | FE **không bao giờ tự tính tiền voucher**. Mọi con số giảm giá (kể cả khi chọn voucher từ ví) đều phải hỏi BE | `validateVoucher` + `/client/vouchers/validate` |
 | **BR-V14** | **Voucher mệnh giá LỚN HƠN giá trị đơn → VẪN cho dùng**, giảm tối đa bằng phần tiền hàng còn lại (khách trả 0đ tiền hàng, vẫn trả phí ship). **Không chặn**, không báo lỗi. Voucher **bị tính là đã dùng** (tiêu 1 lượt) — chấp nhận mất phần chênh. **Có cảnh báo 2 lớp** (xem BR-V15) | `calculateDiscount` (kẹp ở `eligibleAmount`) + `createOrder` (kẹp ở `subtotal`) |
@@ -263,8 +257,8 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 > không dùng được voucher — trong khi các sàn lớn (Shopee/Tiki) đều cho áp và coi như dùng hết.
 
 > **BR-V15 — vì sao BE phải trả `forfeitedAmount` (thêm 2026-09-30).** BR-V13 cấm FE tự tính
-> tiền voucher, mà FE **không có mệnh giá gốc** của mã gõ tay (chỉ có `discountAmount` của
-> voucher trong ví) → FE không thể tự biết đã bị kẹp. Nên BE phải nói ra. `calculateNominalDiscount`
+> tiền voucher, mà FE chỉ có `discountAmount` của voucher trong ví, **không** có mệnh giá gốc
+> → FE không thể tự biết đã bị kẹp. Nên BE phải nói ra. `calculateNominalDiscount`
 > **cố ý không kẹp theo `orderTotal`** (khác `calculateDiscount`) — chính phần chênh đó là thứ cần đo.
 >
 > **Chỉ voucher SỐ TIỀN CỐ ĐỊNH mới mất.** Với kiểu phần trăm, mệnh giá
@@ -287,7 +281,7 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 
 ```
 ┌─ ADMIN ────────────────────────────────────────────────────────────────┐
-│  Tạo mẫu voucher (code, mức giảm, phạm vi, điều kiện, ảnh)             │
+│  Tạo mẫu voucher (code, mức giảm, phạm vi, điều kiện)                 │
 │      │                                                                 │
 │      ├── phát đích danh ──→ UserVoucher (GIFTED) ──┐                   │
 │      └── để PUBLIC ───────→ kho "Ưu đãi dành cho bạn"                  │
@@ -300,7 +294,7 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 │  Ví voucher (tab: Khả dụng / Đã dùng / Hết hạn)                          │
 │      │                                                                  │
 │      ▼                                                                  │
-│  Checkout: gõ mã  HOẶC  chọn từ ví                                      │
+│  Checkout: chọn voucher từ ví                                      │
 │      │                                                                  │
 │      ├─ preview (validate) ──→ hiện số tiền giảm                        │
 │      ▼                                                                  │
@@ -320,7 +314,7 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 | Cột | Kiểu | Null | Ý nghĩa | Ghi chú |
 |---|---|:--:|---|---|
 | `id` | varchar(255) | ✗ | Khoá chính (UUID) | |
-| `code` | varchar(255) | ✗ | Mã khách gõ, VD `GIAM10` | **UNIQUE**, lưu dạng HOA |
+| `code` | varchar(255) | ✗ | Mã voucher, VD `GIAM10` | **UNIQUE**, lưu dạng HOA |
 | `title` | varchar(255) | ✓ | Tiêu đề hiển thị trên overlay giỏ | V10 |
 | `description` | varchar(500) | ✓ | Mô tả / điều kiện hiển thị cho khách | V10 |
 | `discount_percent` | int | ✓ | % giảm (1–100) | XOR với `discount_amount` |
@@ -330,7 +324,6 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 | `usage_limit` | int | ✓ | Lượt dùng tối đa toàn hệ thống | Mặc định 100 |
 | `used_count` | int | ✓ | Số lượt đã dùng | Mặc định 0, chỉ hệ thống tăng |
 | `active` | bit(1) | ✗ | Còn dùng được | Mặc định 1 |
-| `image` | varchar(255) | ✓ | Ảnh đại diện (URL Cloudinary) | |
 | `min_order_value` | bigint | ✓ | Đơn tối thiểu (xét trên `eligibleAmount`) | null = không yêu cầu |
 | `max_discount_amount` | bigint | ✓ | Trần giảm (cho voucher %) | null = không trần |
 | `per_user_limit` | int | ✓ | Số lượt tối đa mỗi khách | null = không giới hạn |
@@ -374,7 +367,7 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 
 | Enum | Giá trị | Ý nghĩa |
 |---|---|---|
-| `VoucherType` | `PUBLIC` | Khách gõ mã ở checkout, không cần claim |
+| `VoucherType` | `PUBLIC` | Khách tự claim vào ví, không cần admin phát |
 | | `ASSIGNED` | Admin gán tay cho 1 khách (phải có trong ví mới dùng được) |
 | `ScopeType` | `ALL` / `CATEGORY` / `BRAND` / `PRODUCT` | Phạm vi áp dụng |
 | `UserVoucherStatus` | `AVAILABLE` / `USED` / `EXPIRED` | Trạng thái trong ví |
@@ -398,8 +391,9 @@ chuyện thường; chặn cả lô vì một người là sai. Lỗi ở bướ
 | POST | `/vouchers/assign` | `UPDATE_VOUCHER` | `{ voucherId, userIds: [...] }` | `int` (số đã phát) |
 | GET | `/vouchers/{id}/holders` | `READ_VOUCHER` | — | `List<VoucherHolderResponse>` |
 
-**Vì sao create/update dùng `@ModelAttribute` (form-data)?** Voucher có ảnh, cần hỗ trợ
-upload file — giống Category/Product.
+**Vì sao create/update dùng `@ModelAttribute` (form-data)?** Form có nhiều trường, giữ
+nguyên khuôn `@ModelAttribute` cho đồng bộ với Category/Product. **Đã bỏ ảnh** — không còn
+`inputFile`/`imageUrl`/`removeImage`.
 
 **`VoucherCreationRequest`:**
 
@@ -420,14 +414,12 @@ upload file — giống Category/Product.
 | `scopeValues` | List\<String\> | | |
 | `voucherType` | VoucherType | | |
 | `active` | boolean | | Mặc định true |
-| `inputFile` | MultipartFile | | Ưu tiên hơn `imageUrl` |
-| `imageUrl` | String | | Dán link ảnh online |
 
-`VoucherUpdateRequest` = như trên + `removeImage: boolean`.
+`VoucherUpdateRequest` = như trên (không có trường riêng).
 
 **`VoucherResponse`:** `id, code, title, description, discountPercent, discountAmount,
 startDate, expiryDate, usageLimit, usedCount, active, minOrderValue, maxDiscountAmount,
-perUserLimit, scopeType, scopeValues, voucherType, image, createdAt, updatedAt`.
+perUserLimit, scopeType, scopeValues, voucherType, createdAt, updatedAt`.
 
 **`VoucherHolderResponse`** (bảng "Khách đã nhận"): `id, userId, userName, userEmail,
 source, status, acquiredAt, expiresAt, usedAt`.
@@ -441,14 +433,14 @@ source, status, acquiredAt, expiresAt, usedAt`.
 | GET | `/vouchers?status=` | `isAuthenticated()` | — | `List<UserVoucherResponse>` (ví) |
 | GET | `/vouchers/available` | `isAuthenticated()` | — | `List<VoucherResponse>` (kho nhận được) |
 | POST | `/vouchers/claim/{voucherId}` | `isAuthenticated()` | — | `UserVoucherResponse` |
-| POST | `/vouchers/validate` | `isAuthenticated()` | `{ code }` hoặc `{ userVoucherId }` | `VoucherValidationResponse` |
+| POST | `/vouchers/validate` | `isAuthenticated()` | `{ userVoucherId }` | `VoucherValidationResponse` |
 
 **`VoucherValidationResponse`:** `{ valid: bool, code, discountAmount: Long, forfeitedAmount: Long, message: String }`.
-Luôn HTTP 200 — kể cả mã sai — để FE hiện thông báo inline.
+Luôn HTTP 200 — kể cả voucher không hợp lệ — để FE hiện thông báo inline.
 `forfeitedAmount` = phần mệnh giá voucher không dùng được vì đơn nhỏ hơn mệnh giá (BR-V15);
 `> 0` thì FE hiện cảnh báo mất tiền. Không tính phần bị cắt bởi trần `maxDiscountAmount`.
 
-**`UserVoucherResponse`:** `id, voucherId, code, image, discountPercent, discountAmount,
+**`UserVoucherResponse`:** `id, voucherId, code, discountPercent, discountAmount,
 minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`.
 
 ---
@@ -474,18 +466,13 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 | **4015** | **`VOUCHER_INACTIVE`** | 400 | Voucher đã bị khoá hoặc ngừng áp dụng | **Nhánh chặn #1a** *(mới 2026-09-28)* |
 | **4017** | **`VOUCHER_NO_ELIGIBLE_ITEM`** | 400 | Voucher không áp dụng cho sản phẩm nào trong đơn | **Nhánh chặn #4** *(mới 2026-09-28)* |
 | **4018** | **`VOUCHER_NO_DISCOUNT`** | 400 | Voucher không tạo ra khoản giảm nào cho đơn này | **Giảm ra ≤ 0** *(mới 2026-09-28)* |
-| **4019** | **`VOUCHER_CODE_EMPTY`** | 400 | Vui lòng nhập mã voucher | **Mã để trống** *(mới 2026-09-28)* |
 | 4201 | `USER_VOUCHER_NOT_FOUND` | 404 | Không tìm thấy voucher trong ví | Ví — không thuộc khách |
 | 4202 | `USER_VOUCHER_ALREADY_CLAIMED` | 400 | Bạn đã nhận voucher này rồi | Claim |
 | 4203 | `USER_VOUCHER_OUT_OF_STOCK` | 400 | Voucher đã hết lượt nhận | Claim |
 | 4204 | `USER_VOUCHER_EXPIRED` | 400 | Voucher đã hết hạn | Ví — quá hạn |
 | 4205 | `USER_VOUCHER_ALREADY_USED` | 400 | Voucher này đã được sử dụng | Ví — đã dùng |
 | 4206 | `USER_VOUCHER_NOT_CLAIMABLE` | 400 | Voucher này không thể nhận trước | Claim (ASSIGNED) |
-| 4208 | `VOUCHER_AND_VOUCHER_CONFLICT` | 400 | Chỉ được dùng một trong hai: voucher hoặc voucher trong ví | Chốt đơn (D11) |
 | 5014 | `VOUCHER_NOT_USABLE` | 400 | Voucher không hợp lệ hoặc đã hết hạn | *fallback* — xem ghi chú |
-
-> **Lưu ý mã 4208:** tên hằng số giữ di sản lịch sử (thời còn tách "Coupon" vs
-> "Voucher"); nghĩa hiện tại là **"gõ mã vs chọn từ ví"**.
 
 > **Cập nhật 2026-09-28 — ErrorCode chi tiết cho từng nhánh.** Trước đây `checkVoucherRules`
 > trả **chuỗi message** và ở bước **chốt đơn** chuỗi đó **bị vứt đi**, chỉ ném
@@ -508,11 +495,11 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 | Màn | Nội dung |
 |---|---|
 | **Danh sách Voucher** (`/admin/vouchers`) | KPI + filter + bulk toolbar + bảng 8 cột (kèm menu kebab 3 chấm) + phân trang |
-| **Form Voucher** (`/admin/vouchers/create`, `/:id/edit`) | Mã, tiêu đề, mô tả, mức giảm (tab % / số tiền), thời gian, lượt dùng, **scope-picker** (tab loại + hộp tick + chip), điều kiện (đơn tối thiểu, trần giảm, lượt/khách), ảnh, panel **preview** cách tính |
+| **Form Voucher** (`/admin/vouchers/create`, `/:id/edit`) | Mã, tiêu đề, mô tả, mức giảm (tab % / số tiền), thời gian, lượt dùng, **scope-picker** (tab loại + hộp tick + chip), điều kiện (đơn tối thiểu, trần giảm, lượt/khách), trạng thái, panel **preview** cách tính |
 | **Chi tiết Voucher** (`/admin/vouchers/:id`) | KPI 4 thẻ, thông tin, phạm vi, timeline, **bảng "Khách đã nhận"**, card "Phát hành & phạm vi" |
 
 **Thành phần dùng chung:** `scope-picker` (chọn nhiều giá trị theo tab loại), `user-picker`
-(phát voucher cho khách, có tìm kiếm phân trang), `image-upload`.
+(phát voucher cho khách, có tìm kiếm phân trang), `voucher-card` (card vé ở client).
 
 > **Quy ước UI:** form admin bám mockup `design-mockup/promotion-admin-preview.html` —
 > dùng **tab + tick + chip** cho phạm vi, **không** dùng `<select>`. Không để lộ thuật ngữ
@@ -522,8 +509,8 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 
 | Màn | Nội dung |
 |---|---|
-| **Ví voucher** (`/vouchers`) | Tab **Khả dụng / Đã dùng / Hết hạn**; mục "Ưu đãi dành cho bạn" (kho claim) với nút "Lưu mã" |
-| **Overlay ưu đãi** (trong cart + checkout) | Ô nhập mã voucher + danh sách voucher từ ví; chọn/bỏ chọn → tiền cập nhật ngay. Khi voucher bị kẹp → **khối amber** cảnh báo mất tiền (BR-V15) |
+| **Ví voucher** (`/vouchers`) | Tab **Khả dụng / Đã dùng / Hết hạn**; mục "Ưu đãi dành cho bạn" (kho claim) với nút "Lưu mã". Card dùng chung `app-voucher-card`, hiện **giới hạn mỗi khách** (`perUserLimit`) + **tổng lượt** (`usageLimit`) — trường trống hiện "Không giới hạn" |
+| **Overlay ưu đãi** (trong cart + checkout) | Danh sách voucher từ ví (`app-voucher-card` chế độ chọn, có dòng giới hạn lượt/khách + tổng lượt); chọn/bỏ chọn → tiền cập nhật ngay. Khi voucher bị kẹp → **khối amber** cảnh báo mất tiền (BR-V15) |
 | **Sidebar đơn hàng** (`app-order-summary`) | Tạm tính / Tổng khuyến mại (Giảm giá sản phẩm + Voucher) / Phí vận chuyển / Cần thanh toán. Khi voucher bị kẹp → dòng cảnh báo nhỏ dưới dòng "Voucher" (BR-V15). Dòng "Voucher" kèm **mã** (`voucherCode`), dưới "Giảm giá sản phẩm" liệt kê **tên từng chương trình** (`promotionLines`) |
 | **Chi tiết đơn hàng** (`/orders/:id`) | `app-order-summary` nhận đủ breakdown từ `OrderDetailResponse`: `promotionDiscount` + `voucherDiscount` + `voucherCode` + `promotionLines` → khách xem lại đơn thấy rõ **khuyến mãi nào, voucher nào** (BR-V16). Đơn cũ (`promotionDiscount`/`voucherDiscount` = **null**) rơi về nhánh "Giảm giá" gộp — xem lưu ý `hasBreakdown` bên dưới |
 | **Checkout — nút "Đặt hàng"** | Voucher bị kẹp → **dialog xác nhận** "Voucher vượt giá trị đơn" trước khi tạo đơn (BR-V15). `window.open` cho VNPay phải mở TRƯỚC dialog (nếu sau sẽ bị trình duyệt chặn popup) |
@@ -537,7 +524,7 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 | E-V01 | Voucher khai `scopeType != ALL` nhưng `scopes` rỗng | Trả `false` — **không khớp gì** (BR-V06). Nếu trả `true` sẽ biến voucher "chỉ danh mục X" thành "áp cả đơn" |
 | E-V02 | Giỏ 40tr nhưng chỉ 10tr thuộc phạm vi, voucher yêu cầu đơn từ 20tr | **Chặn** — `minOrderValue` xét trên `eligibleAmount` (10tr), không phải 40tr |
 | E-V03 | Voucher 10% trên đơn 90tr, `maxDiscountAmount = 500k` | Giảm **500k**, không phải 9tr |
-| E-V04 | Khách gõ mã 1 lần, rồi claim voucher đó để dùng lần 2, `perUserLimit = 1` | **Chặn** — `perUserLimit` đếm cả hai nguồn (BR-V07) |
+| E-V04 | Khách claim voucher (`perUserLimit = 1`) rồi mới dùng lần đầu | **Cho dùng** — claim tạo bản ghi `AVAILABLE`, chưa tính là một lượt. Dùng xong (bản ghi `USED`) thì chạm trần, lần sau bị chặn (BR-V07) |
 | E-V05 | Hai request claim cùng voucher song song | **Unique index DB** chặn — bước kiểm tra ở service có thể lọt |
 | E-V06 | Admin sửa `expiryDate` của mẫu sau khi đã phát voucher | Hạn của voucher **đã phát** không đổi (`expiresAt` đã chép) |
 | E-V07 | Huỷ đơn dùng voucher → voucher hết hạn trong lúc đó | Về `EXPIRED`, không về `AVAILABLE` |
@@ -547,7 +534,7 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 | E-V11 | Preview hiện 1 số, đơn tạo ra số khác | **Không xảy ra** — cùng hàm `checkVoucherRules` + cùng engine (BR-V01) |
 | E-V12 | Tổng giảm vượt `subtotal` | Cap `discountAmount = min(promotion + voucher, subtotal)` → `Cần thanh toán` không bao giờ âm |
 | E-V13 | Khách chọn voucher từ ví mà voucher có **phạm vi** (VD chỉ áp hãng Dell) nhưng giỏ toàn ASUS | BE trả `valid = false`, `discountAmount = 0` (BR-V13). FE **không** được tự tính — nếu tự tính trên `subtotal` sẽ báo giảm 50% cả đơn (lệch tới hàng chục triệu) |
-| E-V14 | Chọn voucher từ ví rồi gửi kèm cả `code` | BE ưu tiên nhánh `userVoucherId` khi có; FE đã xoá `code` khi chọn từ ví nên không xảy ra |
+| E-V14 | Chọn voucher từ ví nhưng request còn sót trường mã gõ tay | Không còn xảy ra — đường gõ mã tay đã bỏ hẳn khỏi DTO/BE |
 | E-V15 | **Voucher 500k cho đơn 100k** (mệnh giá > giá trị đơn) | **Cho dùng** (BR-V14): `voucherDiscount` kẹp ở `eligibleAmount`, tổng giảm kẹp ở `subtotal`. Khách trả **0đ tiền hàng** + phí ship. Voucher bị tính đã dùng. `forfeitedAmount = 410.000` → FE cảnh báo 2 lớp (BR-V15) |
 | E-V16 | Đơn 100k có promotion 10k + voucher "giảm thẳng 500k" | `eligibleAmount` = 100.000 − 10.000 = **90.000**; `voucherDiscount` = min(500.000, 90.000) = 90.000; `promotionDiscount` = 10.000; `discountAmount` = min(90.000 + 10.000, 100.000) = **100.000**; `totalPrice` = 100.000 − 100.000 + 50.000 ship = **50.000**. Tiền hàng về 0, còn lại chỉ là **phí vận chuyển** (đơn < 2 triệu nên không freeship). `forfeitedAmount = 410.000` |
 | E-V17 | Voucher **phần trăm** trên đơn nhỏ | VD 100% trên đơn 100k → giảm 100k, cùng kết quả như E-V16. `forfeitedAmount = 0` — **không cảnh báo** (mệnh giá % không bao giờ vượt đơn) |
@@ -565,13 +552,13 @@ minOrderValue, maxDiscountAmount, status, source, acquiredAt, expiresAt, usedAt`
 | **AC-V04** | Claim voucher PUBLIC → thấy trong ví; claim lần 2 → lỗi `USER_VOUCHER_ALREADY_CLAIMED` |
 | **AC-V05** | Claim voucher `ASSIGNED` → lỗi `USER_VOUCHER_NOT_CLAIMABLE` |
 | **AC-V06** | Dùng voucher từ ví → `status = USED`, `used_at` + `order_id` được ghi; dùng lại → `USER_VOUCHER_ALREADY_USED` |
-| **AC-V07** | Gửi cả `voucherCode` và `userVoucherId` → lỗi `VOUCHER_AND_VOUCHER_CONFLICT` |
+| **AC-V07** | Voucher **chỉ vào đơn qua ví** (`userVoucherId`); DTO/BE không còn trường mã gõ tay |
 | **AC-V08** | Voucher "Laptop văn phòng, đơn từ 20tr", giỏ 40tr nhưng chỉ 10tr thuộc scope → **chặn**; giỏ 25tr thuộc scope → **được**, giảm tính trên 25tr (đã trừ promotion), không phải 40tr |
 | **AC-V09** | Voucher `scopeType = ALL` → số tiền khớp **hành vi cũ** (không hồi quy) |
 | **AC-V10** | Voucher 10% + `maxDiscountAmount = 500k` trên đơn 90tr → giảm đúng **500k** |
-| **AC-V11** | `perUserLimit = 1`: dùng voucher ở đơn 1 → gõ mã lần 2 → **chặn** |
+| **AC-V11** | `perUserLimit = 1`: claim voucher (chưa dùng) → **áp được**; sau khi dùng xong ở đơn 1 → lần sau **chặn** |
 | **AC-V12** | Huỷ đơn dùng voucher → voucher về `AVAILABLE` (nếu còn hạn), `usedCount` voucher −1, `usedCount` promotion −1 |
-| **AC-V13** | Số tiền preview ở overlay **khớp 100%** số tiền ghi vào đơn sau khi đặt — cho **cả hai** nhánh (gõ mã và chọn từ ví) |
+| **AC-V13** | Số tiền preview ở overlay **khớp 100%** số tiền ghi vào đơn sau khi đặt (chọn từ ví) |
 | **AC-V13b** | Chọn voucher từ ví có phạm vi không khớp giỏ → FE hiện `valid = false` (không tự tính giảm) |
 | **AC-V13c** | Chọn voucher từ ví → FE **có gọi** `POST /client/vouchers/validate` với `userVoucherId` (kiểm qua network tab) |
 | **AC-V14** | Sửa request `CreateOrderRequest` (đổi số tiền) → **không** làm sai số tiền đơn (BE luôn tính lại) |

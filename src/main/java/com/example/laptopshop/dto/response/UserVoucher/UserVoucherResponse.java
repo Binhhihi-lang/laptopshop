@@ -13,7 +13,7 @@ import lombok.Setter;
 
 /**
  * Một voucher trong ví khách (§3.4). Trả kèm thông tin hiển thị của voucher
- * (mã, mức giảm, ảnh) để FE không phải gọi thêm API tra voucher.
+ * (mã, mức giảm) để FE không phải gọi thêm API tra voucher.
  */
 @Getter
 @Setter
@@ -28,11 +28,19 @@ public class UserVoucherResponse {
     private String voucherId;
 
     private String code;
-    private String image;
     private Integer discountPercent;
     private Long discountAmount;
     private Long minOrderValue;
     private Long maxDiscountAmount;
+
+    /** Tổng lượt dùng tối đa toàn hệ thống; 0 = không giới hạn. */
+    private Integer usageLimit;
+
+    /** Số lượt đã dùng trên toàn hệ thống (để FE hiện "còn N lượt"). */
+    private Integer usedCount;
+
+    /** Số lượt tối đa MỖI KHÁCH; null = không giới hạn. */
+    private Integer perUserLimit;
 
     private UserVoucherStatus status;
     private UserVoucherSource source;

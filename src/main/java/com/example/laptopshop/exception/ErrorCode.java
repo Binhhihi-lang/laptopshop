@@ -77,7 +77,6 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
     VOUCHER_NO_DISCOUNT(4018, "Voucher không tạo ra khoản giảm nào cho đơn này",
             HttpStatus.BAD_REQUEST),
-    VOUCHER_CODE_EMPTY(4019, "Vui lòng nhập mã voucher", HttpStatus.BAD_REQUEST),
 
     // === PROMOTION MODULE (4100 - 4199) ===
     PROMOTION_NOT_FOUND(4101, "Không tìm thấy chương trình khuyến mại", HttpStatus.NOT_FOUND),
@@ -101,9 +100,6 @@ public enum ErrorCode {
     USER_VOUCHER_EXPIRED(4204, "Voucher đã hết hạn", HttpStatus.BAD_REQUEST),
     USER_VOUCHER_ALREADY_USED(4205, "Voucher này đã được sử dụng", HttpStatus.BAD_REQUEST),
     USER_VOUCHER_NOT_CLAIMABLE(4206, "Voucher này không thể nhận trước", HttpStatus.BAD_REQUEST),
-    // D11: gửi cả voucherCode lẫn userVoucherId -> không rõ đường nào, chặn hẳn.
-    VOUCHER_AND_VOUCHER_CONFLICT(4208,
-            "Chỉ được dùng một trong hai: voucher hoặc voucher trong ví", HttpStatus.BAD_REQUEST),
 
     // === FLASH SALE (4300 - 4399) ===
     FLASH_SALE_NOT_FOUND(4301, "Không tìm thấy phiên flash sale", HttpStatus.NOT_FOUND),

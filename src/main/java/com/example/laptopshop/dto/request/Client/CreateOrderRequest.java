@@ -44,13 +44,9 @@ public class CreateOrderRequest {
 
     private String note;
 
-    // Voucher (optional). Không tìm thấy / hết hạn / hết lượt → báo lỗi rõ
-    // ràng thay vì âm thầm bỏ qua.
-    private String voucherCode;
-
     /**
      * Voucher lấy từ ví (optional) — id của UserVoucher, không phải mã voucher.
-     * D11: không được gửi cả {@code voucherCode} lẫn trường này.
+     * Voucher chỉ vào đơn qua VÍ, không còn đường gõ mã tay.
      */
     private String userVoucherId;
 

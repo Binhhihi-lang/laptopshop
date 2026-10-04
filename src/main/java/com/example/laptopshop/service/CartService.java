@@ -453,6 +453,14 @@ public class CartService {
                     res.setId(p.getId());
                     res.setName(p.getName());
                     res.setTitle(p.getTitle());
+                    // Gửi kèm quy tắc để FE hiện đúng mệnh giá chương trình, không
+                    // phải số tiền tính ra cho giỏ hiện tại.
+                    res.setDiscountType(p.getDiscountType());
+                    res.setDiscountValue(p.getDiscountValue());
+                    res.setMaxDiscountAmount(p.getMaxDiscountAmount());
+                    res.setMinOrderValue(p.getMinOrderValue());
+                    res.setMinQuantity(p.getMinQuantity());
+                    res.setUsageLimit(p.getUsageLimit());
                     res.setDiscountAmount(discountByPromotion.get(p.getId()));
                     return res;
                 })

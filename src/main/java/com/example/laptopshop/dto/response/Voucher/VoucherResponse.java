@@ -33,7 +33,6 @@ public class VoucherResponse {
     private List<String> scopeValues;
     private VoucherType voucherType;
 
-    private String image;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

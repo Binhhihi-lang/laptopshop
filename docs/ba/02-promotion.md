@@ -416,7 +416,7 @@ Promotion **không có endpoint riêng** cho khách — nó được trả kèm 
 | `total` | `subtotal + shippingFee` (chưa trừ voucher) |
 | `promotionDiscount` | Tổng giảm từ promotion |
 | `payable` | Số phải trả = `subtotal + shippingFee − promotionDiscount` |
-| `promotions[]` | Danh sách chương trình đã áp: `{ id, name, title, discountAmount }` |
+| `promotions[]` | Danh sách chương trình đã áp: `{ id, name, title, discountType, discountValue, maxDiscountAmount, minOrderValue, minQuantity, usageLimit, discountAmount }` |
 | `items[].lineDiscount` | Tiền giảm riêng từng dòng |
 | `items[].flashPrice` | Giá flash nếu dòng đang trong phiên |
 
@@ -473,8 +473,14 @@ chọn được, hệ thống tự áp.
 ### 8.2 Client
 
 Promotion hiển thị trong **overlay "Ưu đãi và khuyến mại"** mở từ nút ở cả trang giỏ và
-trang thanh toán: mục "Khuyến mại" liệt kê chương trình đang áp (dấu ✓) + số tiền giảm.
-Sidebar đơn hàng hiển thị dòng "Giảm giá sản phẩm" = `promotionDiscount`.
+trang thanh toán: mục "Khuyến mại" liệt kê chương trình đang áp (dấu ✓). Stub mỗi card hiện
+**QUY TẮC** chương trình (`10%` hoặc `500K/máy`), các dòng dưới liệt kê **điều kiện chương
+trình THỰC SỰ có**: đơn tối thiểu, số lượng tối thiểu/dòng, trần giảm tối đa, ngân sách
+(`usageLimit` = số đơn tối đa). **Promotion KHÔNG có khái niệm giới hạn mỗi khách** (khác
+Voucher) nên card không hiện dòng đó. **Không** in số tiền tính ra cho giỏ này ở stub, vì đó
+là kết quả chứ không phải định nghĩa chương trình (chương trình "10%" mà card ghi "giảm 3tr"
+khiến khách hiểu nhầm mệnh giá). Tổng tiền giảm thực tế hiện ở footer overlay mục **"Tiết
+kiệm được"**. Sidebar đơn hàng hiển thị dòng "Giảm giá sản phẩm" = `promotionDiscount`.
 
 ---
 

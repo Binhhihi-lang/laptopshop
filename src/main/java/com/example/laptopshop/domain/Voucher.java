@@ -55,7 +55,6 @@ public class Voucher {
     private Integer usedCount = 0; // số lượt đã dùng
 
     private boolean active = true; // true: còn dùng được, false: đã khóa
-    private String image; // Ảnh đại diện voucher (URL Cloudinary)
 
     // ===== v1: điều kiện áp dụng (tất cả nullable — null = không giới hạn, P3) =====
     // Voucher cũ trong DB có các cột này NULL → hành vi giữ nguyên như trước.

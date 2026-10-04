@@ -25,8 +25,12 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucher, String
     /** Đã claim voucher này chưa (R17) — kiểm tra sớm để báo lỗi thân thiện. */
     boolean existsByUserIdAndVoucherId(String userId, String voucherId);
 
-    /** Nguồn đếm `perUserLimit` cho voucher lấy từ ví (D15). */
-    long countByUserIdAndVoucherId(String userId, String voucherId);
+    /**
+     * Nguồn đếm {@code perUserLimit} cho voucher lấy từ ví: chỉ tính bản ghi ĐÃ
+     * DÙNG (status = USED). Claim chỉ "nhận" voucher chứ chưa dùng — nếu đếm cả
+     * bản ghi AVAILABLE thì khách vừa lưu mã đã bị coi là hết lượt.
+     */
+    long countByUserIdAndVoucherIdAndStatus(String userId, String voucherId, UserVoucherStatus status);
 
     /** Tổng voucher đã PHÁT RA của một voucher — cơ sở chặn hết lượt nhận. */
     long countByVoucherId(String voucherId);
