@@ -1,0 +1,20 @@
+# Không đưa vào image — chỉ cần khi build trên máy
+target/
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Tài liệu, không cần cho lúc chạy
+docs/
+TONG_QUAN_DU_AN_LAPTOPSHOP_v5.md
+HELP.md
+
+# Secret: image chỉ lấy cấu hình từ biến môi trường (docker-compose/.env),
+# không nhúng file secret của máy dev vào trong image.
+src/main/resources/application-local.properties
+.env
+.env.local
