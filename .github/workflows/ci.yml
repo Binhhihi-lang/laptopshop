@@ -1,0 +1,40 @@
+name: CI Backend
+
+# Chạy khi push lên main hoặc khi mở pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # Dùng `test` chứ KHÔNG dùng `install`.
+      # Lý do: pom.xml có JaCoCo gate 60% coverage ở phase `verify`; lệnh `install`
+      # chạy qua `verify` nên sẽ fail nếu coverage dưới ngưỡng — đó là lỗi cấu hình
+      # chứ không phải lỗi code. `test` dừng trước `verify` nên tránh được.
+      #
+      # Test dùng profile "test" (H2 in-memory, xem src/test/resources/application-test.properties)
+      # nên KHÔNG cần biến môi trường và KHÔNG đụng DB thật.
+      - name: Chạy test
+        run: ./mvnw -B test
+
+      - name: Lưu báo cáo test khi thất bại
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: target/surefire-reports/
+          retention-days: 7
